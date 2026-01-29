@@ -27,6 +27,7 @@ export interface Character {
   imageBases64: string[];
   description: string;
   refinedDescription?: string;
+  relationship?: string;
 }
 
 export interface StoryBlueprint {

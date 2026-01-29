@@ -117,7 +117,8 @@ CHILD DETAILS:
 
 ${storyData.useSecondCharacter && storyData.secondCharacter ? `SIDEKICK/COMPANION:
 - Name: ${storyData.secondCharacter.name}
-- Type: ${storyData.secondCharacter.type === 'object' ? 'Magical Object/Toy' : 'Person/Sibling'}
+- Type: ${storyData.secondCharacter.type === 'object' ? 'Magical Object/Toy' : 'Person'}
+- Relationship: ${storyData.secondCharacter.relationship || 'Unspecified'}
 - Age: ${storyData.secondCharacter.age || 'N/A'}` : ''}
 
 STORY PARAMETERS:
