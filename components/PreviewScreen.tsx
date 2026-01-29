@@ -59,6 +59,24 @@ const PageWrapper: React.FC<{ children: React.ReactNode, side: 'left' | 'right' 
     );
 };
 
+const TextContainer: React.FC<{ textBlocks: TextBlock[], storyData: StoryData, language: Language }> = ({ textBlocks, storyData, language }) => {
+    return (
+        <div className="absolute inset-0 z-20 p-8 flex flex-col justify-center">
+            {textBlocks.map((block, i) => (
+                <div key={i} className="bg-white/90 p-6 rounded-2xl shadow-sm backdrop-blur-sm border border-white/50 text-brand-navy"
+                    style={{
+                        textAlign: block.alignment || 'center',
+                    }}>
+                    <div
+                        className={getAgeBasedFontSizeClass(block.text, storyData.childAge)}
+                        dangerouslySetInnerHTML={{ __html: formatStoryTextHTML(block.text, storyData.childName) }}
+                    />
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const Endpaper: React.FC = () => (
     <div className="w-full h-full bg-amber-50 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-multiply"></div>
