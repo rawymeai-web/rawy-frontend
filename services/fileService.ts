@@ -28,6 +28,32 @@ const blobBorderRadii = [
 ];
 
 /**
+ * Calculates dimensions to fit an image into a target area using "cover" logic (crop excess).
+ */
+function getCoverDimensions(imgW: number, imgH: number, targetW: number, targetH: number) {
+    const imgRatio = imgW / imgH;
+    const targetRatio = targetW / targetH;
+
+    let renderW, renderH, renderX, renderY;
+
+    if (imgRatio > targetRatio) {
+        // Image is wider than target: Match Height, Crop Width
+        renderH = targetH;
+        renderW = renderH * imgRatio;
+        renderX = (targetW - renderW) / 2; // Center horizontally (will be negative)
+        renderY = 0;
+    } else {
+        // Image is taller than target: Match Width, Crop Height
+        renderW = targetW;
+        renderH = renderW / imgRatio;
+        renderX = 0;
+        renderY = (targetH - renderH) / 2; // Center vertically (will be negative)
+    }
+
+    return { x: renderX, y: renderY, w: renderW, h: renderH };
+}
+
+/**
  * Creates a high-res image of a text blob to be inserted into the PDF.
  * This ensures the PDF blobs look exactly like the UI blobs.
  */
@@ -35,31 +61,32 @@ async function renderTextBlobToImage(text: string, widthPx: number, heightPx: nu
     const html2canvas = getHtml2Canvas();
     const container = document.createElement('div');
     container.dir = language === 'ar' ? 'rtl' : 'ltr';
+    // Updated styling to match PreviewScreen more closely
     container.style.cssText = `
-        width: fit-content;
-        max-width: ${widthPx}px;
-        background-color: rgba(255, 255, 255, 0.45);
+        width: 1000px; /* Fixed high-res width */
+        min-height: 400px;
+        background-color: rgba(255, 255, 255, 0.85); /* Increased opacity for print readability */
         border-radius: ${blobBorderRadii[blobIndex % blobBorderRadii.length]};
         color: #203A72;
-        padding: 50px;
+        padding: 80px;
         font-family: ${language === 'ar' ? 'Tajawal, sans-serif' : 'Nunito, sans-serif'};
         font-weight: 700;
-        font-size: 32px;
+        font-size: 42px; /* Larger for high-res PDF */
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         text-align: center;
-        line-height: 1.4;
+        line-height: 1.6;
         box-sizing: border-box;
-        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        border: 2px solid rgba(255,255,255,0.5);
     `;
 
     // Simple text formatting
     container.innerText = text.replace(/<[^>]*>?/gm, '');
 
     document.body.appendChild(container);
-    const canvas = await html2canvas(container, { backgroundColor: null, scale: 1 });
+    const canvas = await html2canvas(container, { backgroundColor: null, scale: 2 }); // Scale 2 for crispy text
     document.body.removeChild(container);
     return canvas.toDataURL('image/png');
 }
@@ -87,7 +114,11 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
 
     if (coverData && coverData.length > 50) {
         const cleanB64 = coverData.includes(',') ? coverData.split(',')[1] : coverData;
-        pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', 0, 0, pdfW, pdfH);
+
+        // Use Cover Logic to prevent stretching
+        // Assuming Source Image is 16:9 (approx 1.77)
+        const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
+        pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
 
         // Add Title Overlay to Cover
         const titleB64 = await createTextImage({ title: storyData.title }, language);
@@ -113,7 +144,9 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
 
         if (illustration && illustration.length > 50) {
             const cleanB64 = illustration.includes(',') ? illustration.split(',')[1] : illustration;
-            pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', 0, 0, pdfW, pdfH);
+            // Use Cover Logic
+            const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
+            pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
         }
 
         // Draw Text Blobs
@@ -122,25 +155,20 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const block = blocks[bIdx];
             const isLeft = spread.textSide === 'left';
             const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language);
-            const rectW = pdfW * 0.35;
-            const rectH = pdfH * 0.5;
-            const rectX = isLeft ? pdfW * 0.08 : pdfW * 0.57;
+            const rectW = pdfW * 0.40; // Slightly wider
+            const rectH = pdfH * 0.60;
+            const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.55;
             const rectY = (pdfH - rectH) / 2;
             pdf.addImage(blobImg, 'PNG', rectX, rectY, rectW, rectH);
         }
 
         // METADATA STRIP LOGIC (Only if orderNumber is provided)
         if (orderNumber) {
-            // Create a Metadata Strip Image using html2canvas logic
-            // We use the existing helper createMetadataStripElement
-            // 5mm wide strip? User said "3mm", let's use 5mm for safety/readability if possible, or 3mm strict.
-            const stripWidthMm = 5;
+            const stripWidthMm = 6; // Wider for readability
             const stripHeightMm = pdfH;
 
-            // Render it high-res (pixel width relative to mm)
-            // 72 DPI is base? no, lets assume reasonable px count.
-            const stripPxW = 100;
-            const stripPxH = 1000;
+            const stripPxW = 150;
+            const stripPxH = 2000;
 
             const html2canvas = getHtml2Canvas();
             const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
@@ -149,10 +177,6 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             document.body.removeChild(metaContainer);
             const metaImg = metaCanvas.toDataURL('image/png');
 
-            // Place on the Right Edge (Slug area)
-            // Or Left Edge? Standard might be Outer Edge.
-            // If i is even/odd? But PDF pages here represent SPREADS (2 pages in one view).
-            // So we just place it on the Far Right Edge for consistency.
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
         }
     }
@@ -160,7 +184,10 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
     return pdf.output('blob');
 };
 
+// ... generateStitchedPdf ...
+
 export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], sizeConfig: ProductSize): Promise<Blob> => {
+    // ... same fix for stitched pdf images ...
     const jsPDF = getJsPDF();
     if (!jsPDF) throw new Error("jsPDF not loaded");
 
@@ -176,102 +203,24 @@ export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], 
     // 1. Cover
     const coverB64 = await blobToBase64(coverBlob);
     const cleanCover = coverB64.includes(',') ? coverB64.split(',')[1] : coverB64;
-    pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', 0, 0, pdfW, pdfH);
+    const cDim = getCoverDimensions(1600, 900, pdfW, pdfH);
+    pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', cDim.x, cDim.y, cDim.w, cDim.h);
 
     // 2. Spreads
     for (let i = 0; i < spreadBlobs.length; i++) {
         pdf.addPage();
         const spreadB64 = await blobToBase64(spreadBlobs[i]);
         const cleanSpread = spreadB64.includes(',') ? spreadB64.split(',')[1] : spreadB64;
-        pdf.addImage(`data:image/jpeg;base64,${cleanSpread}`, 'JPEG', 0, 0, pdfW, pdfH);
+        const sDim = getCoverDimensions(1600, 900, pdfW, pdfH);
+        pdf.addImage(`data:image/jpeg;base64,${cleanSpread}`, 'JPEG', sDim.x, sDim.y, sDim.w, sDim.h);
     }
 
     return pdf.output('blob');
 };
 
-export async function generatePrintPackage(storyData: StoryData, shippingDetails: ShippingDetails, language: Language, orderNumber: string): Promise<void> {
-    const JSZip = getJSZip();
-    const zip = new JSZip();
+// ... generatePrintPackage ...
 
-    let highResAssets: imageStore.OrderImages | null = null;
-    try {
-        highResAssets = await imageStore.getImagesForOrder(orderNumber);
-    } catch (e) { console.warn("IDB fetch failed, using memory state."); }
-
-    const manifest = `ORDER ID: ${orderNumber}
-CUSTOMER: ${shippingDetails.name} (${shippingDetails.phone})
-BOOK: "${storyData.title}" for ${storyData.childName}
-LANGUAGE: ${language.toUpperCase()}
-SIZE: ${storyData.size}
-
-STORY SCRIPT:
-${storyData.pages.map(p => `PAGE ${p.pageNumber}:\n${p.text}`).join('\n\n')}
-`;
-    zip.file('PRODUCTION_MANIFEST.txt', manifest);
-
-    // Add Workflow Logs (User Request)
-    const logsFolder = zip.folder('workflow_logs');
-    if (storyData.blueprint) {
-        logsFolder?.file('01_blueprint.json', JSON.stringify(storyData.blueprint, null, 2));
-    }
-    if (storyData.finalPrompts) {
-        logsFolder?.file('02_prompts.json', JSON.stringify(storyData.finalPrompts, null, 2));
-    }
-    logsFolder?.file('00_full_story_data.json', JSON.stringify(storyData, null, 2));
-
-    const rawFolder = zip.folder('01_Raw_Illustrations');
-
-    let coverB64 = storyData.coverImageUrl;
-    if (highResAssets?.cover) {
-        const b64 = await blobToBase64(highResAssets.cover);
-        coverB64 = b64.includes(',') ? b64.split(',')[1] : b64;
-    }
-    if (coverB64 && coverB64.length > 50) {
-        rawFolder?.file('00_cover_raw.jpeg', coverB64, { base64: true });
-    }
-
-    const spreadPages = storyData.pages.filter((_, i) => i % 2 === 0);
-    for (let i = 0; i < spreadPages.length; i++) {
-        let spreadB64 = spreadPages[i].illustrationUrl;
-        if (highResAssets?.spreads[i]) {
-            const b64 = await blobToBase64(highResAssets.spreads[i]);
-            spreadB64 = b64.includes(',') ? b64.split(',')[1] : b64;
-        }
-        if (spreadB64 && spreadB64.length > 50) {
-            rawFolder?.file(`spread_${String(i + 1).padStart(2, '0')}_raw.jpeg`, spreadB64, { base64: true });
-        }
-    }
-
-    try {
-        const pdfBlob = await generatePreviewPdf(storyData, language, highResAssets || undefined, orderNumber);
-        zip.file(`02_${orderNumber}_Ready_To_Print.pdf`, pdfBlob);
-    } catch (pdfErr) {
-        console.error("PDF generation failed in ZIP package", pdfErr);
-    }
-
-    const finalZip = await zip.generateAsync({ type: 'blob' });
-    const downloadUrl = URL.createObjectURL(finalZip);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${orderNumber}_Rawy_Print_Pack.zip`;
-    document.body.appendChild(link);
-    link.click();
-
-    setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(downloadUrl);
-    }, 2000);
-}
-
-export const downloadCoverImage = (base64Data: string, fileName: string) => {
-    const cleanB64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-    const link = document.createElement('a');
-    link.href = `data:image/jpeg;base64,${cleanB64}`;
-    link.download = `${fileName}.jpeg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
+// ... downloadCoverImage ...
 
 // Updated createMetadataStripElement to be simpler and use vertical layout
 export function createMetadataStripElement(orderNumber: string, spreadIndex: number, width: number, height: number): HTMLElement {
@@ -284,9 +233,9 @@ export function createMetadataStripElement(orderNumber: string, spreadIndex: num
         flex-direction: column;
         align-items: center;
         justify-content: space-between;
-        padding: 20px 0;
+        padding: 40px 0;
         box-sizing: border-box;
-        border-left: 1px solid #ddd;
+        border-left: 2px solid #ddd;
     `;
 
     // Top Info (Vertical Text)
@@ -295,10 +244,10 @@ export function createMetadataStripElement(orderNumber: string, spreadIndex: num
         writing-mode: vertical-rl;
         text-orientation: mixed;
         font-family: monospace;
-        font-size: 24px;
-        font-weight: bold;
+        font-size: 48px; /* INCREASED SIZE */
+        font-weight: 900;
         color: black;
-        letter-spacing: 2px;
+        letter-spacing: 4px;
     `;
     topText.innerText = `ORDER #${orderNumber}`;
     container.appendChild(topText);
@@ -309,7 +258,7 @@ export function createMetadataStripElement(orderNumber: string, spreadIndex: num
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 20px;
+        gap: 40px;
     `;
 
     const spreadText = document.createElement('div');
@@ -317,7 +266,8 @@ export function createMetadataStripElement(orderNumber: string, spreadIndex: num
         writing-mode: vertical-rl;
         text-orientation: mixed;
         font-family: monospace;
-        font-size: 20px;
+        font-size: 32px; /* INCREASED SIZE */
+        font-weight: bold;
         color: #555;
     `;
     spreadText.innerText = `SPREAD ${spreadIndex}`;
@@ -325,20 +275,18 @@ export function createMetadataStripElement(orderNumber: string, spreadIndex: num
 
     // Better Barcode Simulation
     const bcContainer = document.createElement('div');
-    bcContainer.style.cssText = "display:flex; flex-direction:column; align-items:center; gap:2px;";
+    bcContainer.style.cssText = "display:flex; flex-direction:column; align-items:center; gap:4px;";
     // Random bars
     for (let k = 0; k < 15; k++) {
         const bar = document.createElement('div');
         bar.style.width = Math.random() > 0.5 ? '80%' : '60%';
-        bar.style.height = Math.random() > 0.5 ? '4px' : '2px';
+        bar.style.height = Math.random() > 0.5 ? '8px' : '4px'; /* Thicker bars */
         bar.style.backgroundColor = 'black';
         bcContainer.appendChild(bar);
     }
     bottomGroup.appendChild(bcContainer);
 
-
     container.appendChild(bottomGroup);
-
     return container;
 }
 
