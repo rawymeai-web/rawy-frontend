@@ -64,7 +64,7 @@ async function renderTextBlobToImage(text: string, widthPx: number, heightPx: nu
     return canvas.toDataURL('image/png');
 }
 
-export const generatePreviewPdf = async (storyData: StoryData, language: Language, highResImages?: imageStore.OrderImages): Promise<Blob> => {
+export const generatePreviewPdf = async (storyData: StoryData, language: Language, highResImages?: imageStore.OrderImages, orderNumber?: string): Promise<Blob> => {
     const jsPDF = getJsPDF();
     if (!jsPDF) throw new Error("jsPDF not loaded");
 
@@ -121,171 +121,44 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
             const block = blocks[bIdx];
             const isLeft = spread.textSide === 'left';
-
-            // Render the UI-style blob to an image
             const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language);
-
             const rectW = pdfW * 0.35;
             const rectH = pdfH * 0.5;
             const rectX = isLeft ? pdfW * 0.08 : pdfW * 0.57;
             const rectY = (pdfH - rectH) / 2;
-
             pdf.addImage(blobImg, 'PNG', rectX, rectY, rectW, rectH);
+        }
+
+        // METADATA STRIP LOGIC (Only if orderNumber is provided)
+        if (orderNumber) {
+            // Create a Metadata Strip Image using html2canvas logic
+            // We use the existing helper createMetadataStripElement
+            // 5mm wide strip? User said "3mm", let's use 5mm for safety/readability if possible, or 3mm strict.
+            const stripWidthMm = 5;
+            const stripHeightMm = pdfH;
+
+            // Render it high-res (pixel width relative to mm)
+            // 72 DPI is base? no, lets assume reasonable px count.
+            const stripPxW = 100;
+            const stripPxH = 1000;
+
+            const html2canvas = getHtml2Canvas();
+            const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
+            document.body.appendChild(metaContainer);
+            const metaCanvas = await html2canvas(metaContainer, { backgroundColor: null, scale: 2 });
+            document.body.removeChild(metaContainer);
+            const metaImg = metaCanvas.toDataURL('image/png');
+
+            // Place on the Right Edge (Slug area)
+            // Or Left Edge? Standard might be Outer Edge.
+            // If i is even/odd? But PDF pages here represent SPREADS (2 pages in one view).
+            // So we just place it on the Far Right Edge for consistency.
+            pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
         }
     }
 
     return pdf.output('blob');
 };
-
-const blobToBase64 = (blob: Blob): Promise<string> => {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-    });
-};
-
-export async function createTextImage(titleData: { title: string }, lang: Language): Promise<string> {
-    const html2canvas = getHtml2Canvas();
-    const container = document.createElement('div');
-    container.style.cssText = 'position:absolute;left:-9999px;font-family:sans-serif;color:white;background:rgba(0,0,0,0.4);border-radius:15px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,0.8);padding:20px 30px;text-align:center;max-width:1000px;line-height:1.3;font-size:65px;';
-    container.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    container.innerHTML = titleData.title;
-    document.body.appendChild(container);
-    const canvas = await html2canvas(container, { backgroundColor: null, scale: 2 });
-    document.body.removeChild(container);
-    return canvas.toDataURL('image/png');
-}
-
-export function createBarcodeHtmlElement(orderNumber: string, width: number, height: number): HTMLElement {
-    const container = document.createElement('div');
-    container.style.cssText = `width:${width}px;height:${height}px;background:white;border:1px solid #ccc;display:flex;align-items:stretch;justify-content:space-between;padding:2px;box-sizing:border-box;`;
-    for (let i = 0; i < 20; i++) {
-        const bar = document.createElement('div');
-        bar.style.cssText = `background:black;width:${Math.random() * 4 + 1}%;`;
-        container.appendChild(bar);
-    }
-    return container;
-}
-
-export async function createQrCodeElement(text: string, width: number, height: number): Promise<HTMLImageElement> {
-    const dataUrl = await QRCode.toDataURL(text, { width: width, margin: 0 });
-    const img = new Image();
-    img.src = dataUrl;
-    img.style.width = `${width}px`;
-    img.style.height = `${height}px`;
-    return img;
-}
-
-export function createMetadataStripElement(orderNumber: string, spreadIndex: number, width: number, height: number): HTMLElement {
-    const container = document.createElement('div');
-    container.style.cssText = `
-        width: ${width}px;
-        height: ${height}px;
-        background: white;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: space-between;
-        padding: 50px 0;
-        box-sizing: border-box;
-        font-family: 'Courier New', monospace;
-        font-size: 24px;
-        color: black;
-    `;
-
-    // Metadata Text (Rotated)
-    const textContainer = document.createElement('div');
-    textContainer.style.cssText = `
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
-        display: flex;
-        gap: 20px;
-        align-items: center;
-    `;
-
-    const orderSpan = document.createElement('span');
-    orderSpan.innerText = `ORDER: ${orderNumber}`;
-    const spreadSpan = document.createElement('span');
-    spreadSpan.innerText = `SPREAD: ${spreadIndex + 1}`;
-
-    textContainer.appendChild(orderSpan);
-    textContainer.appendChild(spreadSpan);
-    container.appendChild(textContainer);
-
-    // Barcode (Vertical)
-    const barcodeBox = document.createElement('div');
-    // Barcode should be vertical too? Or just placed at bottom.
-    // "barcode with the order no. on the side"
-    // Let's make a small barcode and rotate it or just place it.
-    // Since width is small (3mm ~ 35px at 300DPI), standard barcode might be too wide if horizontal.
-    // Let's rotate it 90deg.
-
-    // We reuse createBarcodeHtmlElement but wrapper needs to rotate it.
-    // 3mm is very narrow. 3mm * 118 px/cm = 35px.
-    // A barcode needs length. So it must be vertical.
-
-    const bcWidth = height * 0.2; // Use 20% of height for barcode length
-    const bcHeight = width * 0.8; // Fit within the strip width
-
-    const barcode = createBarcodeHtmlElement(orderNumber, bcWidth, bcHeight);
-    barcode.style.transform = 'rotate(90deg)';
-    barcode.style.transformOrigin = 'center';
-
-    // Wrap it to avoid layout issues with transform
-    const bcWrapper = document.createElement('div');
-    bcWrapper.style.cssText = `
-        width: ${width}px;
-        height: ${bcWidth}px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-    `;
-    bcWrapper.appendChild(barcode);
-
-    container.appendChild(bcWrapper);
-
-    return container;
-}
-
-export function createPrintableTextBlockElement(text: string, language: Language, index: number, age: string, childName: string, isStitched: boolean = false): HTMLElement {
-    const container = document.createElement('div');
-    container.dir = language === 'ar' ? 'rtl' : 'ltr';
-
-    const childFirstName = childName.split(' ')[0];
-    const nameRegex = new RegExp(`(\\b${childFirstName}\\b!?)`, 'gi');
-    let formattedText = text.split('\n\n').map(p => `<p style="margin-bottom: 0.75rem;">${p.trim()}</p>`).join('');
-    if (childFirstName) {
-        formattedText = formattedText.replace(nameRegex, `<span style="font-weight: 900; text-transform: uppercase;">$1</span>`);
-    }
-
-    const ageNum = parseInt(age, 10) || 8;
-    let fontSize = '24px';
-    if (ageNum <= 2) fontSize = '48px';
-    else if (ageNum <= 5) fontSize = '36px';
-
-    container.style.cssText = `
-        background-color: rgba(255, 255, 255, 0.45);
-        border-radius: ${blobBorderRadii[index % blobBorderRadii.length]};
-        color: #203A72;
-        padding: 60px;
-        font-family: sans-serif;
-        font-weight: 700;
-        font-size: ${fontSize};
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        line-height: 1.4;
-        box-sizing: border-box;
-        text-shadow: 0 1px 0 rgba(255,255,255,0.5);
-    `;
-
-    container.innerHTML = formattedText;
-    return container;
-}
 
 export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], sizeConfig: ProductSize): Promise<Blob> => {
     const jsPDF = getJsPDF();
@@ -370,7 +243,7 @@ ${storyData.pages.map(p => `PAGE ${p.pageNumber}:\n${p.text}`).join('\n\n')}
     }
 
     try {
-        const pdfBlob = await generatePreviewPdf(storyData, language, highResAssets || undefined);
+        const pdfBlob = await generatePreviewPdf(storyData, language, highResAssets || undefined, orderNumber);
         zip.file(`02_${orderNumber}_Ready_To_Print.pdf`, pdfBlob);
     } catch (pdfErr) {
         console.error("PDF generation failed in ZIP package", pdfErr);
@@ -399,3 +272,150 @@ export const downloadCoverImage = (base64Data: string, fileName: string) => {
     link.click();
     document.body.removeChild(link);
 };
+
+// Updated createMetadataStripElement to be simpler and use vertical layout
+export function createMetadataStripElement(orderNumber: string, spreadIndex: number, width: number, height: number): HTMLElement {
+    const container = document.createElement('div');
+    container.style.cssText = `
+        width: ${width}px;
+        height: ${height}px;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 0;
+        box-sizing: border-box;
+        border-left: 1px solid #ddd;
+    `;
+
+    // Top Info (Vertical Text)
+    const topText = document.createElement('div');
+    topText.style.cssText = `
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        font-family: monospace;
+        font-size: 24px;
+        font-weight: bold;
+        color: black;
+        letter-spacing: 2px;
+    `;
+    topText.innerText = `ORDER #${orderNumber}`;
+    container.appendChild(topText);
+
+    // Bottom Info (Spread + Barcode)
+    const bottomGroup = document.createElement('div');
+    bottomGroup.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    `;
+
+    const spreadText = document.createElement('div');
+    spreadText.style.cssText = `
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        font-family: monospace;
+        font-size: 20px;
+        color: #555;
+    `;
+    spreadText.innerText = `SPREAD ${spreadIndex}`;
+    bottomGroup.appendChild(spreadText);
+
+    // Better Barcode Simulation
+    const bcContainer = document.createElement('div');
+    bcContainer.style.cssText = "display:flex; flex-direction:column; align-items:center; gap:2px;";
+    // Random bars
+    for (let k = 0; k < 15; k++) {
+        const bar = document.createElement('div');
+        bar.style.width = Math.random() > 0.5 ? '80%' : '60%';
+        bar.style.height = Math.random() > 0.5 ? '4px' : '2px';
+        bar.style.backgroundColor = 'black';
+        bcContainer.appendChild(bar);
+    }
+    bottomGroup.appendChild(bcContainer);
+
+
+    container.appendChild(bottomGroup);
+
+    return container;
+}
+
+const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+    });
+};
+
+export async function createTextImage(titleData: { title: string }, lang: Language): Promise<string> {
+    const html2canvas = getHtml2Canvas();
+    const container = document.createElement('div');
+    container.style.cssText = 'position:absolute;left:-9999px;font-family:sans-serif;color:white;background:rgba(0,0,0,0.4);border-radius:15px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,0.8);padding:20px 30px;text-align:center;max-width:1000px;line-height:1.3;font-size:65px;';
+    container.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    container.innerHTML = titleData.title;
+    document.body.appendChild(container);
+    const canvas = await html2canvas(container, { backgroundColor: null, scale: 2 });
+    document.body.removeChild(container);
+    return canvas.toDataURL('image/png');
+}
+
+export function createBarcodeHtmlElement(orderNumber: string, width: number, height: number): HTMLElement {
+    const container = document.createElement('div');
+    container.style.cssText = `width:${width}px;height:${height}px;background:white;border:1px solid #ccc;display:flex;align-items:stretch;justify-content:space-between;padding:2px;box-sizing:border-box;`;
+    for (let i = 0; i < 20; i++) {
+        const bar = document.createElement('div');
+        bar.style.cssText = `background:black;width:${Math.random() * 4 + 1}%;`;
+        container.appendChild(bar);
+    }
+    return container;
+}
+
+export async function createQrCodeElement(text: string, width: number, height: number): Promise<HTMLImageElement> {
+    const dataUrl = await QRCode.toDataURL(text, { width: width, margin: 0 });
+    const img = new Image();
+    img.src = dataUrl;
+    img.style.width = `${width}px`;
+    img.style.height = `${height}px`;
+    return img;
+}
+
+export function createPrintableTextBlockElement(text: string, language: Language, index: number, age: string, childName: string, isStitched: boolean = false): HTMLElement {
+    const container = document.createElement('div');
+    container.dir = language === 'ar' ? 'rtl' : 'ltr';
+
+    const childFirstName = childName.split(' ')[0];
+    const nameRegex = new RegExp(`(\\b${childFirstName}\\b!?)`, 'gi');
+    let formattedText = text.split('\n\n').map(p => `<p style="margin-bottom: 0.75rem;">${p.trim()}</p>`).join('');
+    if (childFirstName) {
+        formattedText = formattedText.replace(nameRegex, `<span style="font-weight: 900; text-transform: uppercase;">$1</span>`);
+    }
+
+    const ageNum = parseInt(age, 10) || 8;
+    let fontSize = '24px';
+    if (ageNum <= 2) fontSize = '48px';
+    else if (ageNum <= 5) fontSize = '36px';
+
+    container.style.cssText = `
+        background-color: rgba(255, 255, 255, 0.45);
+        border-radius: ${blobBorderRadii[index % blobBorderRadii.length]};
+        color: #203A72;
+        padding: 60px;
+        font-family: sans-serif;
+        font-weight: 700;
+        font-size: ${fontSize};
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        line-height: 1.4;
+        box-sizing: border-box;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+    `;
+
+    container.innerHTML = formattedText;
+    return container;
+}
