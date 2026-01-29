@@ -51,13 +51,41 @@ STYLE: ${storyData.selectedStylePrompt}
 
             // PAGES GEN
             const pages: Page[] = [];
-            const prompts = storyData.finalPrompts!;
             const spreadPlan = storyData.spreadPlan?.spreads || [];
+
+            // SELF-HEALING: If prompts are missing (e.g. skipped workflow), try to regenerate them
+            let prompts = storyData.finalPrompts;
+            if (!prompts || prompts.length === 0) {
+                setGenerationStatus(language === 'ar' ? 'إصلاح المخطط المفقود...' : 'Repairing missing blueprints...');
+                // Attempt to recover using minimal path
+                try {
+                    // We need spreadPlan first
+                    let effectiveSpreadPlan = storyData.spreadPlan;
+                    if (!effectiveSpreadPlan) {
+                        effectiveSpreadPlan = await geminiService.runVisualDesigner(storyData.blueprint);
+                        updateStory({ spreadPlan: effectiveSpreadPlan });
+                    }
+
+                    prompts = await geminiService.runPromptEngineer(
+                        effectiveSpreadPlan,
+                        storyData.technicalStyleGuide || '',
+                        storyData.selectedStylePrompt,
+                        storyData.blueprint
+                    );
+                    // Review them quickly
+                    prompts = await geminiService.runPromptReviewer(prompts);
+                    updateStory({ finalPrompts: prompts });
+                } catch (recoveryError) {
+                    console.error("Failed to self-heal story:", recoveryError);
+                    throw new Error("Story data corrupted. Please restart.");
+                }
+            }
 
             for (let i = 0; i < prompts.length; i++) {
                 setGenerationStatus(language === 'ar' ? `رسم المشهد ${i + 1}/${prompts.length}...` : `Painting Scene ${i + 1}/${prompts.length}...`);
 
                 const plan = spreadPlan[i];
+                // Fallback for plan
                 const side = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
                 const opp = side === 'left' ? 'right' : 'left';
 
