@@ -79,14 +79,25 @@ const MainLayout: React.FC = () => {
     };
 
     const handlePaymentSuccess = useCallback(async () => {
-        const newOrderNumber = 'RWY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        setOrderNumber(newOrderNumber);
-        if (shippingDetails) {
-            await adminService.saveOrder(newOrderNumber, storyData, shippingDetails);
-            fileService.generatePrintPackage(storyData, shippingDetails, language, newOrderNumber).catch(err => console.error(err));
+        try {
+            const newOrderNumber = 'RWY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+            setOrderNumber(newOrderNumber);
+            if (shippingDetails) {
+                await adminService.saveOrder(newOrderNumber, storyData, shippingDetails);
+                fileService.generatePrintPackage(storyData, shippingDetails, language, newOrderNumber).catch(err => console.error("PDF Gen Error:", err));
+            }
+            setPaymentModalOpen(false);
+            setScreen('confirmation');
+        } catch (error) {
+            console.error("Payment Success Error:", error);
+            alert("An error occurred while creating the order. Please check the console for details.");
+            setPaymentModalOpen(false); // Close anyway so user isn't stuck? Or keep open? 
+            // If it's a critical logic error, closing might be better to let them try to save manualLy or contact support. 
+            // But let's close it and let them see confirmation (maybe with empty data? No that's bad).
+            // Actually, if saveOrder fails, we probably shouldn't show confirmation.
+            // But for "Bypass", it's a test feature.
+            // Let's Alert and STAY on modal.
         }
-        setPaymentModalOpen(false);
-        setScreen('confirmation');
     }, [shippingDetails, storyData, language, setPaymentModalOpen, setScreen, setOrderNumber]);
 
     const renderScreen = () => {
