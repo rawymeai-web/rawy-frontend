@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { Character, StoryData, Language, StoryBlueprint, SpreadDesignPlan, StoryTheme } from '../types';
 import * as adminService from './adminService';
 
-const API_KEY = "AIzaSyBiYR5gYmwPyufsJOWXKwBlcA7-hPy8yQA";
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const ai = () => new GoogleGenAI({ apiKey: API_KEY });
 
 const getContext = () => {
