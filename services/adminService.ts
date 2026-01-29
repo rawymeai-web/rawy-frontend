@@ -26,8 +26,10 @@ const defaultBible: SeriesBible = {
 STYLISTIC GUIDELINES & WORD COUNTS (STRICT):
 Rule 1: Title & Expectation Consistency. The title, cover concept, and content must match exactly.
 Rule 2: Age-Appropriate Rhythm & Phrasing. Use the "Rule of Three" (e.g., "Thump! Thump! Shake!").
-Rule 3: Show, Don't Tell (Sensory Writing). Every page should appeal to at least one sense beyond sight (Sound, Touch, Temperature).
+Rule 3: Show, Don't Tell. Every page should appeal to at least one sense beyond sight.
 Rule 4: Child Agency. The child protagonist must solve the problem. Adults cannot fix the main issue.
+Rule 5: **NO PRONOUNS FOR HERO:** Never use "he" or "she". ALWAYS use the child's name (e.g., "Leo ran," "Leo laughed").
+Rule 6: **HERO NAME EMPHASIS:** The hero's name is the most important word.
 
 **STRICT WORD COUNT & STRUCTURE BY AGE:**
 - **Ages 1-3:** 5–10 words/page. (Total 40-80). STRUCTURE: 1 Concept per page. No complex plot.

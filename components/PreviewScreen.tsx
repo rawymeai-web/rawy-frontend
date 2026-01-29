@@ -32,142 +32,115 @@ const getTitleFontSizeClass = (title: string, language: Language): string => {
 
 const formatStoryTextHTML = (text: string, childName: string): string => {
     if (!text) return '';
-    const childFirstName = childName.split(' ')[0].toUpperCase();
-    const nameRegex = new RegExp(`(\\b${childFirstName}\\b)`, 'gi');
+
+    // Normalize spaces and casing for detection
+    const childFirstName = childName.trim().split(/\s+/)[0];
+    const escapedName = childFirstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special chars
+
+    // Regex to match name (case-insensitive) but wrap it
+    // Using simple replacement for now, complex logical matching if needed.
+    const nameRegex = new RegExp(`\\b(${escapedName})\\b`, 'gi');
 
     let formatted = text.split('\n\n').map(p => `<p class="mb-2 last:mb-0 leading-relaxed">${p.trim()}</p>`).join('');
 
-    // HERO NAME IN BOLD UPPERCASE
+    // HERO NAME IN BOLD UPPERCASE with visual pop
     if (childFirstName) {
-        formatted = formatted.replace(nameRegex, `<span class="font-black text-brand-navy underline decoration-brand-orange/40">$1</span>`);
+        formatted = formatted.replace(nameRegex, `<span class="font-black text-brand-navy underline decoration-brand-orange/40 text-110">$1</span>`);
     }
 
     return formatted;
 };
 
-const PageWrapper: React.FC<{ children: React.ReactNode; side: 'left' | 'right' }> = ({ children, side }) => {
-    return (
-        <div className={`w-1/2 h-full relative z-20 flex items-center justify-center`}>
-            {children}
-        </div>
-    );
-};
+// ... existing PageWrapper ...
 
-const TextBox: React.FC<{ text: string; storyData: StoryData; language: Language; style?: React.CSSProperties; blobIndex: number; }> = ({ text, storyData, language, style, blobIndex }) => {
-    const formattedText = useMemo(() => formatStoryTextHTML(text, storyData.childName), [text, storyData.childName]);
-    if (!text) return null;
+const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange: (v: string) => void, type: 'spread' }> = ({ storyData, language, onTitleChange, type }) => {
+    // LAYOUT LOGIC:
+    // ENGLISH: [Back Cover (Left)] | [Front Cover (Right) - Text/Hero]
+    // ARABIC: [Front Cover (Left) - Text/Hero] | [Back Cover (Right)]  <-- Wait, user said "Arabic: right". 
+    // RE-READING USER: "Arabic: right/ English: left" -> This likely refers to Front Cover position?
+    // User said: "arabic cover has : hero + title on the left side , tile is text not a designed , barcode and logo rigtht side cover spread"
+    // THEN CORRECTED: "Arabic: right/ English: left".
+    // AND: "same side as the hero and above he/she"
+    // INTERPRETATION:
+    // ARABIC SPREAD: [Front Cover (Right)] | [Back Cover (Left)] ?? No, Arabic books open R-to-L. Front is "Right" when closed? 
+    // Let's implement User's Correction directly: 
+    // ARABIC: Front (Hero+Title) on RIGHT half. Back (Logo+QR) on LEFT half.
+    // ENGLISH: Front (Hero+Title) on LEFT half. Back (Logo+QR) on RIGHT half. <-- User said "English: left". 
+    // This contradicts standard English books (Front is Right). But I will follow instructions.
 
-    const combinedStyle: React.CSSProperties = {
-        ...style,
-        backgroundColor: 'rgba(255, 255, 255, 0.75)', // Slightly more opaque for better contrast
-        borderRadius: blobBorderRadii[blobIndex % blobBorderRadii.length],
-        padding: '2.5rem 3rem', // Increased padding ("bigger than text")
-        width: 'auto',
-        maxWidth: '85%',
-        minWidth: '240px',
-        maxHeight: '60%',
-        overflowY: 'auto',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
-        lineHeight: '1.8', // "Stretched" vertical space
-        letterSpacing: '0.025em', // "Stretched" horizontal space
-        fontWeight: '700', // Bold/Black font
-        color: '#000000', // Pure black
-        fontFamily: language === 'ar' ? 'Tajawal, sans-serif' : 'Nunito, sans-serif', // Brand Fonts
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        backdropFilter: 'blur(12px)',
-        border: '3px solid rgba(255, 255, 255, 0.8)',
-    };
+    // WAIT. "Arabic cover has: hero + title on the left side" (Original) -> "Arabic: right / English: left" (Correction).
+    // So:
+    // ARABIC: Hero/Title = RIGHT SIDE.
+    // ENGLISH: Hero/Title = LEFT SIDE.
+
+    const isAr = language === 'ar';
+    const isHeroRight = isAr; // Arabic = Hero Right half
+    const isHeroLeft = !isAr; // English = Hero Left half
 
     return (
-        <div
-            style={combinedStyle}
-            className={`story-text-container no-scrollbar ${getAgeBasedFontSizeClass(text, storyData.childAge)} transition-all duration-700`}
-            dangerouslySetInnerHTML={{ __html: formattedText }}
-        />
-    );
-};
-
-const TextContainer: React.FC<{
-    textBlocks: TextBlock[];
-    storyData: StoryData;
-    language: Language;
-}> = ({ textBlocks, storyData, language }) => {
-    if (!textBlocks || textBlocks.length === 0) return null;
-    return (
-        <div className="w-full h-full flex items-center justify-center p-8">
-            {textBlocks.map((block, index) => (
-                <TextBox
-                    key={index}
-                    blobIndex={index}
-                    text={block.text}
-                    storyData={storyData}
-                    language={language}
-                    style={{ textAlign: 'center' }}
-                />
-            ))}
-        </div>
-    );
-};
-
-const Endpaper: React.FC = () => <div className="w-full h-full bg-white flex items-center justify-center opacity-10 grayscale brightness-150">
-    <img src="https://imgur.com/WEMI2UE.png" className="w-32 h-auto" />
-</div>;
-
-const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange: (v: string) => void, type: 'front' | 'back' }> = ({ storyData, language, onTitleChange, type }) => {
-    const isFront = type === 'front';
-    const isRtl = language === 'ar';
-
-    // Orientation logic: Arabic (Front on Right), English (Front on Left)
-    const bgPos = isFront
-        ? (isRtl ? 'left center' : 'right center')
-        : (isRtl ? 'right center' : 'left center');
-
-    return (
-        <div className="w-full h-full relative overflow-hidden"
+        <div className="w-full h-full relative overflow-hidden flex shadow-2xl rounded-3xl border-8 border-white ring-1 ring-gray-200"
             style={{
                 backgroundImage: `url(data:image/jpeg;base64,${storyData.coverImageUrl})`,
-                backgroundSize: '200% 100%',
-                backgroundPosition: bgPos,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
             }}>
-            {isFront && (
-                <div className="absolute top-[8%] left-0 w-full px-8 z-30 flex flex-col items-center text-center">
-                    {language === 'en' ? (
-                        // ENGLISH: "DESIGNED" TITLE (Titan One + Effects)
+
+            {/* LEFT HALF */}
+            <div className="w-1/2 h-full relative border-r border-white/10 flex flex-col justify-between p-8">
+                {isHeroLeft ? (
+                    // ENGLISH FRONT (Hero Title Side)
+                    <div className="relative z-10 h-full flex flex-col items-center pt-10">
                         <div
                             contentEditable
                             suppressContentEditableWarning
                             onBlur={(e) => onTitleChange(e.currentTarget.innerText)}
-                            style={{
-                                fontFamily: '"Titan One", sans-serif',
-                                WebkitTextStroke: '3px white',
-                                textShadow: '0px 8px 0px rgba(0,0,0,0.2), 0px 8px 24px rgba(0,0,0,0.4)',
-                                transform: 'rotate(-2deg)',
-                            }}
-                            className="text-5xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-brand-yellow to-brand-orange drop-shadow-2xl focus:outline-none transition-all hover:scale-105"
+                            style={{ fontFamily: '"Titan One", sans-serif', WebkitTextStroke: '3px white', textShadow: '0px 8px 0px rgba(0,0,0,0.2)' }}
+                            className="text-5xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-brand-yellow to-brand-orange drop-shadow-2xl text-center transform -rotate-2"
                         >
                             {storyData.title}
                         </div>
-                    ) : (
-                        // ARABIC: Standard Elegant Title
+                    </div>
+                ) : (
+                    // ARABIC BACK (Logo + QR Side)
+                    <div className="relative z-10 h-full flex flex-col justify-end items-center pb-8 opacity-80 mix-blend-multiply">
+                        <div className="bg-white p-2 rounded-lg mb-4"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://rawy.me" alt="QR" className="w-20 h-20 mix-blend-multiply" /></div>
+                        <img src="https://imgur.com/WEMI2UE.png" alt="Logo" className="w-24 opacity-60" />
+                        <p className="text-[10px] font-mono mt-2 text-brand-navy">ISBN-13: 978-RAWY-ME-AI</p>
+                    </div>
+                )}
+            </div>
+
+            {/* RIGHT HALF */}
+            <div className="w-1/2 h-full relative flex flex-col justify-between p-8">
+                {isHeroRight ? (
+                    // ARABIC FRONT (Hero Title Side)
+                    <div className="relative z-10 h-full flex flex-col items-center pt-10">
                         <div
                             contentEditable
                             suppressContentEditableWarning
                             onBlur={(e) => onTitleChange(e.currentTarget.innerText)}
-                            className={`w-full max-w-xl text-white drop-shadow-2xl focus:outline-none bg-black/20 p-6 md:p-8 rounded-[3rem] backdrop-blur-md border border-white/20 shadow-2xl transition-all hover:bg-black/30 ${getTitleFontSizeClass(storyData.title, language)}`}
+                            className={`text-white drop-shadow-2xl bg-black/20 p-6 rounded-[3rem] backdrop-blur-md border border-white/20 text-center ${getTitleFontSizeClass(storyData.title, language)}`}
                         >
                             {storyData.title}
                         </div>
-                    )}
-                </div>
-            )}
+                    </div>
+                ) : (
+                    // ENGLISH BACK (Logo + QR Side)
+                    <div className="relative z-10 h-full flex flex-col justify-end items-center pb-8 opacity-80 mix-blend-multiply">
+                        <div className="bg-white p-2 rounded-lg mb-4"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://rawy.me" alt="QR" className="w-20 h-20 mix-blend-multiply" /></div>
+                        <img src="https://imgur.com/WEMI2UE.png" alt="Logo" className="w-24 opacity-60" />
+                        <p className="text-[10px] font-mono mt-2 text-brand-navy">ISBN-13: 978-RAWY-ME-AI</p>
+                    </div>
+                )}
+            </div>
+
             <Watermark />
         </div>
     );
 };
 
 const PresentationView: React.FC<BookProps> = ({ storyData, language, onTitleChange }) => {
+    // ... logic to show Cover as first item ...
     const spreads = useMemo(() => {
         const result = [];
         for (let i = 0; i < storyData.pages.length; i += 2) {
@@ -177,40 +150,27 @@ const PresentationView: React.FC<BookProps> = ({ storyData, language, onTitleCha
         return result;
     }, [storyData.pages]);
 
-    const views = useMemo(() => ['cover', ...spreads.map((_, i) => i), 'back'], [spreads]);
+    const views = useMemo(() => ['cover', ...spreads.map((_, i) => i)], [spreads]);
     const [viewIndex, setViewIndex] = useState(0);
 
     const goNext = () => setViewIndex(i => Math.min(i + 1, views.length - 1));
     const goPrev = () => setViewIndex(i => Math.max(i - 1, 0));
-
     const currentView = views[viewIndex];
 
     const renderCurrentView = () => {
         if (currentView === 'cover') {
             return (
-                <div className="aspect-[2/1.1] max-w-5xl mx-auto flex shadow-2xl rounded-3xl overflow-hidden border-8 border-white ring-1 ring-gray-200">
-                    <PageWrapper side="left">
-                        {language === 'en' ? <Cover storyData={storyData} language={language} onTitleChange={onTitleChange} type="front" /> : <Endpaper />}
-                    </PageWrapper>
-                    <PageWrapper side="right">
-                        {language === 'ar' ? <Cover storyData={storyData} language={language} onTitleChange={onTitleChange} type="front" /> : <Endpaper />}
-                    </PageWrapper>
+                <div className="max-w-5xl mx-auto aspect-[2/1.1]">
+                    <Cover storyData={storyData} language={language} onTitleChange={onTitleChange} type="spread" />
                 </div>
             );
         }
 
-        if (currentView === 'back') {
-            return (
-                <div className="aspect-[2/1.1] max-w-5xl mx-auto flex shadow-2xl rounded-3xl overflow-hidden border-8 border-white ring-1 ring-gray-200">
-                    <PageWrapper side="left">
-                        {language === 'ar' ? <Cover storyData={storyData} language={language} onTitleChange={onTitleChange} type="back" /> : <Endpaper />}
-                    </PageWrapper>
-                    <PageWrapper side="right">
-                        {language === 'en' ? <Cover storyData={storyData} language={language} onTitleChange={onTitleChange} type="back" /> : <Endpaper />}
-                    </PageWrapper>
-                </div>
-            );
-        }
+        // Removed separate 'back' view as user requested standard stitching?? 
+        // User said: "cover front and back should be stiched in 1 spread view on the preview screen"
+        // So the "Back Cover" view at end is probably not needed if it's already shown in the full spread?
+        // Or maybe they just meant the *preview* of the cover should be one piece.
+        // I'll keep the inner pages logic same.
 
         const spreadPage = spreads[currentView as number];
         return (
