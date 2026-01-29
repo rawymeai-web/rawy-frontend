@@ -59,6 +59,12 @@ const PageWrapper: React.FC<{ children: React.ReactNode, side: 'left' | 'right' 
     );
 };
 
+const Endpaper: React.FC = () => (
+    <div className="w-full h-full bg-amber-50 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-multiply"></div>
+    </div>
+);
+
 const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange: (v: string) => void, type: 'spread' }> = ({ storyData, language, onTitleChange, type }) => {
     // LAYOUT LOGIC:
     // ARABIC: Hero/Title = RIGHT SIDE.
