@@ -30,8 +30,9 @@ export const useStoryGeneration = (
 
             // STRICTER COVER LOGIC
             const isAr = language === 'ar';
-            const frontSide = isAr ? 'LEFT' : 'RIGHT';
-            const backSide = isAr ? 'RIGHT' : 'LEFT';
+            // User Request: Arabic Front = Right, English Front = Left
+            const frontSide = isAr ? 'RIGHT' : 'LEFT';
+            const backSide = isAr ? 'LEFT' : 'RIGHT';
 
             const coverPrompt = `TASK: Create a Panoramic 16:9 Book Cover Spread.
 **LAYOUT MANDATE:**
@@ -43,7 +44,8 @@ export const useStoryGeneration = (
 TITLE: ${storyData.title}
 STYLE: ${storyData.selectedStylePrompt}
 
-**SCENE:** The hero looking epic/welcoming.`;
+**SCENE:** The hero looking epic/welcoming.
+**INTEGRATION:** Ensure the character is naturally lit and blended into the scene. No "sticker" look.`;
 
             const coverResult = await geminiService.generateMethod4Image(coverPrompt, masterDNA, storyData.styleSeed);
             const currentStoryData = { ...storyData, coverImageUrl: coverResult.imageBase64, actualCoverPrompt: coverResult.fullPrompt };

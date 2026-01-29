@@ -51,25 +51,16 @@ const formatStoryTextHTML = (text: string, childName: string): string => {
     return formatted;
 };
 
-// ... existing PageWrapper ...
+const PageWrapper: React.FC<{ children: React.ReactNode, side: 'left' | 'right' }> = ({ children, side }) => {
+    return (
+        <div className={`w-1/2 h-full relative ${side === 'left' ? 'border-r border-black/5' : ''}`}>
+            {children}
+        </div>
+    );
+};
 
 const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange: (v: string) => void, type: 'spread' }> = ({ storyData, language, onTitleChange, type }) => {
     // LAYOUT LOGIC:
-    // ENGLISH: [Back Cover (Left)] | [Front Cover (Right) - Text/Hero]
-    // ARABIC: [Front Cover (Left) - Text/Hero] | [Back Cover (Right)]  <-- Wait, user said "Arabic: right". 
-    // RE-READING USER: "Arabic: right/ English: left" -> This likely refers to Front Cover position?
-    // User said: "arabic cover has : hero + title on the left side , tile is text not a designed , barcode and logo rigtht side cover spread"
-    // THEN CORRECTED: "Arabic: right/ English: left".
-    // AND: "same side as the hero and above he/she"
-    // INTERPRETATION:
-    // ARABIC SPREAD: [Front Cover (Right)] | [Back Cover (Left)] ?? No, Arabic books open R-to-L. Front is "Right" when closed? 
-    // Let's implement User's Correction directly: 
-    // ARABIC: Front (Hero+Title) on RIGHT half. Back (Logo+QR) on LEFT half.
-    // ENGLISH: Front (Hero+Title) on LEFT half. Back (Logo+QR) on RIGHT half. <-- User said "English: left". 
-    // This contradicts standard English books (Front is Right). But I will follow instructions.
-
-    // WAIT. "Arabic cover has: hero + title on the left side" (Original) -> "Arabic: right / English: left" (Correction).
-    // So:
     // ARABIC: Hero/Title = RIGHT SIDE.
     // ENGLISH: Hero/Title = LEFT SIDE.
 
@@ -101,11 +92,9 @@ const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange:
                         </div>
                     </div>
                 ) : (
-                    // ARABIC BACK (Logo + QR Side)
+                    // ARABIC BACK - Clean, no metadata for preview
                     <div className="relative z-10 h-full flex flex-col justify-end items-center pb-8 opacity-80 mix-blend-multiply">
-                        <div className="bg-white p-2 rounded-lg mb-4"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://rawy.me" alt="QR" className="w-20 h-20 mix-blend-multiply" /></div>
-                        <img src="https://imgur.com/WEMI2UE.png" alt="Logo" className="w-24 opacity-60" />
-                        <p className="text-[10px] font-mono mt-2 text-brand-navy">ISBN-13: 978-RAWY-ME-AI</p>
+                        {/* Metadata hidden for preview as per user request */}
                     </div>
                 )}
             </div>
@@ -125,11 +114,9 @@ const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange:
                         </div>
                     </div>
                 ) : (
-                    // ENGLISH BACK (Logo + QR Side)
+                    // ENGLISH BACK - Clean, no metadata for preview
                     <div className="relative z-10 h-full flex flex-col justify-end items-center pb-8 opacity-80 mix-blend-multiply">
-                        <div className="bg-white p-2 rounded-lg mb-4"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://rawy.me" alt="QR" className="w-20 h-20 mix-blend-multiply" /></div>
-                        <img src="https://imgur.com/WEMI2UE.png" alt="Logo" className="w-24 opacity-60" />
-                        <p className="text-[10px] font-mono mt-2 text-brand-navy">ISBN-13: 978-RAWY-ME-AI</p>
+                        {/* Metadata hidden for preview as per user request */}
                     </div>
                 )}
             </div>
