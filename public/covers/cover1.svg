@@ -1,0 +1,6 @@
+<svg width="400" height="600" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#F78F50"/>
+  <circle cx="200" cy="200" r="120" fill="#F4C95D" opacity="0.8"/>
+  <path d="M200,350 Q250,250 350,300 T200,500" stroke="#243A61" stroke-width="10" fill="none"/>
+  <text x="50%" y="550" font-family="Nunito, sans-serif" font-size="40" fill="#243A61" text-anchor="middle">Adventure</text>
+</svg>
