@@ -57,21 +57,22 @@ function getCoverDimensions(imgW: number, imgH: number, targetW: number, targetH
  * Creates a high-res image of a text blob to be inserted into the PDF.
  * This ensures the PDF blobs look exactly like the UI blobs.
  */
-async function renderTextBlobToImage(text: string, widthPx: number, heightPx: number, blobIndex: number, language: Language): Promise<string> {
+async function renderTextBlobToImage(text: string, widthPx: number, heightPx: number, blobIndex: number, language: Language, fontSize: number = 42): Promise<string> {
     const html2canvas = getHtml2Canvas();
     const container = document.createElement('div');
     container.dir = language === 'ar' ? 'rtl' : 'ltr';
+    container.spellcheck = false; // Disable spellchecker to prevent red underlines
     // Updated styling to match PreviewScreen more closely
     container.style.cssText = `
         width: 1000px; /* Fixed high-res width */
         min-height: 400px;
-        background-color: rgba(255, 255, 255, 0.85); /* Increased opacity for print readability */
+        background-color: rgba(255, 255, 255, 0.6); /* Reduced opacity for better visibility of art (was 0.85) */
         border-radius: ${blobBorderRadii[blobIndex % blobBorderRadii.length]};
         color: #203A72;
         padding: 80px;
         font-family: ${language === 'ar' ? 'Tajawal, sans-serif' : 'Nunito, sans-serif'};
         font-weight: 700;
-        font-size: 42px; /* Larger for high-res PDF */
+        font-size: ${fontSize}px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -154,7 +155,16 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
             const block = blocks[bIdx];
             const isLeft = spread.textSide === 'left';
-            const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language);
+
+            // Calculate dynamic font size based on age
+            const ageNum = parseInt(storyData.childAge, 10) || 6;
+            let fontSize = 42;
+            if (ageNum >= 10) fontSize = 24;
+            else if (ageNum >= 7) fontSize = 28;
+            else if (ageNum >= 4) fontSize = 32;
+            // Ages 1-3 remain 42 (or 36 if preferred, but sticking to logic of short text = big font)
+
+            const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language, fontSize);
             const rectW = pdfW * 0.40; // Slightly wider
             const rectH = pdfH * 0.60;
             const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.55;
@@ -342,9 +352,13 @@ export function createPrintableTextBlockElement(text: string, language: Language
     }
 
     const ageNum = parseInt(age, 10) || 8;
-    let fontSize = '24px';
-    if (ageNum <= 2) fontSize = '48px';
-    else if (ageNum <= 5) fontSize = '36px';
+    let fontSize = '24px'; // Default for older/general
+
+    // Updated logic per new word count rules
+    if (ageNum <= 3) fontSize = '42px'; // Minimal text (5-10 words) -> Big font
+    else if (ageNum <= 6) fontSize = '32px'; // Short text (10-25 words) -> Medium-Big
+    else if (ageNum <= 9) fontSize = '28px'; // Medium text (20-35 words) -> Medium
+    else fontSize = '24px'; // Longer text (35-45 words) -> Normal
 
     container.style.cssText = `
         background-color: rgba(255, 255, 255, 0.45);

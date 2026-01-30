@@ -33,9 +33,9 @@ Rule 6: **HERO NAME EMPHASIS:** The hero's name is the most important word.
 
 **STRICT WORD COUNT & STRUCTURE BY AGE:**
 - **Ages 1-3:** 5–10 words/page. (Total 40-80). STRUCTURE: 1 Concept per page. No complex plot.
-- **Ages 4-6:** 20–30 words/page. (Total 150-250). STRUCTURE: 1 Plot point per page. Fast transitions.
-- **Ages 7-9:** 50–75 words/page. (Total 400-600). STRUCTURE: Each page is a full scene.
-- **Ages 10-12:** 100–150 words/page. (Total 800-1200). STRUCTURE: Dense text blocks, detailed narrative.`,
+- **Ages 4-6:** 10–25 words/page. (Total 80-200). STRUCTURE: 1 Plot point per page. Fast transitions.
+- **Ages 7-9:** 20–35 words/page. (Total 160-280). STRUCTURE: Each page is a full scene.
+- **Ages 10-12:** 35–45 words/page. (Total 280-360). STRUCTURE: Dense text blocks, detailed narrative.`,
   storyFlowLogic: `THE 9-POINT NARRATIVE ARC (REQUIRED):
 1. Desire (The "I Want"): Protagonist expresses a clear wish/goal (Pages 1-2). Contrast with reality.
 2. Catalyst (The "Uh-Oh"): Inciting incident disrupts status quo. Sensory and immediate.

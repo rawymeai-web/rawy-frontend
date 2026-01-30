@@ -13,8 +13,8 @@ export const useStoryGeneration = (
 
     const startGeneration = async (language: Language, onComplete: () => void, onError: () => void) => {
         setIsGenerating(true);
-        setGenerationStatus(language === 'ar' ? 'تحليل المخطط النهائي...' : 'Analyzing final blueprint...');
-        setGenerationProgress(0);
+        setGenerationStatus(language === 'ar' ? 'بدء المعالجة المتوازية...' : 'Initializing Parallel Production...');
+        setGenerationProgress(5);
         setError(null);
 
         try {
@@ -22,21 +22,18 @@ export const useStoryGeneration = (
             if (!masterDNA) throw new Error("No style reference found");
             if (!storyData.blueprint) throw new Error("No blueprint found");
 
-            const script = await geminiService.generateFinalScript(storyData.blueprint, language);
-            setGenerationProgress(20);
+            // --- 1. DEFINE PARALLEL TASKS ---
 
-            // COVER GEN
-            setGenerationStatus(language === 'ar' ? 'رسم اللوحة الكبرى للغلاف...' : 'Painting the Grand Cover...');
+            // Task A: Script Generation
+            const scriptTask = geminiService.generateFinalScript(storyData.blueprint, language).then(res => {
+                setGenerationProgress(prev => prev + 10);
+                return res;
+            });
 
-            // STRICTER COVER LOGIC
+            // Task B: Cover Generation
             const isAr = language === 'ar';
-            // User Request: Arabic Front = Left, English Front = Right (Hero/Title Side)
-            // Note: This logic places the "Front Cover" (Hero) on the spread.
-            // English Book (L-to-R): Front Cover is on the RIGHT side of the open spread.
-            // Arabic Book (R-to-L): Front Cover is on the LEFT side of the open spread.
             const frontSide = isAr ? 'LEFT' : 'RIGHT';
             const backSide = isAr ? 'RIGHT' : 'LEFT';
-
             const coverPrompt = `TASK: Create a Panoramic 16:9 Book Cover Spread.
 **LAYOUT MANDATE:**
 - **${frontSide} HALF (FRONT COVER):** Hero (${storyData.childName}) MUST be here. Focus on the child. Top 30% clean sky for Title.
@@ -51,38 +48,49 @@ STYLE: ${storyData.selectedStylePrompt}
 **SCENE:** ${storyData.childName} looking epic and welcoming.
 **INTEGRATION:** Ensure the character is naturally lit and blended into the scene. No "sticker" look.`;
 
-            const coverResult = await geminiService.generateMethod4Image(coverPrompt, masterDNA, storyData.styleSeed);
-            const currentStoryData = { ...storyData, coverImageUrl: coverResult.imageBase64, actualCoverPrompt: coverResult.fullPrompt };
-            updateStory(currentStoryData);
+            const coverTask = geminiService.generateMethod4Image(coverPrompt, masterDNA, storyData.mainCharacter.description, storyData.styleSeed).then(res => {
+                setGenerationProgress(prev => prev + 10);
+                return res;
+            });
 
-            // PAGES GEN - OPTIMIZED BATCHING
-            const spreadPlan = storyData.spreadPlan?.spreads || [];
-
-            // SELF-HEALING (Moved inside batch loop if needed, but keeping pre-check is safer)
-            let prompts = storyData.finalPrompts;
-            if (!prompts || prompts.length === 0) {
-                // ... (Keep existing self-healing logic if desired, or assume it's done)
-                // For safety re-implement strict self-healing here or assume it's passed.
-                // Let's assume prompts exist or we run the healer block from before (omitted here for brevity in replace, but critical to keep if not replacing whole file)
-                // Wait, I am replacing the block that *contained* the healer. I must put it back.
-                setGenerationStatus(language === 'ar' ? 'إصلاح المخطط المفقود...' : 'Repairing missing blueprints...');
-                try {
+            // Task C: Prompts (Self-Healing if needed)
+            const promptsTask = (async () => {
+                let prompts = storyData.finalPrompts;
+                if (!prompts || prompts.length === 0) {
+                    // setGenerationStatus('Repairing blueprints...'); // Don't block UI with status updates, just run
                     let effectiveSpreadPlan = storyData.spreadPlan;
                     if (!effectiveSpreadPlan) {
-                        effectiveSpreadPlan = await geminiService.runVisualDesigner(storyData.blueprint);
-                        updateStory({ spreadPlan: effectiveSpreadPlan });
+                        effectiveSpreadPlan = await geminiService.runVisualDesigner(storyData.blueprint!);
                     }
-                    prompts = await geminiService.runPromptEngineer(effectiveSpreadPlan, storyData.technicalStyleGuide || '', storyData.selectedStylePrompt, storyData.blueprint);
+                    prompts = await geminiService.runPromptEngineer(effectiveSpreadPlan, storyData.technicalStyleGuide || '', storyData.selectedStylePrompt, storyData.blueprint!);
                     prompts = await geminiService.runPromptReviewer(prompts);
-                    updateStory({ finalPrompts: prompts });
-                } catch (recoveryError) {
-                    console.error("Failed to self-heal:", recoveryError);
-                    throw new Error("Story data corrupted.");
+                    setGenerationProgress(prev => prev + 10);
+                    return { prompts, spreadPlan: effectiveSpreadPlan };
                 }
-            }
+                setGenerationProgress(prev => prev + 10);
+                return { prompts, spreadPlan: storyData.spreadPlan };
+            })();
+
+            // --- 2. EXECUTE PARALLEL TASKS ---
+            const [script, coverResult, promptsResult] = await Promise.all([scriptTask, coverTask, promptsTask]);
+
+            const prompts = promptsResult.prompts;
+            const spreadPlan = promptsResult.spreadPlan?.spreads || [];
+
+            // Consolidate updates
+            const currentStoryData = {
+                ...storyData,
+                coverImageUrl: coverResult.imageBase64,
+                actualCoverPrompt: coverResult.fullPrompt,
+                finalPrompts: prompts,
+                spreadPlan: promptsResult.spreadPlan || storyData.spreadPlan
+            };
+            updateStory(currentStoryData);
+
+            // --- 3. BATCH IMAGE GENERATION ---
 
             const pages: Page[] = [];
-            const BATCH_SIZE = 3;
+            const BATCH_SIZE = 6;
 
             for (let i = 0; i < prompts.length; i += BATCH_SIZE) {
                 const batch = prompts.slice(i, i + BATCH_SIZE);
@@ -105,7 +113,7 @@ ${secondRef ? `**MANDATORY:** THE SECOND HERO FROM IMAGE 2 MUST BE VISIBLE.` : '
 ${prompt}
 NEGATIVE: No vertical seams, no text.`;
 
-                    return geminiService.generateMethod4Image(scenePrompt, masterDNA, storyData.styleSeed, secondRef);
+                    return geminiService.generateMethod4Image(scenePrompt, masterDNA, storyData.mainCharacter.description, storyData.styleSeed, secondRef);
                 }));
 
                 // Process batch results
@@ -137,9 +145,7 @@ NEGATIVE: No vertical seams, no text.`;
                     });
                 });
 
-                // Sort pages by number to ensure order is preserved despite async (though map preserves order, pushing might not if logic diverged, but here we process results sequentially from the array)
-                // Actually Promise.all returns in order. we push in order. good.
-                setGenerationProgress(20 + ((i + BATCH_SIZE) / prompts.length) * 80);
+                setGenerationProgress(30 + ((i + BATCH_SIZE) / prompts.length) * 70);
             }
 
             // Ensure pages are sorted just in case
