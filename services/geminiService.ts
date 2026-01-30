@@ -284,6 +284,12 @@ export async function generateFinalScript(blueprint: StoryBlueprint, language: L
 ${getContext()}
 TASK: Write ${settings.defaultSpreadCount * 2} pages of narrative text in ${language}. 
 Blueprint: ${JSON.stringify(blueprint)}. 
+
+**STRICT CHARACTER RULE:** 
+- The story must focus on the Child (and Sidekick if present). 
+- **DO NOT** introduce parents, siblings, or family members unless they are explicitly mentioned in the "Customer Input". 
+- Use fictional characters (wizards, animals, friends) for supporting roles if needed.
+
 OUTPUT: JSON array of ${settings.defaultSpreadCount * 2} { "text": "string" }.`;
 
         const response = await ai().models.generateContent({
@@ -305,6 +311,7 @@ SPECIFIC CHECKS:
 2. **Sensory:** Ensure every page has Sound, Touch, or Smell.
 3. **Agency:** Ensure the child is the one solving the problem, not adults.
 4. **Formatting:** Keep it to ${language === 'ar' ? 'Arabic' : 'English'}.
+5. **No Unrequested Family:** Ensure no parents/siblings appear in the text unless they were in the input.
 
 DRAFT CONTENT:
 ${JSON.stringify(draft)}
