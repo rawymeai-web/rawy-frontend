@@ -141,7 +141,7 @@ const WorkflowScreen: React.FC<WorkflowScreenProps> = ({ stage, artifact, previo
     };
 
     return (
-        <div className="max-w-4xl mx-auto w-full space-y-8 animate-enter-forward pb-12">
+        <div className="max-w-4xl mx-auto w-full space-y-8 animate-enter-forward pb-32">
             <div className="flex justify-between items-center px-4">
                 {/* Simplified Header for User Mode */}
                 <div className="space-y-1">

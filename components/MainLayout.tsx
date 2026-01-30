@@ -167,7 +167,7 @@ const MainLayout: React.FC = () => {
                 currency={currency}
                 onCurrencyChange={(c) => setCurrency(currencies.find(x => x.code === c) || currencies[0])}
             />
-            <main className="flex-grow relative overflow-hidden">
+            <main className="flex-grow relative">
                 <PageDecorations />
                 <div className="relative z-10 w-full h-full p-4 sm:p-8 flex flex-col justify-center">{renderScreen()}</div>
             </main>
