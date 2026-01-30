@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Language, StoryTheme, Character } from '../types';
 import * as adminService from '../services/adminService';
 import * as geminiService from '../services/geminiService';
@@ -41,17 +41,22 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
         }
     };
 
+    const [themes, setThemes] = useState<StoryTheme[]>([]);
+    const [settings, setSettings] = useState<any>(null);
+
+    useEffect(() => {
+        adminService.getThemes().then(setThemes);
+        adminService.getSettings().then(setSettings);
+    }, []);
+
     const runGeneration = async (mode: 'allThemes' | 'allStylesMaster' | 'allStylesForOneTheme', targetThemeId?: string) => {
-        if (!seedImage) return;
+        if (!seedImage || !settings) return;
         setIsGenerating(true);
         setError('');
         setThumbnails([]);
         setProgress(0);
-        
-        const settings = adminService.getSettings();
-        const delay = settings.generationDelay;
 
-        const themes = adminService.getThemes();
+        const delay = settings.generationDelay;
         const mockCharacter: Character = {
             name: 'Hero',
             type: 'person',
@@ -104,11 +109,11 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
         for (let i = 0; i < tasks.length; i++) {
             setCurrentTask(i + 1);
             const task = tasks[i];
-            
+
             try {
                 // Rate limit spacing from Admin Settings
                 if (i > 0 && delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-                
+
                 const { imageBase64 } = await geminiService.generateThemeStylePreview(
                     mockCharacter,
                     undefined,
@@ -116,8 +121,8 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
                     task.stylePrompt
                 );
 
-                setThumbnails(prev => [...prev, { 
-                    name: task.fileName, 
+                setThumbnails(prev => [...prev, {
+                    name: task.fileName,
                     imageBase64,
                     styleName: task.styleName,
                     themeName: task.themeName
@@ -159,7 +164,7 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                     <div className="space-y-4">
                         <label className="block text-sm font-bold text-gray-700">1. Upload Seed Hero Photo</label>
-                        <div 
+                        <div
                             className="aspect-square w-full max-w-[300px] border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden relative group"
                             onClick={() => fileInputRef.current?.click()}
                         >
@@ -167,7 +172,7 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
                                 <img src={`data:image/jpeg;base64,${seedImage.base64}`} alt="Seed" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="text-center p-6">
-                                    <svg className="w-16 h-16 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    <svg className="w-16 h-16 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                     <p className="text-xs text-gray-400 font-bold uppercase mt-4">Pick generic kid photo</p>
                                 </div>
                             )}
@@ -178,11 +183,11 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
 
                     <div className="space-y-6">
                         <label className="block text-sm font-bold text-gray-700">2. Select Generation Type</label>
-                        
+
                         <div className="space-y-3">
-                            <Button 
-                                onClick={() => runGeneration('allStylesMaster')} 
-                                disabled={!seedImage || isGenerating}
+                            <Button
+                                onClick={() => runGeneration('allStylesMaster')}
+                                disabled={!seedImage || isGenerating || !settings}
                                 className="w-full !py-4 shadow-lg shadow-brand-coral/20"
                             >
                                 Generate Style Picker (14 Art Styles)
@@ -191,9 +196,9 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
                         </div>
 
                         <div className="space-y-3">
-                            <Button 
-                                onClick={() => runGeneration('allThemes')} 
-                                disabled={!seedImage || isGenerating}
+                            <Button
+                                onClick={() => runGeneration('allThemes')}
+                                disabled={!seedImage || isGenerating || !settings}
                                 variant="secondary"
                                 className="w-full !py-4"
                             >
@@ -209,15 +214,15 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
 
                         <div className="flex gap-2">
                             <select id="themeSelector" className="flex-1 p-2 border rounded-lg text-sm bg-gray-50 border-gray-200">
-                                {adminService.getThemes().map(t => <option key={t.id} value={t.id}>{t.title.en}</option>)}
+                                {themes.map(t => <option key={t.id} value={t.id}>{t.title.en}</option>)}
                             </select>
-                            <Button 
+                            <Button
                                 variant="outline"
                                 onClick={() => {
                                     const id = (document.getElementById('themeSelector') as HTMLSelectElement).value;
                                     runGeneration('allStylesForOneTheme', id);
                                 }}
-                                disabled={!seedImage || isGenerating}
+                                disabled={!seedImage || isGenerating || !settings}
                                 className="!px-4 !py-2 text-xs"
                             >
                                 Try All Styles

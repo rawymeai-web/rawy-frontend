@@ -26,8 +26,11 @@ const WorkflowScreen: React.FC<WorkflowScreenProps> = ({ stage, artifact, previo
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const [simulatedProgress, setSimulatedProgress] = useState(0);
     const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
-    const settings = adminService.getSettings();
-    const isDebug = settings.enableDebugView;
+    const [isDebug, setIsDebug] = useState(false);
+
+    useEffect(() => {
+        adminService.getSettings().then(s => setIsDebug(s.enableDebugView));
+    }, []);
     const { storyData } = useStory(); // Access Story Context
 
     // AUTO-ADVANCE LOGIC: If not in debug mode, automatically approve when loading finishes

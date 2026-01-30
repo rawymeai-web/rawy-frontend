@@ -104,7 +104,7 @@ const blueprintSchema = {
 };
 
 export async function runJuniorWriter(storyData: StoryData, selectedTheme: StoryTheme | undefined): Promise<StoryBlueprint> {
-    const settings = adminService.getSettings();
+    const settings = await adminService.getSettings();
     return withRetry(async () => {
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
 
@@ -150,7 +150,7 @@ OUTPUT: JSON blueprint.`;
 }
 
 export async function runSeniorWriter(blueprint: StoryBlueprint): Promise<StoryBlueprint> {
-    const settings = adminService.getSettings();
+    const settings = await adminService.getSettings();
     return withRetry(async () => {
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
         const prompt = `ROLE: Senior Editor. 
@@ -167,7 +167,7 @@ Blueprint: ${JSON.stringify(blueprint)}`;
 }
 
 export async function runVisualDesigner(blueprint: StoryBlueprint): Promise<SpreadDesignPlan> {
-    const settings = adminService.getSettings();
+    const settings = await adminService.getSettings();
     return withRetry(async () => {
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
         const prompt = `ROLE: Art Director. Plan ${settings.defaultSpreadCount} panoramic layouts. 
@@ -192,7 +192,7 @@ Blueprint: ${JSON.stringify(blueprint)}`;
 }
 
 export async function runCreativeDirector(blueprint: StoryBlueprint, plan: SpreadDesignPlan): Promise<SpreadDesignPlan> {
-    const settings = adminService.getSettings();
+    const settings = await adminService.getSettings();
     return withRetry(async () => {
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
         const prompt = `ROLE: Executive Creative Director. 
@@ -275,7 +275,7 @@ ${bible.compositionMandates}
 }
 
 export async function generateFinalScript(blueprint: StoryBlueprint, language: Language): Promise<{ text: string }[]> {
-    const settings = adminService.getSettings();
+    const settings = await adminService.getSettings();
 
     // STEP 1: THE AUTHOR (Drafting)
     const draft = await withRetry(async () => {

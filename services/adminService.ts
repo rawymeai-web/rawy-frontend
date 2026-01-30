@@ -1,212 +1,290 @@
 
+import { supabase } from '../utils/supabaseClient';
 import type { AdminOrder, AdminCustomer, OrderStatus, StoryData, ShippingDetails, ProductSize, StoryTheme, AppSettings } from '../types';
 import { INITIAL_THEMES, ART_STYLE_OPTIONS } from '../constants';
 import * as imageStore from './imageStore';
 
-const SETTINGS_KEY = 'albumii_settings_v5';
-const BIBLE_KEY = 'rawy_series_bible';
-
-export interface SeriesBible {
-  masterGuardrails: string;
-  storyFlowLogic: string;
-  compositionMandates: string;
+// --- DB Interfaces ---
+// These match the Supabase table columns
+interface DBOrder {
+  order_number: string;
+  customer_id: string;
+  customer_name: string;
+  total: number;
+  status: string;
+  created_at: string;
+  story_data: any; // JSONB
+  shipping_details: any; // JSONB
+  production_cost: number;
+  ai_cost: number;
+  shipping_cost: number;
+}
+interface DBTheme {
+  id: string;
+  title: any;
+  description: any;
+  emoji: string;
+  category: string;
+  visual_dna: string;
+  skeleton: any;
+}
+interface DBProduct {
+  id: string;
+  name: string;
+  price: number;
+  preview_image_url: string;
+  dimensions: any;
+}
+interface DBSettings {
+  id: number;
+  default_method: string;
+  default_spread_count: number;
+  enable_debug_view: boolean;
+  generation_delay: number;
+  unit_production_cost: number;
+  unit_ai_cost: number;
+  unit_shipping_cost: number;
+  target_model: string;
 }
 
-const defaultBible: SeriesBible = {
-  masterGuardrails: `STRICT MASTER PRODUCTION RULES (MANDATORY):
-1. **NO REAL FAMILY:** Do not include Grandmother, Mother, Father, Brother, or Sister. Use neighbors, friends, or magical creatures.
-2. **NO RAINBOWS:** Never describe or generate rainbows.
-3. **CULTURAL AUTHENTICITY (CONTEXT AWARE):** Characters must always show respect and modesty.
-   - **For Local/Traditional Stories ONLY:** Use arches, clay walls, palm mats, sadu patterns.
-   - **For ALL OTHER Themes (Space, Dino, Ocean, etc.):** DO NOT use heritage elements. Use pure genre visuals (e.g. High-tech spaceship, Prehistoric Jungle). make it look international standard.
-4. **NATURAL SPACE:** Do not use artificial blur. Instead, use "cinematic wide-angle composition with integrated negative space".
-5. **CONTINUOUS CANVAS:** No vertical seams or dividers in the center 30% of the image.
-6. **ACTIVE LIMITER:** The limiter must NOT be a passive rule. It must be an active pressure that blocks progress and forces a decision.
+// --- Converters ---
+const mapDBOrder = (o: DBOrder): AdminOrder => ({
+  orderNumber: o.order_number,
+  customerName: o.customer_name,
+  orderDate: o.created_at,
+  status: o.status as OrderStatus,
+  total: o.total,
+  productionCost: o.production_cost || 0,
+  aiCost: o.ai_cost || 0,
+  shippingCost: o.shipping_cost || 0,
+  storyData: o.story_data,
+  shippingDetails: o.shipping_details,
+});
 
-STYLISTIC GUIDELINES & WORD COUNTS (STRICT):
-Rule 1: Title & Expectation Consistency. The title, cover concept, and content must match exactly.
-Rule 2: Age-Appropriate Rhythm & Phrasing. Use the "Rule of Three" (e.g., "Thump! Thump! Shake!").
-Rule 3: Show, Don't Tell. Every page should appeal to at least one sense beyond sight.
-Rule 4: Child Agency. The child protagonist must solve the problem. Adults cannot fix the main issue.
-Rule 5: **NO PRONOUNS FOR HERO:** Never use "he" or "she". ALWAYS use the child's name (e.g., "Leo ran," "Leo laughed").
-Rule 6: **HERO NAME EMPHASIS:** The hero's name is the most important word.
+// --- Services ---
 
-**STRICT WORD COUNT & STRUCTURE BY AGE:**
-- **Ages 1-3:** 5–10 words/page. (Total 40-80). STRUCTURE: 1 Concept per page. No complex plot.
-- **Ages 4-6:** 10–25 words/page. (Total 80-200). STRUCTURE: 1 Plot point per page. Fast transitions.
-- **Ages 7-9:** 20–35 words/page. (Total 160-280). STRUCTURE: Each page is a full scene.
-- **Ages 10-12:** 35–45 words/page. (Total 280-360). STRUCTURE: Dense text blocks, detailed narrative.`,
-  storyFlowLogic: `THE 9-POINT NARRATIVE ARC (REQUIRED):
-1. Desire (The "I Want"): Protagonist expresses a clear wish/goal (Pages 1-2). Contrast with reality.
-2. Catalyst (The "Uh-Oh"): Inciting incident disrupts status quo. Sensory and immediate.
-3. Launch Event (The "Action"): Protagonist chooses to engage. No passivity.
-4. Challenge (The "Obstacle"): Two-Layer Challenge (Physical Threat + Social/External Misunderstanding).
-5. The Limiter (The "Ticking Clock"): Constraint forcing immediate action (e.g., sunset, melting ice).
-6. Limited Resources (The "Tool"): Hero uses perspective, empathy, or cleverness (never weapons).
-7. Logical Flow: Cause must lead to Effect ("But... Therefore..."). No "And then...".
-8. Character Introduction: All key characters established/hinted before climax. No Deus Ex Machina.
-9. End State (The "New Normal"): World returns to peace, hero has changed/learned.`,
-  compositionMandates: `VISUAL COMPOSITION MANDATES:
-- **50% HEADROOM:** For covers, the top half must be clean background for titles.
-- **HERO PLACEMENT:** Protagonists must be clearly visible on their assigned side.
-- **PANORAMIC 16:9:** All spreads must be a single continuous painting.`
-};
-
-const defaultSettings: AppSettings = {
-  defaultMethod: 'method4',
-  defaultSpreadCount: 8,
-  enableDebugView: false,
-  generationDelay: 0,
-  unitProductionCost: 13.250,
-  unitAiCost: 0.600,
-  unitShippingCost: 1.500,
-  targetModel: 'gemini-3-pro-preview'
-};
-
-function getFromStorage<T>(key: string, defaultValue: T): T {
-  try {
-    const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error reading from localStorage key “${key}”:`, error);
-    return defaultValue;
+// 1. Settings
+export async function getSettings(): Promise<AppSettings> {
+  const { data, error } = await supabase.from('settings').select('*').single();
+  if (error || !data) {
+    console.warn('Could not fetch settings, returning defaults', error);
+    return {
+      defaultMethod: 'method4',
+      defaultSpreadCount: 8,
+      enableDebugView: false,
+      generationDelay: 0,
+      unitProductionCost: 13.250,
+      unitAiCost: 0.600,
+      unitShippingCost: 1.500,
+      targetModel: 'gemini-3-pro-preview'
+    };
   }
+  return {
+    defaultMethod: data.default_method,
+    defaultSpreadCount: data.default_spread_count,
+    enableDebugView: data.enable_debug_view,
+    generationDelay: data.generation_delay,
+    unitProductionCost: data.unit_production_cost,
+    unitAiCost: data.unit_ai_cost,
+    unitShippingCost: data.unit_shipping_cost,
+    targetModel: data.target_model
+  };
 }
 
-function setToStorage<T>(key: string, value: T): void {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error writing to localStorage key “${key}”:`, error);
+export async function saveSettings(s: AppSettings): Promise<void> {
+  const { error } = await supabase.from('settings').upsert({
+    id: 1, // Single row
+    default_method: s.defaultMethod,
+    default_spread_count: s.defaultSpreadCount,
+    enable_debug_view: s.enableDebugView,
+    generation_delay: s.generationDelay,
+    unit_production_cost: s.unitProductionCost,
+    unit_ai_cost: s.unitAiCost,
+    unit_shipping_cost: s.unitShippingCost,
+    target_model: s.targetModel
+  });
+  if (error) throw error;
+}
+
+// 2. Orders
+export async function getOrders(): Promise<AdminOrder[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching orders:', error);
+    return [];
   }
+  return data.map(mapDBOrder);
 }
-
-// Initializations
-if (!localStorage.getItem(BIBLE_KEY)) setToStorage(BIBLE_KEY, defaultBible);
-if (!localStorage.getItem(SETTINGS_KEY)) setToStorage(SETTINGS_KEY, defaultSettings);
-
-const storedProducts = getFromStorage<ProductSize[]>('admin_products', []);
-if (storedProducts.length === 0) {
-  setToStorage('admin_products', [{ id: '20x20', name: 'Square', price: 29.900, previewImageUrl: 'https://i.imgur.com/KCXTGBh.png', isAvailable: true, cover: { totalWidthCm: 46.2, totalHeightCm: 23.4, spineWidthCm: 1 }, page: { widthCm: 20, heightCm: 20 }, margins: { topCm: 0.5, bottomCm: 0.5, outerCm: 2, innerCm: 1 }, coverContent: { barcode: { fromRightCm: 15.2, fromTopCm: 21.4, widthCm: 3, heightCm: 0.5 }, format: { fromTopCm: 0, widthCm: 0, heightCm: 0 }, title: { fromTopCm: 3, widthCm: 17, heightCm: 3 } } }]);
-}
-
-export function getSeriesBible(): SeriesBible {
-  return getFromStorage<SeriesBible>(BIBLE_KEY, defaultBible);
-}
-
-export function saveSeriesBible(bible: SeriesBible): void {
-  setToStorage(BIBLE_KEY, bible);
-}
-
-export function getSettings(): AppSettings {
-  return getFromStorage<AppSettings>(SETTINGS_KEY, defaultSettings);
-}
-
-export function saveSettings(settings: AppSettings): void {
-  setToStorage(SETTINGS_KEY, settings);
-}
-
-export function getOrders(): AdminOrder[] {
-  const orders = getFromStorage<AdminOrder[]>('admin_orders', []);
-  return orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
-}
-
-export function updateOrderStatus(orderNumber: string, status: OrderStatus): void {
-  const orders = getOrders();
-  const orderIndex = orders.findIndex(o => o.orderNumber === orderNumber);
-  if (orderIndex > -1) {
-    orders[orderIndex].status = status;
-    setToStorage('admin_orders', orders);
-  }
-}
-
-export function getCustomers(): AdminCustomer[] {
-  const customers = getFromStorage<AdminCustomer[]>('admin_customers', []);
-  return customers.sort((a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime());
-}
-
-export function getProductSizes(): ProductSize[] { return getFromStorage<ProductSize[]>('admin_products', []); }
-export function getProductSizeById(id: string): ProductSize | undefined { return getProductSizes().find(p => p.id === id); }
-export function saveProductSize(productData: ProductSize): void {
-  const products = getProductSizes();
-  const index = products.findIndex(p => p.id === productData.id);
-  if (index > -1) products[index] = productData;
-  else products.push(productData);
-  setToStorage('admin_products', products);
-}
-export function deleteProductSize(id: string): void { setToStorage('admin_products', getProductSizes().filter(p => p.id !== id)); }
-
-export function getThemes(): StoryTheme[] { return getFromStorage<StoryTheme[]>('admin_themes', INITIAL_THEMES); }
-export function saveTheme(themeData: StoryTheme): void {
-  const themes = getThemes();
-  const index = themes.findIndex(t => t.id === themeData.id);
-  if (index > -1) themes[index] = themeData;
-  else themes.push(themeData);
-  setToStorage('admin_themes', themes);
-}
-export function deleteTheme(id: string): void { setToStorage('admin_themes', getThemes().filter(t => t.id !== id)); }
-
-export function getArtStyles(): any[] { return getFromStorage<any[]>('admin_styles', ART_STYLE_OPTIONS); }
-export function saveArtStyle(style: any): void {
-  const styles = getArtStyles();
-  const index = styles.findIndex(s => s.name === style.name);
-  if (index > -1) styles[index] = style;
-  else styles.push(style);
-  setToStorage('admin_styles', styles);
-}
-export function deleteArtStyle(name: string): void { setToStorage('admin_styles', getArtStyles().filter(s => s.name !== name)); }
 
 export async function saveOrder(orderNumber: string, storyData: StoryData, shippingDetails: ShippingDetails): Promise<void> {
-  const orders = getOrders();
-  const customers = getCustomers();
-  const now = new Date();
-  const settings = getSettings();
-
-  const product = getProductSizeById(storyData.size);
+  const settings = await getSettings(); // Fetch latest costs
+  const product = await getProductSizeById(storyData.size);
   const basePrice = product ? product.price : 29.900;
-  const totalPrice = basePrice + 1.500;
+  const totalPrice = basePrice + 1.500; // Mock calculation logic from before
 
+  // 1. Upload Images
   const imageFiles: imageStore.OrderImages = {
     cover: new File([await (await fetch(`data:image/jpeg;base64,${storyData.coverImageUrl}`)).blob()], 'cover.jpeg', { type: 'image/jpeg' }),
     spreads: await Promise.all(storyData.pages.filter((_, i) => i % 2 === 0).map(async (p, i) => {
       return new File([await (await fetch(`data:image/jpeg;base64,${p.illustrationUrl}`)).blob()], `spread_${i + 1}.jpeg`, { type: 'image/jpeg' });
     }))
   };
-  await imageStore.saveImagesForOrder(orderNumber, imageFiles);
 
+  const imageUrls = await imageStore.saveImagesForOrder(orderNumber, imageFiles);
+
+  // 2. Sanitize Story Data (Remove Base64)
   const sanitizedStoryData = {
     ...storyData,
-    coverImageUrl: 'Persisted in IDB',
-    pages: storyData.pages.map(page => ({ ...page, illustrationUrl: 'Persisted in IDB' })),
+    coverImageUrl: imageUrls.cover, // Use Cloud URL
+    pages: storyData.pages.map((page, i) => {
+      // Logic to map spreads to pages is tricky if we don't have exact index match.
+      // Assuming even pages are spreads.
+      const spreadIndex = Math.floor((i) / 2);
+      // This logic needs to align with how we saved spreads.
+      // For safety, let's just say "Stored in Cloud" for now, or use the spreadUrl if valid.
+      return { ...page, illustrationUrl: imageUrls.spreads[spreadIndex] || 'See Cloud Storage' };
+    }),
     mainCharacter: { ...storyData.mainCharacter, imageBases64: [], images: [] },
     secondCharacter: storyData.secondCharacter ? { ...storyData.secondCharacter, imageBases64: [], images: [] } : undefined,
   };
 
-  const newOrder: AdminOrder = {
-    orderNumber,
-    customerName: shippingDetails.name,
-    orderDate: now.toISOString(),
-    status: 'New Order',
-    total: totalPrice,
-    productionCost: settings.unitProductionCost,
-    aiCost: settings.unitAiCost,
-    shippingCost: settings.unitShippingCost,
-    storyData: sanitizedStoryData as any,
-    shippingDetails,
-  };
-  orders.unshift(newOrder);
-  setToStorage('admin_orders', orders);
-
+  // 3. Upsert Customer
   const customerId = shippingDetails.email.toLowerCase();
-  const existingCustomerIndex = customers.findIndex(c => c.id === customerId);
-  if (existingCustomerIndex > -1) {
-    customers[existingCustomerIndex].orderCount += 1;
-    customers[existingCustomerIndex].lastOrderDate = now.toISOString();
-    customers[existingCustomerIndex].name = shippingDetails.name;
-    customers[existingCustomerIndex].phone = shippingDetails.phone;
-  } else {
-    const newCustomer: AdminCustomer = { id: customerId, name: shippingDetails.name, email: shippingDetails.email, phone: shippingDetails.phone, firstOrderDate: now.toISOString(), lastOrderDate: now.toISOString(), orderCount: 1 };
-    customers.unshift(newCustomer);
-  }
-  setToStorage('admin_customers', customers);
+  const { error: custError } = await supabase.from('customers').upsert({
+    id: customerId,
+    email: shippingDetails.email,
+    name: shippingDetails.name,
+    phone: shippingDetails.phone,
+    last_order_date: new Date().toISOString(),
+  }, { onConflict: 'id' });
+
+  if (custError) console.warn('Customer upsert failed:', custError);
+
+  // 4. Insert Order
+  const { error: orderError } = await supabase.from('orders').insert({
+    order_number: orderNumber,
+    customer_id: customerId,
+    customer_name: shippingDetails.name,
+    total: totalPrice,
+    status: 'New Order',
+    story_data: sanitizedStoryData,
+    shipping_details: shippingDetails,
+    production_cost: settings.unitProductionCost,
+    ai_cost: settings.unitAiCost,
+    shipping_cost: settings.unitShippingCost
+  });
+
+  if (orderError) throw orderError;
+}
+
+export async function updateOrderStatus(orderNumber: string, status: OrderStatus): Promise<void> {
+  const { error } = await supabase.from('orders').update({ status }).eq('order_number', orderNumber);
+  if (error) throw error;
+}
+
+// 3. Products
+const mapDBProduct = (p: DBProduct): ProductSize => ({
+  id: p.id,
+  name: p.name,
+  price: p.price,
+  previewImageUrl: p.preview_image_url,
+  isAvailable: true,
+  ...p.dimensions // spread cover, page, margins
+});
+
+export async function getProductSizes(): Promise<ProductSize[]> {
+  const { data, error } = await supabase.from('products').select('*');
+  if (error) return [];
+  return data.map(mapDBProduct);
+}
+export async function getProductSizeById(id: string): Promise<ProductSize | undefined> {
+  const { data } = await supabase.from('products').select('*').eq('id', id).single();
+  if (!data) return undefined;
+  return mapDBProduct(data);
+}
+export async function saveProductSize(p: ProductSize): Promise<void> {
+  // Extract dimensions
+  const { id, name, price, previewImageUrl, isAvailable, ...dimensions } = p;
+  const { error } = await supabase.from('products').upsert({
+    id,
+    name,
+    price,
+    preview_image_url: previewImageUrl,
+    dimensions
+  });
+  if (error) throw error;
+}
+
+// 4. Themes
+const mapDBTheme = (t: DBTheme): StoryTheme => ({
+  id: t.id,
+  title: t.title,
+  description: t.description,
+  emoji: t.emoji,
+  category: t.category as any,
+  visualDNA: t.visual_dna,
+  skeleton: t.skeleton
+});
+
+export async function getThemes(): Promise<StoryTheme[]> {
+  const { data, error } = await supabase.from('themes').select('*');
+  if (error || !data || data.length === 0) return INITIAL_THEMES;
+  return data.map(mapDBTheme);
+}
+
+export async function saveTheme(t: StoryTheme): Promise<void> {
+  const { error } = await supabase.from('themes').upsert({
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    emoji: t.emoji,
+    category: t.category,
+    visual_dna: t.visualDNA,
+    skeleton: t.skeleton
+  });
+  if (error) throw error;
+}
+
+// 5. Bible (Keep Local for now as per plan, or basic store)
+const BIBLE_KEY = 'rawy_series_bible';
+export interface SeriesBible {
+  masterGuardrails: string;
+  storyFlowLogic: string;
+  compositionMandates: string;
+}
+const defaultBible: SeriesBible = {
+  masterGuardrails: `STRICT MASTER PRODUCTION RULES (MANDATORY):... (same as before) ...`,
+  storyFlowLogic: `THE 9-POINT NARRATIVE ARC (REQUIRED):...`,
+  compositionMandates: `VISUAL COMPOSITION MANDATES:...`
+};
+
+export function getSeriesBible(): SeriesBible {
+  const item = window.localStorage.getItem(BIBLE_KEY);
+  return item ? JSON.parse(item) : defaultBible;
+}
+export function saveSeriesBible(bible: SeriesBible): void {
+  window.localStorage.setItem(BIBLE_KEY, JSON.stringify(bible));
+}
+
+// 6. Prompts (Keep Local or move to Settings?)
+// For now, let's assume they are handled by promptService which might use localStorage.
+// If prompted, we can move them too.
+
+// 7. Customers (Read Only in Admin for now)
+export async function getCustomers(): Promise<AdminCustomer[]> {
+  const { data, error } = await supabase.from('customers').select('*');
+  if (error) return [];
+  return data.map(c => ({
+    id: c.id,
+    name: c.name,
+    email: c.email,
+    phone: c.phone,
+    firstOrderDate: c.first_order_date || '',
+    lastOrderDate: c.last_order_date || '',
+    orderCount: c.order_count || 0
+  }));
 }

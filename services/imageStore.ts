@@ -1,51 +1,81 @@
-// services/imageStore.ts
-const DB_NAME = 'AlbumiiImageStore';
-const STORE_NAME = 'orderImages';
-const DB_VERSION = 1;
+
+import { supabase } from '../utils/supabaseClient';
 
 export interface OrderImages {
     cover: File;
     spreads: File[];
 }
 
-function getDB(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onerror = () => reject('Error opening IndexedDB.');
-        request.onsuccess = () => resolve(request.result);
-
-        request.onupgradeneeded = (event) => {
-            const db = (event.target as IDBOpenDBRequest).result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        };
-    });
+export interface UploadedImageUrls {
+    cover: string;
+    spreads: string[];
 }
 
-export async function saveImagesForOrder(orderNumber: string, images: OrderImages): Promise<void> {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.put(images, orderNumber);
-        
-        transaction.oncomplete = () => resolve();
-        transaction.onerror = () => reject('Transaction error while saving images.');
-    });
+/**
+ * Uploads cover and spread images to Supabase Storage.
+ * Path: images/{orderNumber}/...
+ */
+export async function saveImagesForOrder(orderNumber: string, images: OrderImages): Promise<UploadedImageUrls> {
+    const bucket = 'images';
+    const folder = `${orderNumber}`;
+
+    // Helper to upload a single file
+    const uploadFile = async (file: File, name: string): Promise<string> => {
+        const path = `${folder}/${name}`;
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .upload(path, file, { upsert: true });
+
+        if (error) {
+            console.error(`Error uploading ${name}:`, error);
+            throw error;
+        }
+
+        const { data: publicData } = supabase.storage
+            .from(bucket)
+            .getPublicUrl(path);
+
+        return publicData.publicUrl;
+    };
+
+    // Upload Cover
+    const coverUrl = await uploadFile(images.cover, 'cover.jpg');
+
+    // Upload Spreads
+    const spreadUrls = await Promise.all(
+        images.spreads.map((file, index) => uploadFile(file, `spread_${index + 1}.jpg`))
+    );
+
+    return {
+        cover: coverUrl,
+        spreads: spreadUrls
+    };
 }
 
-export async function getImagesForOrder(orderNumber: string): Promise<OrderImages | null> {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.get(orderNumber);
+/**
+ * Retrieves public URLs for an order's images.
+ * Note: Since we are not browsing the bucket, we return the constructed URLs.
+ * In a real scenario, these URLs should be stored in the 'orders' table.
+ */
+export async function getImagesForOrder(orderNumber: string): Promise<UploadedImageUrls | null> {
+    // This function is less useful now because we save the URLs in the DB.
+    // But for backward compatibility or direct bucket access:
+    const bucket = 'images';
+    const folder = `${orderNumber}`;
 
-        request.onsuccess = () => {
-            resolve(request.result ? (request.result as OrderImages) : null);
-        };
-        request.onerror = () => reject('Error fetching images from IndexedDB.');
-    });
+    // We can't easily "list" and download files as Blobs here without Auth if the bucket is private.
+    // Assuming Public bucket for now given the previous checks.
+
+    // For now, return null to force logic to rely on DB URLs if possible, 
+    // or implement list logic if needed for the Zip download.
+
+    // Actually, the Zip downloader needs Blobs.
+    // So we might need a helper to download URLs as Blobs.
+    return null;
+}
+
+export async function downloadImageAsBlob(url: string): Promise<Blob> {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch image: ${url}`);
+    return await response.blob();
 }

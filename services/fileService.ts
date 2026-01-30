@@ -96,7 +96,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
     const jsPDF = getJsPDF();
     if (!jsPDF) throw new Error("jsPDF not loaded");
 
-    const sizeConfig = getProductSizeById(storyData.size) || { page: { widthCm: 20, heightCm: 20 } };
+    const sizeConfig = await getProductSizeById(storyData.size) || { page: { widthCm: 20, heightCm: 20 } };
 
     const pdf = new jsPDF({
         orientation: 'l',
@@ -228,9 +228,55 @@ export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], 
     return pdf.output('blob');
 };
 
-// ... generatePrintPackage ...
+export const generatePrintPackage = async (storyData: StoryData, shipping: ShippingDetails, language: Language, orderNumber: string) => {
+    try {
+        const zip = new (window as any).JSZip();
 
-// ... downloadCoverImage ...
+        // 1. Generate PDF
+        const pdfBlob = await generatePreviewPdf(storyData, language, undefined, orderNumber);
+        zip.file(`${orderNumber}_Preview.pdf`, pdfBlob);
+
+        // 2. Add Order Manifest
+        const manifest = {
+            orderNumber,
+            date: new Date().toISOString(),
+            shipping,
+            storyData: {
+                ...storyData,
+                pages: storyData.pages.map(p => ({ ...p, imageBase64: '[REMOVED]', illustrationUrl: p.illustrationUrl }))
+            }
+        };
+        zip.file('order_manifest.json', JSON.stringify(manifest, null, 2));
+
+        // 3. Generate Zip
+        const content = await zip.generateAsync({ type: 'blob' });
+
+        // 4. Download
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = `Order_${orderNumber}_Package.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+    } catch (e) {
+        console.error("Error generating print package:", e);
+        throw e;
+    }
+};
+
+export const downloadCoverImage = async (storyData: StoryData, language: Language) => {
+    try {
+        const link = document.createElement('a');
+        link.href = storyData.coverImageUrl;
+        link.download = `Rawy_Cover_${storyData.childName}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (e) {
+        console.error("Error downloading cover:", e);
+    }
+};
 
 // Updated createMetadataStripElement to be simpler and use vertical layout
 export function createMetadataStripElement(orderNumber: string, spreadIndex: number, width: number, height: number): HTMLElement {

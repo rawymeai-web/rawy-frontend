@@ -88,7 +88,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
     useEffect(() => {
         const generateVariations = async () => {
             if (storyData.mainCharacter.imageBases64.length === 0) return;
-            const settings = adminService.getSettings();
+            const settings = await adminService.getSettings();
 
             for (let i = 0; i < previews.length; i++) {
                 if (previews[i].status === 'done') continue;

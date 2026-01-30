@@ -51,9 +51,10 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
     const [stitchedResults, setStitchedResults] = useState<StitchedResults | null>(null);
 
     useEffect(() => {
-        const sizes = adminService.getProductSizes();
-        setAllSizes(sizes);
-        if (sizes.length > 0) setSelectedSizeId(sizes[0].id);
+        adminService.getProductSizes().then(sizes => {
+            setAllSizes(sizes);
+            if (sizes.length > 0) setSelectedSizeId(sizes[0].id);
+        });
     }, []);
 
     useEffect(() => {

@@ -5,10 +5,10 @@ import * as adminService from '../services/adminService';
 import { convertPrice, type Currency } from '../services/currencyService';
 
 interface SizeScreenProps {
-  onNext: (sizeId: string, spreadCount?: number) => void;
-  onBack: () => void;
-  language: Language;
-  currency: Currency;
+    onNext: (sizeId: string, spreadCount?: number) => void;
+    onBack: () => void;
+    language: Language;
+    currency: Currency;
 }
 
 interface SizeOptionProps {
@@ -28,11 +28,10 @@ const SizeOption: React.FC<SizeOptionProps> = ({ title, dimensions, price, isSel
         <button
             onClick={onClick}
             disabled={disabled}
-            className={`relative p-0 text-center rounded-3xl transition-all duration-300 h-full flex flex-col items-center justify-start w-full sm:w-72 group overflow-hidden ${
-                isSelected
-                    ? 'bg-white shadow-2xl ring-4 ring-brand-coral scale-105 z-10'
-                    : 'bg-white/70 backdrop-blur-md hover:bg-white hover:shadow-xl hover:scale-[1.02] border border-white/60'
-            } ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
+            className={`relative p-0 text-center rounded-3xl transition-all duration-300 h-full flex flex-col items-center justify-start w-full sm:w-72 group overflow-hidden ${isSelected
+                ? 'bg-white shadow-2xl ring-4 ring-brand-coral scale-105 z-10'
+                : 'bg-white/70 backdrop-blur-md hover:bg-white hover:shadow-xl hover:scale-[1.02] border border-white/60'
+                } ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
             aria-pressed={isSelected}
         >
             {disabled && (
@@ -41,7 +40,7 @@ const SizeOption: React.FC<SizeOptionProps> = ({ title, dimensions, price, isSel
                 </div>
             )}
             <div className="w-full h-48 overflow-hidden relative bg-gray-100">
-                <img src={imageUrl} alt={title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/>
+                <img src={imageUrl} alt={title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 {isSelected && (
                     <div className="absolute inset-0 bg-brand-coral/10 flex items-center justify-center">
                         <div className="bg-white p-2 rounded-full shadow-lg text-brand-coral animate-bounce">
@@ -63,15 +62,16 @@ const SizeOption: React.FC<SizeOptionProps> = ({ title, dimensions, price, isSel
 const SizeScreen: React.FC<SizeScreenProps> = ({ onNext, onBack, language, currency }) => {
     const [availableSizes, setAvailableSizes] = useState<ProductSize[]>([]);
     const [selectedSize, setSelectedSize] = useState<string>('');
-    const [spreadCount, setSpreadCount] = useState<number>(adminService.getSettings().defaultSpreadCount);
-    
+    const [spreadCount, setSpreadCount] = useState<number>(4);
+
     useEffect(() => {
-        const sizes = adminService.getProductSizes();
-        setAvailableSizes(sizes);
-        const firstAvailable = sizes.find(s => s.isAvailable);
-        if (firstAvailable) { setSelectedSize(firstAvailable.id); }
+        adminService.getProductSizes().then(sizes => {
+            setAvailableSizes(sizes);
+            const firstAvailable = sizes.find(s => s.isAvailable);
+            if (firstAvailable) { setSelectedSize(firstAvailable.id); }
+        });
     }, []);
-    
+
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
     const handleSpreadCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -21,7 +21,7 @@ export const useStoryWorkflow = (
             let result;
             switch (currentStage) {
                 case 1:
-                    const themes = adminService.getThemes();
+                    const themes = await adminService.getThemes();
                     const selectedTheme = themes.find(t => t.id === storyData.themeId);
                     result = await geminiService.runJuniorWriter(storyData, selectedTheme);
                     updateStory({ blueprint: result });

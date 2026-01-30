@@ -5,15 +5,15 @@ import type { StoryData, Language } from '../types';
 import * as fileService from '../services/fileService';
 
 interface ShareComponentProps {
-  storyData: StoryData;
-  language: Language;
+    storyData: StoryData;
+    language: Language;
 }
 
 const ShareButton: React.FC<{
-  onClick: () => void;
-  children: React.ReactNode;
-  className: string;
-  ariaLabel: string;
+    onClick: () => void;
+    children: React.ReactNode;
+    className: string;
+    ariaLabel: string;
 }> = ({ onClick, children, className, ariaLabel }) => (
     <button
         onClick={onClick}
@@ -29,8 +29,7 @@ const ShareComponent: React.FC<ShareComponentProps> = ({ storyData, language }) 
     const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
 
     const handleDownloadCover = () => {
-        const fileName = storyData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        fileService.downloadCoverImage(storyData.coverImageUrl, `rawy_cover_${fileName}`);
+        fileService.downloadCoverImage(storyData, language);
     };
 
     const handleShare = (platform: 'twitter' | 'facebook' | 'whatsapp') => {
@@ -62,7 +61,7 @@ const ShareComponent: React.FC<ShareComponentProps> = ({ storyData, language }) 
             <p className="text-center text-gray-600 max-w-lg mx-auto">
                 {t('هل أعجبتك القصة؟ شاركها مع أصدقائك وعائلتك! قم بتنزيل الغلاف أولاً لتحصل على أفضل نتيجة عند المشاركة.', 'Love the story? Share it with your friends and family! Download the cover first for the best sharing experience.')}
             </p>
-            
+
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
                 <Button onClick={handleDownloadCover} variant="secondary" className="flex items-center gap-2 !px-6 !py-3">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -70,7 +69,7 @@ const ShareComponent: React.FC<ShareComponentProps> = ({ storyData, language }) 
                     </svg>
                     {t('تنزيل الغلاف', 'Download Cover')}
                 </Button>
-                
+
                 <div className="flex items-center justify-center gap-4">
                     <ShareButton onClick={() => handleShare('twitter')} className="bg-[#1DA1F2]" ariaLabel="Share on Twitter">
                         <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>

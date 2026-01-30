@@ -28,7 +28,6 @@ import { PageTransition } from './PageTransition';
 import { useStoryGeneration } from '../hooks/useStoryGeneration';
 
 const MainLayout: React.FC = () => {
-    // Context State
     const {
         storyData, updateStory, resetStory,
         language, setLanguage,
@@ -38,6 +37,11 @@ const MainLayout: React.FC = () => {
         isPaymentModalOpen, setPaymentModalOpen,
         isOrderStatusModalOpen, setOrderStatusModalOpen
     } = useStory();
+
+    const [currentPrice, setCurrentPrice] = useState(29.9);
+    useEffect(() => {
+        adminService.getProductSizeById(storyData.size).then(p => { if (p) setCurrentPrice(p.price); });
+    }, [storyData.size]);
 
     const {
         stage: workflowStage,
@@ -166,7 +170,7 @@ const MainLayout: React.FC = () => {
                 <div className="relative z-10 w-full h-full p-4 sm:p-8 flex flex-col justify-center">{renderScreen()}</div>
             </main>
             <Footer language={language} onCheckOrderStatus={() => setOrderStatusModalOpen(true)} />
-            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(adminService.getProductSizeById(storyData.size)?.price || 29.9, currency)} language={language} />
+            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(currentPrice, currency)} language={language} />
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
         </div>
     );

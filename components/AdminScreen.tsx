@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from './Button';
 import { Logo } from './Logo';
 import { Spinner } from './Spinner';
@@ -13,6 +13,11 @@ import { ProductEditorModal } from './ProductEditorModal';
 import { ThemeEditorModal } from './ThemeEditorModal';
 import { ThemePreviewView } from './ThemePreviewView';
 import StitchingScreen from './StitchingScreen';
+
+interface AdminScreenProps {
+    onExit: () => void;
+    language: Language;
+}
 
 type AdminView = 'orders' | 'customers' | 'products' | 'themes' | 'bible' | 'prompts' | 'settings' | 'themePreview' | 'stitching';
 
@@ -85,15 +90,23 @@ const NavItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => v
 const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
     const [view, setView] = useState<AdminView>('orders');
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
-    const orders = useMemo(() => adminService.getOrders(), []);
-    const stats = useMemo(() => {
+    const [orders, setOrders] = useState<AdminOrder[]>([]);
+    const [settings, setSettings] = useState<AppSettings | null>(null);
+
+    useEffect(() => {
+        // Initial Fetch
+        adminService.getOrders().then(setOrders);
+        adminService.getSettings().then(setSettings);
+    }, []);
+
+    const stats = React.useMemo(() => {
         const totalRevenue = orders.reduce((acc, o) => acc + o.total, 0);
         return { totalRevenue, orderCount: orders.length };
     }, [orders]);
 
     const renderView = () => {
         switch (view) {
-            case 'orders': return <OrdersView orders={adminService.getOrders()} language={language} />;
+            case 'orders': return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} />;
             case 'bible': return <GuidelinesView />;
             case 'themes': return <ThemesView language={language} />;
             case 'products': return <ProductsView />;
@@ -101,7 +114,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
             case 'settings': return <SettingsView />;
             case 'themePreview': return <ThemePreviewView language={language} />;
             case 'stitching': return <StitchingScreen onExit={() => setView('orders')} language={language} />;
-            default: return <OrdersView orders={adminService.getOrders()} language={language} />;
+            default: return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} />;
         }
     }
 
@@ -129,7 +142,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <StatCard title="Global Revenue" value={`${stats.totalRevenue.toFixed(3)} ${t('د.ك', 'KWD')}`} icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0-2.08.402-2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} color="bg-brand-orange/10" />
                     <StatCard title="Books Printed" value={stats.orderCount} icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 6.253v11.494m-9-5.747h18" /></svg>} color="bg-brand-teal/10" />
-                    <StatCard title="Active Systems" value={adminService.getSettings().targetModel?.replace('gemini-', '').replace('-preview', '').replace('-exp', '') || '3 Pro'} icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} color="bg-purple-100" />
+                    <StatCard title="Active Systems" value={settings?.targetModel?.replace('gemini-', '').replace('-preview', '').replace('-exp', '') || '3 Pro'} icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} color="bg-purple-100" />
                 </div>
                 {renderView()}
             </main>
@@ -160,23 +173,23 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onExit, language }) => {
     return <AdminDashboard onExit={onExit} language={language} />;
 };
 
-const OrdersView: React.FC<{ orders: AdminOrder[], language: Language }> = ({ orders, language }) => {
+const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOrders: () => void }> = ({ orders, language, refreshOrders }) => {
     const [allOrders, setAllOrders] = useState<AdminOrder[]>(orders);
     const [previewingOrder, setPreviewingOrder] = useState<AdminOrder | null>(null);
     const [isExporting, setIsExporting] = useState<string | null>(null);
 
-    const handleStatusChange = (orderNumber: string, status: OrderStatus) => {
-        adminService.updateOrderStatus(orderNumber, status);
-        setAllOrders(adminService.getOrders());
+    useEffect(() => { setAllOrders(orders); }, [orders]);
+
+    const handleStatusChange = async (orderNumber: string, status: OrderStatus) => {
+        await adminService.updateOrderStatus(orderNumber, status);
+        refreshOrders();
     };
 
     const handleDownloadZip = async (order: AdminOrder) => {
         setIsExporting(order.orderNumber);
         try {
-            const highResImages = await imageStore.getImagesForOrder(order.orderNumber);
-            if (!highResImages) return alert('Assets not found in IDB.');
             await fileService.generatePrintPackage(order.storyData as any, order.shippingDetails, language, order.orderNumber);
-        } catch (e) { alert('Extraction failed.'); } finally { setIsExporting(null); }
+        } catch (e) { alert('Extraction failed.'); console.error(e); } finally { setIsExporting(null); }
     };
 
     return (
@@ -215,8 +228,14 @@ const ThemesView: React.FC<{ language: Language }> = ({ language }) => {
     const [themes, setThemes] = useState<StoryTheme[]>([]);
     const [editingTheme, setEditingTheme] = useState<StoryTheme | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    useEffect(() => { setThemes(adminService.getThemes()); }, []);
-    const handleSave = (theme: StoryTheme) => { adminService.saveTheme(theme); setThemes(adminService.getThemes()); setIsModalOpen(false); };
+
+    useEffect(() => { adminService.getThemes().then(setThemes); }, []);
+
+    const handleSave = async (theme: StoryTheme) => {
+        await adminService.saveTheme(theme);
+        adminService.getThemes().then(setThemes);
+        setIsModalOpen(false);
+    };
     return (
         <div className="space-y-4 animate-enter-forward">
             <div className="flex justify-between items-center px-2"><div><h2 className="text-2xl font-black text-brand-navy uppercase tracking-tight">Story Themes</h2></div><Button onClick={() => { setEditingTheme(null); setIsModalOpen(true); }} className="shadow-lg shadow-brand-orange/20">Construct New Theme</Button></div>
@@ -244,8 +263,15 @@ const ProductsView: React.FC = () => {
     const [products, setProducts] = useState<ProductSize[]>([]);
     const [editingProduct, setEditingProduct] = useState<ProductSize | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    useEffect(() => { setProducts(adminService.getProductSizes()); }, []);
-    const handleSave = (p: ProductSize) => { adminService.saveProductSize(p); setProducts(adminService.getProductSizes()); setIsModalOpen(false); };
+
+    useEffect(() => { adminService.getProductSizes().then(setProducts); }, []);
+
+    const handleSave = async (p: ProductSize) => {
+        await adminService.saveProductSize(p);
+        adminService.getProductSizes().then(setProducts);
+        setIsModalOpen(false);
+    };
+
     return (
         <div className="space-y-4 animate-enter-forward">
             <div className="flex justify-between items-center px-2"><div><h2 className="text-2xl font-black text-brand-navy uppercase tracking-tight">Product Catalog</h2></div><Button onClick={() => { setEditingProduct(null); setIsModalOpen(true); }} className="shadow-lg shadow-brand-orange/20">New SKU</Button></div>
@@ -293,16 +319,20 @@ const PromptsView: React.FC = () => {
 };
 
 const SettingsView: React.FC = () => {
-    const [settings, setSettings] = useState<AppSettings>(adminService.getSettings());
+    const [settings, setSettings] = useState<AppSettings | null>(null);
 
-    // Safety check for targetModel if it doesn't exist in older storage
     useEffect(() => {
-        if (!settings.targetModel) {
-            setSettings(prev => ({ ...prev, targetModel: 'gemini-3-pro-preview' }));
-        }
+        adminService.getSettings().then(setSettings);
     }, []);
 
-    const handleSave = () => { adminService.saveSettings(settings); alert('Global Configuration Updated!'); };
+    const handleSave = async () => {
+        if (settings) {
+            await adminService.saveSettings(settings);
+            alert('Global Configuration Updated!');
+        }
+    };
+
+    if (!settings) return <Spinner />;
 
     return (
         <div className="animate-enter-forward space-y-8">
@@ -397,7 +427,5 @@ const SettingsView: React.FC = () => {
         </div>
     );
 };
-
-interface AdminScreenProps { onExit: () => void; language: Language; }
 
 export default AdminScreen;
