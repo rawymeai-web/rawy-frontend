@@ -34,23 +34,34 @@ export const useStoryGeneration = (
             const isAr = language === 'ar';
             const frontSide = isAr ? 'LEFT' : 'RIGHT';
             const backSide = isAr ? 'RIGHT' : 'LEFT';
+
+            // Enhance Title if needed (Integrate Child Name)
+            let displayTitle = storyData.title;
+            const nameLower = storyData.childName.toLowerCase();
+            if (!displayTitle.toLowerCase().includes(nameLower)) {
+                // E.g., "The Space Adventure" -> "Reem's Space Adventure"
+                // Simple heuristic: prepend name.
+                displayTitle = `${storyData.childName}'s ${displayTitle}`;
+            }
+
             const coverPrompt = `TASK: Create a Panoramic 16:9 Book Cover Spread.
 **LAYOUT MANDATE:**
-- **${frontSide} HALF (FRONT COVER):** Hero (${storyData.childName}) MUST be here. Focus on the child. Top 30% clean sky for Title.
-- **${backSide} HALF (BACK COVER):** Empty/Minimal background or pattern only. Space for blurb.
+- **${frontSide} HALF (FRONT COVER):** Hero (${storyData.childName}) MUST be here. Focus on the child. Top 30% clean sky.
+- **${backSide} HALF (BACK COVER):** Empty/Minimal background or pattern only.
 - **NO CENTRAL SEAM:** The image must flow continuously.
 
 **STORY INFO:**
-TITLE: ${storyData.title}
-SUBTITLE: A story about ${storyData.childName}
+TITLE: ${displayTitle} (CONTEXT ONLY - DO NOT RENDER TEXT).
 STYLE: ${storyData.selectedStylePrompt}
 
 **SCENE:** ${storyData.childName} looking epic and welcoming.
-**INTEGRATION:** Ensure the character is naturally lit and blended into the scene. No "sticker" look.`;
+**INTEGRATION:** Ensure the character is naturally lit and blended into the scene. No "sticker" look.
+**NEGATIVE PROMPT:** TEXT, TITLE, LETTERS, WORDS, TYPOGRAPHY, WATERMARK, ADULTS, PARENTS.`;
 
             const coverTask = geminiService.generateMethod4Image(coverPrompt, masterDNA, storyData.mainCharacter.description, storyData.styleSeed).then(res => {
                 setGenerationProgress(prev => prev + 10);
-                return res;
+                // Return displayTitle so we can update the story data with it
+                return { ...res, displayTitle };
             });
 
             // Task C: Prompts (Self-Healing if needed)
@@ -80,6 +91,7 @@ STYLE: ${storyData.selectedStylePrompt}
             // Consolidate updates
             const currentStoryData = {
                 ...storyData,
+                title: coverResult.displayTitle || storyData.title, // Use the name-integrated title
                 coverImageUrl: coverResult.imageBase64,
                 actualCoverPrompt: coverResult.fullPrompt,
                 finalPrompts: prompts,
@@ -111,7 +123,8 @@ ${secondRef ? `**MANDATORY:** THE SECOND HERO FROM IMAGE 2 MUST BE VISIBLE.` : '
 
 **SCENE ACTION:**
 ${prompt}
-NEGATIVE: No vertical seams, no text.`;
+**GUIDELINE:** If parents/family are in the scene, DO NOT show their faces. Use POV shots, specific details (hands, feet), or shadows. Fictional characters are allowed.
+NEGATIVE: No vertical seams, no text, VISIBLE PARENTS, MOM'S FACE, DAD'S FACE, REALISTIC SIBLING FACES.`;
 
                     return geminiService.generateMethod4Image(scenePrompt, masterDNA, storyData.mainCharacter.description, storyData.styleSeed, secondRef);
                 }));

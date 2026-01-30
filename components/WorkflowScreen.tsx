@@ -201,8 +201,8 @@ const WorkflowScreen: React.FC<WorkflowScreenProps> = ({ stage, artifact, previo
                 {!isLoading && isDebug && renderArtifact()}
             </div>
 
-            {/* Controls - Hide in normal mode unless stuck or final step */}
-            <div className={`flex flex-col sm:flex-row justify-center items-center gap-6 transition-opacity duration-500 ${!isDebug && isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            {/* Controls - Hide in normal mode (auto-advance) unless debug is on */}
+            <div className={`flex flex-col sm:flex-row justify-center items-center gap-6 transition-opacity duration-500 ${!isDebug ? 'opacity-0 pointer-events-none hidden' : 'opacity-100'}`}>
                 {isDebug && <Button onClick={onBack} variant="outline" className="text-xl px-12 py-4 rounded-2xl border-2 transition-all hover:bg-brand-navy hover:text-white" disabled={isLoading}>{t('رجوع', 'Back')}</Button>}
 
                 {/* On final stage in auto-mode, or always in debug mode, show button */}

@@ -7,7 +7,7 @@ import type { Language } from '../types';
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPaymentSuccess: () => void;
+  onPaymentSuccess: (isBypass?: boolean) => void;
   totalAmount: string;
   language: Language;
 }
@@ -22,7 +22,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
   const handlePayment = (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
-    
+
     // Simulate API call to payment gateway
     setTimeout(() => {
       setIsProcessing(false);
@@ -31,12 +31,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4"
       aria-modal="true"
       role="dialog"
     >
-      <div 
+      <div
         className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
       >
@@ -44,7 +44,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
           <h2 className="text-2xl font-bold text-brand-navy">{t('الدفع الآمن', 'Secure Payment')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" disabled={isProcessing}>&times;</button>
         </div>
-        
+
         <form onSubmit={handlePayment} className="space-y-4">
           <p className="text-sm text-center text-gray-600 bg-gray-100 p-3 rounded-lg">
             {t('هذه واجهة دفع تجريبية. لا تقم بإدخال معلومات بطاقة ائتمان حقيقية.', 'This is a demo payment interface. Do not enter real credit card information.')}
@@ -53,7 +53,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
             <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700">{t('رقم البطاقة', 'Card Number')}</label>
             <input type="text" id="cardNumber" placeholder="**** **** **** 1234" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-coral focus:border-brand-coral text-gray-900" required />
           </div>
-          
+
           <div className="flex gap-4">
             <div className="flex-1">
               <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700">{t('تاريخ الانتهاء', 'Expiry Date')}</label>
@@ -64,7 +64,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
               <input type="text" id="cvc" placeholder="123" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-coral focus:border-brand-coral text-gray-900" required />
             </div>
           </div>
-           <div>
+          <div>
             <label htmlFor="cardName" className="block text-sm font-medium text-gray-700">{t('الاسم على البطاقة', 'Name on Card')}</label>
             <input type="text" id="cardName" placeholder={t('الاسم الكامل', 'Full Name')} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-coral focus:border-brand-coral text-gray-900" required />
           </div>
@@ -85,7 +85,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
                 </>
               )}
             </Button>
-            <Button type="button" variant="outline" className="w-full text-sm" onClick={onPaymentSuccess} disabled={isProcessing}>
+            <Button type="button" variant="outline" className="w-full text-sm" onClick={() => onPaymentSuccess(true)} disabled={isProcessing}>
               {t('تجاوز الدفع (للاختبار فقط)', 'Bypass Payment (Test Only)')}
             </Button>
           </div>
