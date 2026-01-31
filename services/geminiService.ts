@@ -214,14 +214,22 @@ export async function runPromptEngineer(plan: SpreadDesignPlan, technicalStyleGu
     return withRetry(async () => {
         const prompt = `ROLE: Lead Illustrator.
             ${getContext()}
-        TASK: Write 8 cinematic prompts based on the visual plan.
+        TASK: Write EXACTLY 8 detailed cinematic prompts based on the visual plan.
+        CRITICAL: You MUST return an array of exactly 8 strings. One for each spread.
             Plan: ${JSON.stringify(plan)}. JSON array output.`;
         const response = await ai().models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } } }
         });
-        return JSON.parse(cleanJsonString(response.text));
+        const prompts = JSON.parse(cleanJsonString(response.text));
+
+        // Safety Fallback: Ensure 8 items
+        if (prompts.length < 8) {
+            console.warn(`Gemini returned ${prompts.length} prompts, padding to 8.`);
+            while (prompts.length < 8) prompts.push(prompts[prompts.length - 1] || "A beautiful continuing scene.");
+        }
+        return prompts.slice(0, 8); // Ensure max 8
     });
 }
 
