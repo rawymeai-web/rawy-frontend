@@ -239,7 +239,7 @@ export async function runPromptReviewer(prompts: string[]): Promise<string[]> {
     });
 }
 
-export async function generateMethod4Image(prompt: string, referenceBase64: string, characterDescription: string, age: string, seed?: number, secondReferenceBase64?: string): Promise<{ imageBase64: string; fullPrompt: string }> {
+export async function generateMethod4Image(prompt: string, stylePrompt: string, referenceBase64: string, characterDescription: string, age: string, seed?: number, secondReferenceBase64?: string): Promise<{ imageBase64: string; fullPrompt: string }> {
     return withRetry(async () => {
         const bible = adminService.getSeriesBible();
 
