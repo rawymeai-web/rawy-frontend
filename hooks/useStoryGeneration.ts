@@ -25,7 +25,7 @@ export const useStoryGeneration = (
             // --- 1. DEFINE PARALLEL TASKS ---
 
             // Task A: Script Generation
-            const scriptTask = geminiService.generateFinalScript(storyData.blueprint, language).then(res => {
+            const scriptTask = geminiService.generateFinalScript(storyData.blueprint, language, storyData.childName).then(res => {
                 setGenerationProgress(prev => prev + 10);
                 return res;
             });

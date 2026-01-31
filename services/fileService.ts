@@ -57,18 +57,31 @@ function getCoverDimensions(imgW: number, imgH: number, targetW: number, targetH
  * Creates a high-res image of a text blob to be inserted into the PDF.
  * This ensures the PDF blobs look exactly like the UI blobs.
  */
-async function renderTextBlobToImage(text: string, widthPx: number, heightPx: number, blobIndex: number, language: Language, fontSize: number = 42): Promise<string> {
+async function renderTextBlobToImage(text: string, widthPx: number, heightPx: number, blobIndex: number, language: Language, fontSize: number = 42, childName: string = ''): Promise<string> {
     const html2canvas = getHtml2Canvas();
     const container = document.createElement('div');
     container.dir = language === 'ar' ? 'rtl' : 'ltr';
-    container.spellcheck = false; // Disable spellchecker to prevent red underlines
-    // Updated styling to match PreviewScreen more closely
+    // container.spellcheck = false; // Not needed on div
+
+    // HIGHLIGHTING LOGIC (Match PreviewScreen)
+    let finalHtml = text.split('\n\n').map(p => `<p style="margin-bottom: 24px; line-height: 1.6;">${p.trim()}</p>`).join('');
+
+    if (childName) {
+        const childFirstName = childName.trim().split(/\s+/)[0];
+        const escapedName = childFirstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Match name with word boundaries
+        const nameRegex = new RegExp(`\\b(${escapedName})\\b`, 'gi');
+        // Apply Bold + Brand Navy + Slight Size Bump (1.1em)
+        finalHtml = finalHtml.replace(nameRegex, `<span style="font-weight: 900; color: #203A72; font-size: 1.1em;">$1</span>`);
+    }
+
+    // STYLING (Match PreviewScreen: bg-white/60, rounded-2xl, shadow-sm, border-white/50)
     container.style.cssText = `
-        width: 1000px; /* Fixed high-res width */
+        width: 1000px;
         min-height: 400px;
-        background-color: rgba(255, 255, 255, 0.6); /* Reduced opacity for better visibility of art (was 0.85) */
-        border-radius: ${blobBorderRadii[blobIndex % blobBorderRadii.length]};
-        color: #203A72;
+        background-color: rgba(255, 255, 255, 0.6);
+        border-radius: 40px; /* rounded-2xl approximation for high-res */
+        color: #203A72; /* text-brand-navy */
         padding: 80px;
         font-family: ${language === 'ar' ? 'Tajawal, sans-serif' : 'Nunito, sans-serif'};
         font-weight: 700;
@@ -78,16 +91,16 @@ async function renderTextBlobToImage(text: string, widthPx: number, heightPx: nu
         justify-content: center;
         align-items: center;
         text-align: center;
-        line-height: 1.6;
         box-sizing: border-box;
         border: 2px solid rgba(255,255,255,0.5);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* shadow-sm */
     `;
 
-    // Simple text formatting
-    container.innerText = text.replace(/<[^>]*>?/gm, '');
+    container.innerHTML = finalHtml;
 
     document.body.appendChild(container);
-    const canvas = await html2canvas(container, { backgroundColor: null, scale: 2 }); // Scale 2 for crispy text
+    // Use scale 2 for crisp text
+    const canvas = await html2canvas(container, { backgroundColor: null, scale: 2 });
     document.body.removeChild(container);
     return canvas.toDataURL('image/png');
 }
@@ -189,7 +202,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             else if (ageNum >= 4) fontSize = 32;
             // Ages 1-3 remain 42 (or 36 if preferred, but sticking to logic of short text = big font)
 
-            const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language, fontSize);
+            const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language, fontSize, storyData.childName);
             const rectW = pdfW * 0.40; // Slightly wider
             const rectH = pdfH * 0.60;
             const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.55;

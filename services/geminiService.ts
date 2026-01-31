@@ -137,6 +137,7 @@ ${inputContext}
 TASK: Create ${settings.defaultSpreadCount}-spread blueprint for ${storyData.childName}.
 - Incorporate the "User's Custom Goal" if provided.
 - Adhere strictly to the "Master Production Rules" in the context above.
+- **CRITICAL:** The Child's Name is "${storyData.childName}". Use it exactly. DO NOT switch to "Reem" or other examples.
 
 OUTPUT: JSON blueprint.`;
 
@@ -278,7 +279,7 @@ ${bible.compositionMandates}
     });
 }
 
-export async function generateFinalScript(blueprint: StoryBlueprint, language: Language): Promise<{ text: string }[]> {
+export async function generateFinalScript(blueprint: StoryBlueprint, language: Language, childName: string): Promise<{ text: string }[]> {
     const settings = await adminService.getSettings();
 
     // STEP 1: THE AUTHOR (Drafting)
@@ -291,6 +292,8 @@ Blueprint: ${JSON.stringify(blueprint)}.
 
 **STRICT CHARACTER RULE:** 
 - The story must focus on the Child (and Sidekick if present). 
+- **CRITICAL NAME RULE:** The child's name is "${childName}". USE THIS NAME EXACTLY. DO NOT use "Reem", "Ahmed", "Sarah", or any other placeholder name.
+- **FREQUENCY:** You MUST mention the child's name ("${childName}") at least once on EVERY single page.
 - **DO NOT** introduce parents, siblings, or family members unless they are explicitly mentioned in the "Customer Input". 
 - Use fictional characters (wizards, animals, friends) for supporting roles if needed.
 
@@ -320,7 +323,8 @@ SPECIFIC CHECKS:
 3. **Agency:** Ensure the child is the one solving the problem, not adults.
 4. **Formatting:** Keep it to ${language === 'ar' ? 'Arabic' : 'English'}.
 5. **No Unrequested Family:** Ensure no parents/siblings appear in the text unless they were in the input.
-6. **No Stage Directions:** ABSOLUTELY NO text in asterisks (e.g. *sigh*, *giggle*). Pure narrative text only.
+6. **Name Frequency:** Ensure the child's name appears at least once on every page.
+7. **No Stage Directions:** ABSOLUTELY NO text in asterisks (e.g. *sigh*, *giggle*). Pure narrative text only.
 
 DRAFT CONTENT:
 ${JSON.stringify(draft)}
