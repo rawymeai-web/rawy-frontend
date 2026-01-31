@@ -85,12 +85,29 @@ ${t('فريق Rawy', 'The Rawy Team')}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          <Button onClick={async () => {
+            // Manual Download Trigger
+            try {
+              // @ts-ignore
+              const fileService = await import('../services/fileService');
+              const blob = await fileService.generatePrintPackage(storyData, shippingDetails || {} as any, language, orderNumber);
+              const link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = `Order_${orderNumber}_Package.zip`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            } catch (e) { alert('Download failed: ' + e); }
+          }} className="text-lg px-8 py-3 bg-brand-orange hover:bg-brand-coral rounded-xl shadow-lg w-full sm:w-auto animate-pulse">
+            {t('⬇ تنزيل الملفات', '⬇ Download Files')}
+          </Button>
+
           {shippingDetails?.email && (
             <Button onClick={handleSendEmail} variant="outline" className="text-lg px-8 py-3 bg-white/50 border-white hover:bg-white rounded-xl w-full sm:w-auto">
               {t('أرسل الفاتورة بالإيميل', 'Send Invoice via Email')}
             </Button>
           )}
-          <Button onClick={onRestart} className="text-lg px-8 py-3 rounded-xl shadow-lg hover:shadow-xl w-full sm:w-auto">
+          <Button onClick={onRestart} className="text-lg px-8 py-3 rounded-xl shadow-lg hover:shadow-xl w-full sm:w-auto bg-gray-800 hover:bg-black">
             {t('صنع قصة جديدة', 'Create a New Story')}
           </Button>
         </div>

@@ -131,11 +131,13 @@ const MainLayout: React.FC = () => {
                 console.log("Generating Print Package...");
                 const zipBlob = await fileService.generatePrintPackage(storyData, shippingDetails, language, newOrderNumber);
 
-                // 3. Upload to Cloud (Supabase)
-                console.log("Uploading to Cloud...");
-                const publicUrl = await fileService.uploadOrderFiles(newOrderNumber, zipBlob);
-                if (publicUrl) {
-                    console.log("File Uploaded:", publicUrl);
+                // 3. Upload to Cloud (Supabase) - Try/Catch to not block download
+                try {
+                    console.log("Uploading to Cloud...");
+                    const publicUrl = await fileService.uploadOrderFiles(newOrderNumber, zipBlob);
+                    if (publicUrl) console.log("File Uploaded:", publicUrl);
+                } catch (uploadError) {
+                    console.warn("Cloud Upload Failed (Continuing to Local Download):", uploadError);
                 }
 
                 // 4. Trigger Local Download (For User/Testing)
