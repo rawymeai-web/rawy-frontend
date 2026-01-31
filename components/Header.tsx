@@ -45,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({
         <div
           onClick={handleLogoClick}
           className={`cursor-pointer transition-transform active:scale-95 ${language === 'ar' ? 'order-last' : 'order-first'}`}
-          title="Rawy"
+          title="Rawy Admin (Tap 5 times)"
         >
           <Logo />
         </div>

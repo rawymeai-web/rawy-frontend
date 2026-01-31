@@ -188,8 +188,22 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
     const handleDownloadZip = async (order: AdminOrder) => {
         setIsExporting(order.orderNumber);
         try {
-            await fileService.generatePrintPackage(order.storyData as any, order.shippingDetails, language, order.orderNumber);
-        } catch (e) { alert('Extraction failed.'); console.error(e); } finally { setIsExporting(null); }
+            // Regenerate the package fresh from the stored story data
+            const zipBlob = await fileService.generatePrintPackage(order.storyData as any, order.shippingDetails, language, order.orderNumber);
+
+            // Trigger Download
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(zipBlob);
+            link.download = `Order_${order.orderNumber}_RECOVERED.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (e) {
+            alert('Extraction failed. See console.');
+            console.error(e);
+        } finally {
+            setIsExporting(null);
+        }
     };
 
     return (
