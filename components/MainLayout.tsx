@@ -75,11 +75,14 @@ const MainLayout: React.FC = () => {
     useEffect(() => {
         if (screen === 'unified-generation') {
             if (workflowStage < 6) {
-                if (!isWorkflowLoading) {
-                    // Auto-advance workflow steps rapidly for visual effect or normal pace
-                    const timer = setTimeout(() => nextStage(), 2500);
-                    return () => clearTimeout(timer);
-                }
+                // Ensure we advance even if loading seems stuck (failsafe)
+                // If loading, wait a bit longer (2s), else rapid advance (800ms)
+                const delay = isWorkflowLoading ? 2000 : 800;
+
+                const timer = setTimeout(() => {
+                    nextStage();
+                }, delay);
+                return () => clearTimeout(timer);
             } else if (!isGenerating && !generationProgress) {
                 // Workflow Done, Start Generation
                 startGeneration(
@@ -96,8 +99,9 @@ const MainLayout: React.FC = () => {
     // Generation: 0-100% -> 60% of total
     const unifiedProgress = (() => {
         if (screen !== 'unified-generation') return 0;
-        // Map 1-6 to 0-40%
-        const wfProgress = ((Math.max(0, workflowStage - 1)) / 5) * 40;
+
+        // Map 1-6 to 5-40% (Start at 5% so it's not empty)
+        const wfProgress = 5 + ((Math.max(0, workflowStage - 1)) / 5) * 35;
 
         if (workflowStage < 6) {
             return wfProgress;
