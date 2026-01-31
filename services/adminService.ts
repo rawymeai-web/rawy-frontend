@@ -106,84 +106,140 @@ export async function saveSettings(s: AppSettings): Promise<void> {
   if (error) throw error;
 }
 
+// --- Local Storage Fallback Helpers ---
+const LOCAL_ORDERS_KEY = 'rawy_local_orders';
+
+function getLocalOrders(): AdminOrder[] {
+  try {
+    const raw = window.localStorage.getItem(LOCAL_ORDERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function saveLocalOrder(order: AdminOrder) {
+  const current = getLocalOrders();
+  // Avoid duplicates
+  if (current.find(o => o.orderNumber === order.orderNumber)) return;
+  const updated = [order, ...current];
+  window.localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updated));
+}
+
+function updateLocalOrderStatus(orderNumber: string, status: OrderStatus) {
+  const current = getLocalOrders();
+  const index = current.findIndex(o => o.orderNumber === orderNumber);
+  if (index !== -1) {
+    current[index].status = status;
+    window.localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(current));
+  }
+}
+
 // 2. Orders
 export async function getOrders(): Promise<AdminOrder[]> {
+  // 1. Fetch Remote
+  let remoteOrders: AdminOrder[] = [];
   const { data, error } = await supabase
     .from('orders')
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching orders:', error);
-    return [];
+  if (!error && data) {
+    remoteOrders = data.map(mapDBOrder);
+  } else {
+    console.warn('Supabase fetch failed, using local orders only.');
   }
-  return data.map(mapDBOrder);
+
+  // 2. Fetch Local
+  const localOrders = getLocalOrders();
+
+  // 3. Merge (Prefer Remote if duplicate)
+  const remoteIds = new Set(remoteOrders.map(o => o.orderNumber));
+  const uniqueLocal = localOrders.filter(o => !remoteIds.has(o.orderNumber));
+
+  return [...remoteOrders, ...uniqueLocal].sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 }
 
 export async function saveOrder(orderNumber: string, storyData: StoryData, shippingDetails: ShippingDetails): Promise<void> {
-  const settings = await getSettings(); // Fetch latest costs
+  const settings = await getSettings();
   const product = await getProductSizeById(storyData.size);
   const basePrice = product ? product.price : 29.900;
-  const totalPrice = basePrice + 1.500; // Mock calculation logic from before
+  const totalPrice = basePrice + 1.500;
 
-  // 1. Upload Images
-  const imageFiles: imageStore.OrderImages = {
-    cover: new File([await (await fetch(`data:image/jpeg;base64,${storyData.coverImageUrl}`)).blob()], 'cover.jpeg', { type: 'image/jpeg' }),
-    spreads: await Promise.all(storyData.pages.filter((_, i) => i % 2 === 0).map(async (p, i) => {
-      return new File([await (await fetch(`data:image/jpeg;base64,${p.illustrationUrl}`)).blob()], `spread_${i + 1}.jpeg`, { type: 'image/jpeg' });
-    }))
-  };
-
-  const imageUrls = await imageStore.saveImagesForOrder(orderNumber, imageFiles);
-
-  // 2. Sanitize Story Data (Remove Base64)
-  const sanitizedStoryData = {
-    ...storyData,
-    coverImageUrl: imageUrls.cover, // Use Cloud URL
-    pages: storyData.pages.map((page, i) => {
-      // Logic to map spreads to pages is tricky if we don't have exact index match.
-      // Assuming even pages are spreads.
-      const spreadIndex = Math.floor((i) / 2);
-      // This logic needs to align with how we saved spreads.
-      // For safety, let's just say "Stored in Cloud" for now, or use the spreadUrl if valid.
-      return { ...page, illustrationUrl: imageUrls.spreads[spreadIndex] || 'See Cloud Storage' };
-    }),
-    mainCharacter: { ...storyData.mainCharacter, imageBases64: [], images: [] },
-    secondCharacter: storyData.secondCharacter ? { ...storyData.secondCharacter, imageBases64: [], images: [] } : undefined,
-  };
-
-  // 3. Upsert Customer
-  const customerId = shippingDetails.email.toLowerCase();
-  const { error: custError } = await supabase.from('customers').upsert({
-    id: customerId,
-    email: shippingDetails.email,
-    name: shippingDetails.name,
-    phone: shippingDetails.phone,
-    last_order_date: new Date().toISOString(),
-  }, { onConflict: 'id' });
-
-  if (custError) console.warn('Customer upsert failed:', custError);
-
-  // 4. Insert Order
-  const { error: orderError } = await supabase.from('orders').insert({
-    order_number: orderNumber,
-    customer_id: customerId,
-    customer_name: shippingDetails.name,
-    total: totalPrice,
+  // Prepare Order Object for Potential Fallback
+  const fallbackOrder: AdminOrder = {
+    orderNumber,
+    customerName: shippingDetails.name,
+    orderDate: new Date().toISOString(),
     status: 'New Order',
-    story_data: sanitizedStoryData,
-    shipping_details: shippingDetails,
-    production_cost: settings.unitProductionCost,
-    ai_cost: settings.unitAiCost,
-    shipping_cost: settings.unitShippingCost
-  });
+    total: totalPrice,
+    productionCost: settings.unitProductionCost,
+    aiCost: settings.unitAiCost,
+    shippingCost: settings.unitShippingCost,
+    storyData: storyData, // Store full data locally
+    shippingDetails: shippingDetails
+  };
 
-  if (orderError) throw orderError;
+  try {
+    // 1. Upload Images
+    const imageFiles: imageStore.OrderImages = {
+      cover: new File([await (await fetch(`data:image/jpeg;base64,${storyData.coverImageUrl}`)).blob()], 'cover.jpeg', { type: 'image/jpeg' }),
+      spreads: await Promise.all(storyData.pages.filter((_, i) => i % 2 === 0).map(async (p, i) => {
+        return new File([await (await fetch(`data:image/jpeg;base64,${p.illustrationUrl}`)).blob()], `spread_${i + 1}.jpeg`, { type: 'image/jpeg' });
+      }))
+    };
+
+    const imageUrls = await imageStore.saveImagesForOrder(orderNumber, imageFiles);
+
+    // 2. Sanitize Story Data (Remove Base64)
+    const sanitizedStoryData = {
+      ...storyData,
+      coverImageUrl: imageUrls.cover,
+      pages: storyData.pages.map((page, i) => {
+        const spreadIndex = Math.floor((Math.max(1, page.pageNumber) - 1) / 2);
+        return { ...page, illustrationUrl: imageUrls.spreads[spreadIndex] || page.illustrationUrl };
+      }),
+      mainCharacter: { ...storyData.mainCharacter, imageBases64: [], images: [] },
+      secondCharacter: storyData.secondCharacter ? { ...storyData.secondCharacter, imageBases64: [], images: [] } : undefined,
+    };
+
+    // 3. Upsert Customer
+    const customerId = shippingDetails.email.toLowerCase();
+    await supabase.from('customers').upsert({
+      id: customerId,
+      email: shippingDetails.email,
+      name: shippingDetails.name,
+      phone: shippingDetails.phone,
+      last_order_date: new Date().toISOString(),
+    }, { onConflict: 'id' });
+
+    // 4. Insert Order
+    const { error: orderError } = await supabase.from('orders').insert({
+      order_number: orderNumber,
+      customer_id: customerId,
+      customer_name: shippingDetails.name,
+      total: totalPrice,
+      status: 'New Order',
+      story_data: sanitizedStoryData,
+      shipping_details: shippingDetails,
+      production_cost: settings.unitProductionCost,
+      ai_cost: settings.unitAiCost,
+      shipping_cost: settings.unitShippingCost
+    });
+
+    if (orderError) throw orderError;
+
+  } catch (error) {
+    console.warn("Supabase Save Failed. Falling back to Local Storage.", error);
+    saveLocalOrder(fallbackOrder);
+    // We do NOT re-throw, so the UI flow continues successfully
+  }
 }
 
 export async function updateOrderStatus(orderNumber: string, status: OrderStatus): Promise<void> {
   const { error } = await supabase.from('orders').update({ status }).eq('order_number', orderNumber);
-  if (error) throw error;
+  if (error) {
+    console.warn("Supabase update failed, trying local.");
+    updateLocalOrderStatus(orderNumber, status);
+  }
 }
 
 // 3. Products

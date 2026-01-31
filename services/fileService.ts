@@ -107,10 +107,29 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
     const pdfW = pdf.internal.pageSize.getWidth();
     const pdfH = pdf.internal.pageSize.getHeight();
 
+    // Helper to normalize image data (Base64 or URL)
+    const normalizeImage = async (input: string | undefined): Promise<string> => {
+        if (!input) return "";
+        if (input.startsWith('http')) {
+            // It's a URL, fetch it
+            try {
+                const resp = await fetch(input);
+                const blob = await resp.blob();
+                return await blobToBase64(blob);
+            } catch (e) {
+                console.error("Failed to fetch image for PDF:", input, e);
+                return "";
+            }
+        }
+        return input;
+    };
+
     // 1. Handle the Cover First
     let coverData = storyData.coverImageUrl;
     if (highResImages?.cover) {
         coverData = await blobToBase64(highResImages.cover);
+    } else {
+        coverData = await normalizeImage(coverData);
     }
 
     if (coverData && coverData.length > 50) {
@@ -119,7 +138,9 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         // Use Cover Logic to prevent stretching
         // Assuming Source Image is 16:9 (approx 1.77)
         const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
-        pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
+        try {
+            pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
+        } catch (e) { console.warn("PDF Cover Add Failed", e); }
 
         // Add Title Overlay to Cover
         const titleB64 = await createTextImage({ title: storyData.title }, language);
@@ -141,13 +162,17 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         let illustration = spread.illustrationUrl;
         if (highResImages?.spreads[i]) {
             illustration = await blobToBase64(highResImages.spreads[i]);
+        } else {
+            illustration = await normalizeImage(illustration);
         }
 
         if (illustration && illustration.length > 50) {
             const cleanB64 = illustration.includes(',') ? illustration.split(',')[1] : illustration;
             // Use Cover Logic
             const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
-            pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
+            try {
+                pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
+            } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
         // Draw Text Blobs
