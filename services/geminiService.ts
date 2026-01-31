@@ -135,6 +135,7 @@ CUSTOMER INPUT:
 ${inputContext}
 
 TASK: Create ${settings.defaultSpreadCount}-spread blueprint for ${storyData.childName}.
+- **PRIORITY OVERRIDE:** If "User's Custom Goal/Challenge" (Customer Input) is provided, it **SUPERSEDES** the standard Theme rules. You MUST write the story based on the CUSTOMER INPUT.
 - Incorporate the "User's Custom Goal" if provided.
 - Adhere strictly to the "Master Production Rules" in the context above.
 - **CRITICAL:** The Child's Name is "${storyData.childName}". Use it exactly. DO NOT switch to "Reem" or other examples.

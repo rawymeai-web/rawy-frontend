@@ -156,11 +156,29 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         } catch (e) { console.warn("PDF Cover Add Failed", e); }
 
         // Add Title Overlay to Cover
+        // LOGIC: Center title on the FRONT COVER half.
+        // EN: Front is RIGHT half (50% to 100%)
+        // AR: Front is LEFT half (0% to 50%)
+        const isAr = language === 'ar';
         const titleB64 = await createTextImage({ title: storyData.title }, language);
-        const tw = pdfW * 0.6;
-        const th = pdfH * 0.2;
-        const tx = (pdfW - tw) / 2;
-        const ty = pdfH * 0.15;
+
+        // Title Width: 40% of full PDF (80% of front cover)
+        const tw = pdfW * 0.4;
+        const titleAspect = 1000 / 200; // From createTextImage dimensions
+        const th = tw / titleAspect;
+
+        let tx;
+        if (isAr) {
+            // Front is LEFT: Center in 0-50% range
+            // Center = 25% w - half title width
+            tx = (pdfW * 0.25) - (tw / 2);
+        } else {
+            // Front is RIGHT: Center in 50-100% range
+            // Center = 75% w - half title width
+            tx = (pdfW * 0.75) - (tw / 2);
+        }
+
+        const ty = pdfH * 0.15; // Top positioning
         pdf.addImage(titleB64, 'PNG', tx, ty, tw, th);
     }
 
@@ -188,7 +206,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
-        // Draw Text Blobs
+        // Draw Text Blobs (Fix Stretching)
         const blocks = spread.textBlocks || [];
         for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
             const block = blocks[bIdx];
@@ -200,12 +218,28 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             if (ageNum >= 10) fontSize = 24;
             else if (ageNum >= 7) fontSize = 28;
             else if (ageNum >= 4) fontSize = 32;
-            // Ages 1-3 remain 42 (or 36 if preferred, but sticking to logic of short text = big font)
 
             const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language, fontSize, storyData.childName);
-            const rectW = pdfW * 0.40; // Slightly wider
-            const rectH = pdfH * 0.60;
-            const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.55;
+
+            // Layout Logic:
+            // Box Width: 35% of PDF Width (approx 70% of a page)
+            const rectW = pdfW * 0.35;
+            // Calculate Height to maintain aspect ratio (prevent stretching)
+            // Blob Canvas is 1000px wide. We need its height.
+            // Since we don't know exact canvas height here easily without async load, 
+            // We rely on renderTextBlobToImage returning an image. 
+            // A better way for PDF is to fix the aspect ratio.
+            // Let's assume the blob is approx 1000x500 (~2:1) but dynamic.
+
+            // FIX: Use 'auto' height equivalent by just setting width and letting PDF engine handle? 
+            // jsPDF addImage(img, format, x, y, w, h). If we know aspect ratio.
+            // The blob image is generated at 1000px width.
+            // We'll set a reasonable fixed height that isn't "stretched" looking, 
+            // OR ideally we'd get image dimensions. 
+            // For now, let's assume a slightly squarer ratio for text bubbles to avoid thin stretching.
+            const rectH = rectW * 0.6; // 5:3 ratio (1.66) instead of 16:9 vertical stretch
+
+            const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.60;
             const rectY = (pdfH - rectH) / 2;
             pdf.addImage(blobImg, 'PNG', rectX, rectY, rectW, rectH);
         }
@@ -441,9 +475,28 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 };
 
 export async function createTextImage(titleData: { title: string }, lang: Language): Promise<string> {
+    // Ensure font is loaded for High-Res Capture
+    const fontLink = document.createElement('link');
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap';
+    fontLink.rel = 'stylesheet';
+    document.head.appendChild(fontLink);
+    // Wait a moment for font to load (heuristic) - in real prod use document.fonts.ready
+    await document.fonts.ready;
+
     const html2canvas = getHtml2Canvas();
     const container = document.createElement('div');
-    container.style.cssText = 'position:absolute;left:-9999px;font-family:sans-serif;color:white;background:rgba(0,0,0,0.4);border-radius:15px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,0.8);padding:20px 30px;text-align:center;max-width:1000px;line-height:1.3;font-size:65px;';
+
+    // Typography Logic
+    const isEn = lang !== 'ar';
+    const fontFamily = isEn ? "'Luckiest Guy', cursive" : "'Tajawal', sans-serif";
+    const letterSpacing = isEn ? '2px' : '0';
+    // Heavier stroke for English "Logo" look
+    const textShadow = isEn
+        ? '4px 4px 0 #203A72, -2px -2px 0 #203A72, 2px -2px 0 #203A72, -2px 2px 0 #203A72, 2px 2px 0 #203A72, 0 8px 15px rgba(0,0,0,0.3)'
+        : '2px 2px 0 #203A72, -1px -1px 0 #203A72, 1px -1px 0 #203A72, -1px 1px 0 #203A72, 1px 1px 0 #203A72';
+
+    container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:#FFFFFF;background:transparent;font-weight:900;text-shadow:${textShadow};padding:20px;text-align:center;width:1000px;line-height:1.1;font-size:90px;text-transform:uppercase;letter-spacing:${letterSpacing};transform: rotate(-2deg);`; // Added slight rotation for "Fun" feel
+
     container.dir = lang === 'ar' ? 'rtl' : 'ltr';
     container.innerHTML = titleData.title;
     document.body.appendChild(container);

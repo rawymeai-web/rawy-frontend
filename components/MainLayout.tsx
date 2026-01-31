@@ -229,7 +229,7 @@ const MainLayout: React.FC = () => {
             />
             <main className="flex-grow relative">
                 <PageDecorations />
-                <div className="relative z-10 w-full h-full p-4 sm:p-8 flex flex-col justify-center">{renderScreen()}</div>
+                <div className={`relative w-full h-full p-4 sm:p-8 flex flex-col justify-center ${screen === 'unified-generation' ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
             </main>
             <Footer language={language} onCheckOrderStatus={() => setOrderStatusModalOpen(true)} />
             <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(currentPrice, currency)} language={language} />
