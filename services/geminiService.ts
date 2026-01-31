@@ -285,7 +285,7 @@ ${bible.compositionMandates}
         let b64 = "";
         for (const part of response.candidates[0].content.parts) if (part.inlineData) b64 = part.inlineData.data;
         if (!b64) throw new Error("Image generation failed");
-        return { imageBase64: b64, fullPrompt: systemInstructions };
+        return { imageBase64: b64, fullPrompt: styleContext + "\nSCENE: " + prompt };
     });
 }
 

@@ -285,6 +285,7 @@ export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], 
 
     // 1. Cover
     // 1. Cover
+    const coverB64 = await blobToBase64(coverBlob);
     let cleanCover = '';
     if (typeof coverB64 === 'string') {
         cleanCover = coverB64.includes(',') ? coverB64.split(',')[1] : coverB64;
