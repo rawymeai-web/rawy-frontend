@@ -62,7 +62,7 @@ STYLE: ${storyData.selectedStylePrompt}
 **INTEGRATION:** Ensure the character is naturally lit and blended into the scene. No "sticker" look.
 **NEGATIVE PROMPT:** TEXT, TITLE, LETTERS, WORDS, TYPOGRAPHY, WATERMARK, ADULTS, PARENTS, SPLIT QUERY, SEPARATE IMAGES.`;
 
-            const coverTask = geminiService.generateMethod4Image(coverPrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed).then(res => {
+            const coverTask = geminiService.generateMethod4Image(coverPrompt, storyData.selectedStylePrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed).then(res => {
                 setGenerationProgress(prev => prev + 10);
                 // Return displayTitle so we can update the story data with it
                 return { ...res, displayTitle };
