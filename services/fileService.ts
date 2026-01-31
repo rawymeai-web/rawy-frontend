@@ -239,10 +239,12 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             // OR ideally we'd get image dimensions. 
             // For now, let's assume a slightly squarer ratio for text bubbles to avoid thin stretching.
             const rectH = rectW * 0.6; // 5:3 ratio (1.66) instead of 16:9 vertical stretch
-
             const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.60;
             const rectY = (pdfH - rectH) / 2;
-            pdf.addImage(blobImg, 'PNG', rectX, rectY, rectW, rectH);
+
+            if (blobImg && blobImg.dataUrl) {
+                pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);
+            }
         }
 
         // METADATA STRIP LOGIC (Only if orderNumber is provided)

@@ -349,7 +349,7 @@ ${bible.masterGuardrails} `;
 export async function generateTechnicalStyleGuide(imageBase64: string, basePrompt: string): Promise<string> {
     return withRetry(async () => {
         const response = await ai().models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-1.5-flash',
             contents: [{ inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }, { text: `Describe palette. 50 words.` }]
         });
         return response.text || "";
