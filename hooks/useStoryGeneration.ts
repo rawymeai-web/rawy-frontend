@@ -108,37 +108,38 @@ STYLE: ${storyData.selectedStylePrompt}
             const pages: Page[] = [];
             const BATCH_SIZE = 6;
 
-            const batch = prompts.slice(i, i + BATCH_SIZE);
+            for (let i = 0; i < prompts.length; i += BATCH_SIZE) {
+                const batch = prompts.slice(i, i + BATCH_SIZE);
 
-            // DYNAMIC MAGICAL STATUS MESSAGES
-            const magicalMessages = language === 'ar' ? [
-                "جاري خلط الألوان السحرية...",
-                "استدعاء رسامي الأحلام...",
-                "وضع اللمسات النهائية على الشخصيات...",
-                "تجهيز الصفحات للطباعة...",
-                "تلوين السماء والنجوم..."
-            ] : [
-                "Mixing stardust paints...",
-                "Summoning the art elves...",
-                "Polishing the moonbeams...",
-                "Sketching the hero's smile...",
-                "Adding a sprinkle of magic..."
-            ];
+                // DYNAMIC MAGICAL STATUS MESSAGES
+                const magicalMessages = language === 'ar' ? [
+                    "جاري خلط الألوان السحرية...",
+                    "استدعاء رسامي الأحلام...",
+                    "وضع اللمسات النهائية على الشخصيات...",
+                    "تجهيز الصفحات للطباعة...",
+                    "تلوين السماء والنجوم..."
+                ] : [
+                    "Mixing stardust paints...",
+                    "Summoning the art elves...",
+                    "Polishing the moonbeams...",
+                    "Sketching the hero's smile...",
+                    "Adding a sprinkle of magic..."
+                ];
 
-            // Cycle messages based on batch index to keep it fresh
-            const msgIndex = (Math.ceil((i + 1) / BATCH_SIZE)) % magicalMessages.length;
-            const progressPercent = Math.round(((i + 1) / prompts.length) * 100);
+                // Cycle messages based on batch index to keep it fresh
+                const msgIndex = (Math.ceil((i + 1) / BATCH_SIZE)) % magicalMessages.length;
+                const progressPercent = Math.round(((i + 1) / prompts.length) * 100);
 
-            setGenerationStatus(`${magicalMessages[msgIndex]} (${progressPercent}%)`);
+                setGenerationStatus(`${magicalMessages[msgIndex]} (${progressPercent}%)`);
 
-            const batchResults = await Promise.all(batch.map(async (prompt, batchIndex) => {
-                const globalIndex = i + batchIndex;
-                const plan = spreadPlan[globalIndex];
-                const side = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
-                const opp = side === 'left' ? 'right' : 'left';
-                const secondRef = (storyData.useSecondCharacter && storyData.secondCharacter?.imageBases64?.[0]) ? storyData.secondCharacter.imageBases64[0] : undefined;
+                const batchResults = await Promise.all(batch.map(async (prompt, batchIndex) => {
+                    const globalIndex = i + batchIndex;
+                    const plan = spreadPlan[globalIndex];
+                    const side = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
+                    const opp = side === 'left' ? 'right' : 'left';
+                    const secondRef = (storyData.useSecondCharacter && storyData.secondCharacter?.imageBases64?.[0]) ? storyData.secondCharacter.imageBases64[0] : undefined;
 
-                const scenePrompt = `**COMPOSITION: STAGE-LIKE LAYOUT (RULE OF THIRDS)**
+                    const scenePrompt = `**COMPOSITION: STAGE-LIKE LAYOUT (RULE OF THIRDS)**
 - **${side.toUpperCase()} SIDE (Subject):** The Main Character MUST be positioned clearly on this side.
 - **${opp.toUpperCase()} SIDE (Void):** THIS AREA MUST BE EMPTY BACKGROUND / NEGATIVE SPACE. It is reserved for text. DO NOT PUT IMPORTANT ELEMENTS HERE.
 ${secondRef ? `**MANDATORY:** THE SECOND HERO FROM IMAGE 2 MUST BE VISIBLE.` : ''}
@@ -148,57 +149,57 @@ ${prompt}
 **GUIDELINE:** If parents/family are in the scene, DO NOT show their faces. Use POV shots, specific details (hands, feet), or shadows. Fictional characters are allowed.
 NEGATIVE: No vertical seams, no text, VISIBLE PARENTS, MOM'S FACE, DAD'S FACE, REALISTIC SIBLING FACES.`;
 
-                // PASS STYLE PROMPT HERE
-                return geminiService.generateMethod4Image(scenePrompt, storyData.selectedStylePrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed, secondRef);
-            }));
+                    // PASS STYLE PROMPT HERE
+                    return geminiService.generateMethod4Image(scenePrompt, storyData.selectedStylePrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed, secondRef);
+                }));
 
-            // Process batch results
-            batchResults.forEach((res, batchIndex) => {
-                const globalIndex = i + batchIndex;
-                const cleanText = (t: string) => t.replace(/{name}/g, storyData.childName).replace(/\*.*?\*/g, '').trim();
+                // Process batch results
+                batchResults.forEach((res, batchIndex) => {
+                    const globalIndex = i + batchIndex;
+                    const cleanText = (t: string) => t.replace(/{name}/g, storyData.childName).replace(/\*.*?\*/g, '').trim();
 
-                // ONE TEXT BLOCK PER SPREAD (Fixed Mapping)
-                // We now generate exactly 8 blocks, one per spread.
-                const txt1 = cleanText(script[globalIndex]?.text || "");
+                    // ONE TEXT BLOCK PER SPREAD (Fixed Mapping)
+                    // We now generate exactly 8 blocks, one per spread.
+                    const txt1 = cleanText(script[globalIndex]?.text || "");
 
-                const plan = spreadPlan[globalIndex];
-                const side = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
-                const opp = side === 'left' ? 'right' : 'left';
+                    const plan = spreadPlan[globalIndex];
+                    const side = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
+                    const opp = side === 'left' ? 'right' : 'left';
 
-                // Push a single page object representing the spread's narrative
-                pages.push({
-                    pageNumber: globalIndex + 1,
-                    text: txt1,
-                    illustrationUrl: res.imageBase64,
-                    actualPrompt: res.fullPrompt,
-                    textSide: opp, // Text goes in negative space
-                    textBlocks: [{ text: txt1, position: { top: 10, left: 10, width: 30 }, alignment: 'center' }]
+                    // Push a single page object representing the spread's narrative
+                    pages.push({
+                        pageNumber: globalIndex + 1,
+                        text: txt1,
+                        illustrationUrl: res.imageBase64,
+                        actualPrompt: res.fullPrompt,
+                        textSide: opp, // Text goes in negative space
+                        textBlocks: [{ text: txt1, position: { top: 10, left: 10, width: 30 }, alignment: 'center' }]
+                    });
                 });
-            });
 
-            setGenerationProgress(30 + ((i + BATCH_SIZE) / prompts.length) * 70);
-        }
+                setGenerationProgress(30 + ((i + BATCH_SIZE) / prompts.length) * 70);
+            }
 
             // Ensure pages are sorted just in case
             pages.sort((a, b) => a.pageNumber - b.pageNumber);
 
-        updateStory({ ...currentStoryData, pages });
-        onComplete();
+            updateStory({ ...currentStoryData, pages });
+            onComplete();
 
-    } catch (e: any) {
-        console.error(e);
-        setError(e.message || "Generation failed");
-        onError();
-    } finally {
-        setIsGenerating(false);
-    }
-};
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || "Generation failed");
+            onError();
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
-return {
-    isGenerating,
-    generationStatus,
-    generationProgress,
-    error,
-    startGeneration
-};
+    return {
+        isGenerating,
+        generationStatus,
+        generationProgress,
+        error,
+        startGeneration
+    };
 };
