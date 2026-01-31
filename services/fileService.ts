@@ -57,7 +57,7 @@ function getCoverDimensions(imgW: number, imgH: number, targetW: number, targetH
  * Creates a high-res image of a text blob to be inserted into the PDF.
  * This ensures the PDF blobs look exactly like the UI blobs.
  */
-async function renderTextBlobToImage(text: string, widthPx: number, heightPx: number, blobIndex: number, language: Language, fontSize: number = 42, childName: string = ''): Promise<string> {
+async function renderTextBlobToImage(text: string, widthPx: number, heightPx: number, blobIndex: number, language: Language, fontSize: number = 42, childName: string = ''): Promise<{ dataUrl: string; width: number; height: number }> {
     const html2canvas = getHtml2Canvas();
     const container = document.createElement('div');
     container.dir = language === 'ar' ? 'rtl' : 'ltr';
@@ -71,8 +71,8 @@ async function renderTextBlobToImage(text: string, widthPx: number, heightPx: nu
         const escapedName = childFirstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         // Match name with word boundaries
         const nameRegex = new RegExp(`\\b(${escapedName})\\b`, 'gi');
-        // Apply Bold + Brand Navy + Slight Size Bump (1.1em)
-        finalHtml = finalHtml.replace(nameRegex, `<span style="font-weight: 900; color: #203A72; font-size: 1.1em;">$1</span>`);
+        // Apply Bold + Black
+        finalHtml = finalHtml.replace(nameRegex, `<span style="font-weight: 900; color: #000000; font-size: 1.1em;">$1</span>`);
     }
 
     // STYLING (Match PreviewScreen: bg-white/60, rounded-2xl, shadow-sm, border-white/50)
@@ -81,7 +81,7 @@ async function renderTextBlobToImage(text: string, widthPx: number, heightPx: nu
         min-height: 400px;
         background-color: rgba(255, 255, 255, 0.6);
         border-radius: 40px; /* rounded-2xl approximation for high-res */
-        color: #203A72; /* text-brand-navy */
+        color: #000000; /* FORCE BLACK TEXT */
         padding: 80px;
         font-family: ${language === 'ar' ? 'Tajawal, sans-serif' : 'Nunito, sans-serif'};
         font-weight: 700;
@@ -102,7 +102,7 @@ async function renderTextBlobToImage(text: string, widthPx: number, heightPx: nu
     // Use scale 2 for crisp text
     const canvas = await html2canvas(container, { backgroundColor: null, scale: 2 });
     document.body.removeChild(container);
-    return canvas.toDataURL('image/png');
+    return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height };
 }
 
 export const generatePreviewPdf = async (storyData: StoryData, language: Language, highResImages?: imageStore.OrderImages, orderNumber?: string): Promise<Blob> => {
@@ -183,7 +183,8 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
     }
 
     // 2. Handle Spreads
-    const spreads = storyData.pages.filter((_, i) => i % 2 === 0);
+    // 2. Handle Spreads (NOW 1:1 Mapping)
+    const spreads = storyData.pages; // Use ALL pages, as we now generate 1 page = 1 spread
 
     for (let i = 0; i < spreads.length; i++) {
         pdf.addPage();
@@ -359,6 +360,26 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         if (storyData.blueprint) artifactsFolder.file("1_blueprint.json", JSON.stringify(storyData.blueprint, null, 2));
         if (storyData.spreadPlan) artifactsFolder.file("3_visual_plan.json", JSON.stringify(storyData.spreadPlan, null, 2));
         if (storyData.finalPrompts) artifactsFolder.file("5_prompts.json", JSON.stringify(storyData.finalPrompts, null, 2));
+
+        // 5. Detailed Creation Prompts (Debug)
+        let detailedPrompts = `STORY GENERATION LOG\n--------------------------------\n`;
+        storyData.pages.forEach(p => {
+            detailedPrompts += `PAGE ${p.pageNumber}\n`;
+            detailedPrompts += `TEXT: ${p.text}\n`;
+            detailedPrompts += `PROMPT USED:\n${p.actualPrompt || 'N/A'}\n`;
+            detailedPrompts += `--------------------------------\n\n`;
+        });
+        artifactsFolder.file("debug_creation_prompts.txt", detailedPrompts);
+
+        // 5. Detailed Creation Prompts (Debug)
+        let detailedPrompts = `STORY GENERATION LOG\n--------------------------------\n`;
+        storyData.pages.forEach(p => {
+            detailedPrompts += `PAGE ${p.pageNumber}\n`;
+            detailedPrompts += `TEXT: ${p.text}\n`;
+            detailedPrompts += `PROMPT USED:\n${p.actualPrompt || 'N/A'}\n`;
+            detailedPrompts += `--------------------------------\n\n`;
+        });
+        artifactsFolder.file("debug_creation_prompts.txt", detailedPrompts);
 
         // 5. Order Manifest
         const manifest = {

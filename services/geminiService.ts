@@ -110,37 +110,38 @@ export async function runJuniorWriter(storyData: StoryData, selectedTheme: Story
 
         const inputContext = `
 CHILD DETAILS:
-- Name: ${storyData.childName}
-- Age: ${storyData.childAge}
-- Gender: ${storyData.mainCharacter.type === 'person' ? 'Child' : 'Object/Toy'}
-- Description: ${storyData.mainCharacter.description}
+        - Name: ${storyData.childName}
+        - Age: ${storyData.childAge}
+        - Gender: ${storyData.mainCharacter.type === 'person' ? 'Child' : 'Object/Toy'}
+        - Description: ${storyData.mainCharacter.description}
 
-${storyData.useSecondCharacter && storyData.secondCharacter ? `SIDEKICK/COMPANION:
-- Name: ${storyData.secondCharacter.name}
-- Type: ${storyData.secondCharacter.type === 'object' ? 'Magical Object/Toy' : 'Person'}
-- Relationship: ${storyData.secondCharacter.relationship || 'Unspecified'}
-- Age: ${storyData.secondCharacter.age || 'N/A'}` : ''}
+        COMPANION / SIDEKICK(Must be included if present):
+            - Name: ${storyData.secondCharacter?.name || 'None'}
+        - Type: ${storyData.secondCharacter?.type === 'object' ? 'Magical Object/Toy' : 'Person'}
+        - Relationship: ${storyData.secondCharacter?.relationship || 'Unspecified'}
+        - Age: ${storyData.secondCharacter?.age || 'N/A'}
 
 STORY PARAMETERS:
-- Theme: ${selectedTheme ? selectedTheme.title.en : storyData.theme}
-- Core Value: ${selectedTheme?.skeleton.storyCores[0] || 'Discovery'}
-- User's Custom Goal: ${storyData.customGoal || 'None Provided'}
-- User's Custom Challenge: ${storyData.customChallenge || 'None Provided'}
+        - Theme: ${selectedTheme ? selectedTheme.title.en : storyData.theme}
+        - Core Value: ${selectedTheme?.skeleton.storyCores[0] || 'Discovery'}
+        - User's Custom Goal: ${storyData.customGoal || 'None Provided'}
+            - User's Custom Challenge: ${storyData.customChallenge || 'None Provided'}
 `;
 
         const prompt = `ROLE: Creative Story Architect.
-${getContext()}
+            ${getContext()}
 
 CUSTOMER INPUT:
 ${inputContext}
 
-TASK: Create ${settings.defaultSpreadCount}-spread blueprint for ${storyData.childName}.
-- **PRIORITY OVERRIDE:** If "User's Custom Goal/Challenge" (Customer Input) is provided, it **SUPERSEDES** the standard Theme rules. You MUST write the story based on the CUSTOMER INPUT.
+        TASK: Create ${settings.defaultSpreadCount} -spread blueprint for ${storyData.childName} ${storyData.secondCharacter?.name ? `and ${storyData.secondCharacter.name}` : ''}.
+- ** PRIORITY OVERRIDE:** If "User's Custom Goal/Challenge"(Customer Input) is provided, it ** SUPERSEDES ** the standard Theme rules.You MUST write the story based on the CUSTOMER INPUT.
 - Incorporate the "User's Custom Goal" if provided.
 - Adhere strictly to the "Master Production Rules" in the context above.
-- **CRITICAL:** The Child's Name is "${storyData.childName}". Use it exactly. DO NOT switch to "Reem" or other examples.
+- ** CRITICAL:** The Child's Name is "${storyData.childName}". Use it exactly. 
+            - ** SIDEKICK RULE:** If a Sidekick("${storyData.secondCharacter?.name}") is listed, they MUST appear in the story logic as a main companion.
 
-OUTPUT: JSON blueprint.`;
+                OUTPUT: JSON blueprint.`;
 
         const response = await ai().models.generateContent({
             model: settings.targetModel,
@@ -155,10 +156,10 @@ export async function runSeniorWriter(blueprint: StoryBlueprint): Promise<StoryB
     const settings = await adminService.getSettings();
     return withRetry(async () => {
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
-        const prompt = `ROLE: Senior Editor. 
-${getContext()}
-AUDIT: Validate the narrative arc against the Story Flow logic. Ensure failure leads to internal growth.
-Blueprint: ${JSON.stringify(blueprint)}`;
+        const prompt = `ROLE: Senior Editor.
+            ${getContext()}
+        AUDIT: Validate the narrative arc against the Story Flow logic.Ensure failure leads to internal growth.
+            Blueprint: ${JSON.stringify(blueprint)} `;
         const response = await ai().models.generateContent({
             model: settings.targetModel,
             contents: prompt,
@@ -172,9 +173,9 @@ export async function runVisualDesigner(blueprint: StoryBlueprint): Promise<Spre
     const settings = await adminService.getSettings();
     return withRetry(async () => {
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
-        const prompt = `ROLE: Art Director. Plan ${settings.defaultSpreadCount} panoramic layouts. 
-${getContext()}
-Blueprint: ${JSON.stringify(blueprint)}`;
+        const prompt = `ROLE: Art Director.Plan ${settings.defaultSpreadCount} panoramic layouts.
+            ${getContext()}
+        Blueprint: ${JSON.stringify(blueprint)} `;
         const response = await ai().models.generateContent({
             model: settings.targetModel,
             contents: prompt,
@@ -197,9 +198,9 @@ export async function runCreativeDirector(blueprint: StoryBlueprint, plan: Sprea
     const settings = await adminService.getSettings();
     return withRetry(async () => {
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
-        const prompt = `ROLE: Executive Creative Director. 
-${getContext()}
-Plan: ${JSON.stringify(plan)}`;
+        const prompt = `ROLE: Executive Creative Director.
+            ${getContext()}
+        Plan: ${JSON.stringify(plan)} `;
         const response = await ai().models.generateContent({
             model: settings.targetModel,
             contents: prompt,
@@ -211,10 +212,10 @@ Plan: ${JSON.stringify(plan)}`;
 
 export async function runPromptEngineer(plan: SpreadDesignPlan, technicalStyleGuide: string, stylePrompt: string, blueprint: StoryBlueprint): Promise<string[]> {
     return withRetry(async () => {
-        const prompt = `ROLE: Lead Illustrator. 
-${getContext()}
-TASK: Write 8 cinematic prompts based on the visual plan.
-Plan: ${JSON.stringify(plan)}. JSON array output.`;
+        const prompt = `ROLE: Lead Illustrator.
+            ${getContext()}
+        TASK: Write 8 cinematic prompts based on the visual plan.
+            Plan: ${JSON.stringify(plan)}. JSON array output.`;
         const response = await ai().models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
@@ -226,9 +227,9 @@ Plan: ${JSON.stringify(plan)}. JSON array output.`;
 
 export async function runPromptReviewer(prompts: string[]): Promise<string[]> {
     return withRetry(async () => {
-        const prompt = `ROLE: Prompt QA. 
-${getContext()}
-Prompts: ${JSON.stringify(prompts)}`;
+        const prompt = `ROLE: Prompt QA.
+            ${getContext()}
+        Prompts: ${JSON.stringify(prompts)} `;
         const response = await ai().models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
@@ -244,22 +245,22 @@ export async function generateMethod4Image(prompt: string, referenceBase64: stri
 
         let systemInstructions = `TASK: Create a cinematic storybook illustration.
 
-**MASTER IDENTITY RULE (CRITICAL):**
-1. **FACE/HEAD:** Must match REFERENCE 1 exactly.
-2. **AGE LOCK:** The character MUST be a child aged ${age}.
-3. **CONSISTENCY:** Same person, same age, same face in every shot.
+** MASTER IDENTITY RULE(CRITICAL):**
+            1. ** FACE / HEAD:** Must match REFERENCE 1 exactly.
+2. ** AGE LOCK:** The character MUST be a child aged ${age}.
+        3. ** CONSISTENCY:** Same person, same age, same face in every shot.
 
-**CLOTHING LOCK:** The character MUST wear: "${characterDescription}". Do not change this outfit unless the prompt specifically requests a costume change.
-${secondReferenceBase64 ? '**IDENTITY LOCK 2 (SECONDARY):** Match face structure exactly from REFERENCE 2.' : ''}
+** CLOTHING LOCK:** The character MUST wear: "${characterDescription}".Do not change this outfit unless the prompt specifically requests a costume change.
+            ${secondReferenceBase64 ? '**IDENTITY LOCK 2 (SECONDARY):** Match face structure exactly from REFERENCE 2.' : ''}
 
 ${bible.masterGuardrails}
 
 ${bible.compositionMandates}
 
-**COMPOSITION:** Ultrawide-Angle Panoramic Shot. Use "Negative Space" on the sides (clean background) for text placement.
+** COMPOSITION:** Ultrawide - Angle Panoramic Shot.Use "Negative Space" on the sides(clean background) for text placement.
 
 
-**SCENE:** ${prompt}`;
+** SCENE:** ${prompt} `;
 
         const contents: any[] = [{ text: systemInstructions }, { inlineData: { mimeType: 'image/jpeg', data: referenceBase64 } }];
 
@@ -288,17 +289,21 @@ export async function generateFinalScript(blueprint: StoryBlueprint, language: L
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
         const draftPrompt = `ROLE: Children's Book Author. 
 ${getContext()}
-TASK: Write ${settings.defaultSpreadCount * 2} pages of narrative text in ${language}. 
-Blueprint: ${JSON.stringify(blueprint)}. 
+        TASK: Write ${settings.defaultSpreadCount} narrative beats (one per spread) in ${language}.
+        Blueprint: ${JSON.stringify(blueprint)}. 
 
-**STRICT CHARACTER RULE:** 
-- The story must focus on the Child (and Sidekick if present). 
-- **CRITICAL NAME RULE:** The child's name is "${childName}". USE THIS NAME EXACTLY. DO NOT use "Reem", "Ahmed", "Sarah", or any other placeholder name.
-- **FREQUENCY:** You MUST mention the child's name ("${childName}") at least once on EVERY single page.
-- **DO NOT** introduce parents, siblings, or family members unless they are explicitly mentioned in the "Customer Input". 
-- Use fictional characters (wizards, animals, friends) for supporting roles if needed.
+** STRICT STRUCTURE MANDATE:**
+- ** BEAT 1 (INTRODUCTION):** You MUST start with an Introduction Phase. Establish the setting and the character's normal world BEFORE the adventure begins. Do not start "in media res".
+- ** ONE BEAT PER SPREAD:** Write exactly ${settings.defaultSpreadCount} text blocks.
 
-OUTPUT: JSON array of ${settings.defaultSpreadCount * 2} { "text": "string" }.`;
+** STRICT CHARACTER RULE:**
+            - The story must focus on the Child(and Sidekick if present). 
+- ** CRITICAL NAME RULE:** The child's name is "${childName}". USE THIS NAME EXACTLY. DO NOT use "Reem", "Ahmed", "Sarah", or any other placeholder name.
+            - ** FREQUENCY:** You MUST mention the child's name ("${childName}") at least once on EVERY single page.
+                - ** DO NOT ** introduce parents, siblings, or family members unless they are explicitly mentioned in the "Customer Input". 
+- Use fictional characters(wizards, animals, friends) for supporting roles if needed.
+
+            OUTPUT: JSON array of ${settings.defaultSpreadCount} { "text": "string" }.`;
 
         const response = await ai().models.generateContent({
             model: settings.targetModel,
@@ -314,23 +319,23 @@ OUTPUT: JSON array of ${settings.defaultSpreadCount * 2} { "text": "string" }.`;
         const maxWords = age <= 3 ? 10 : (age <= 6 ? 20 : 35);
 
         const editorPrompt = `ROLE: Senior Editor & Stylist.
-${getContext()}
+            ${getContext()}
 
-TASK: Polish the draft below to PERFECTION based on the "Stylistic Guidelines" above.
+        TASK: Polish the draft below to PERFECTION based on the "Stylistic Guidelines" above.
 SPECIFIC CHECKS:
-0. **Strict Word Count:** MAXIMUM ${maxWords} words per page. This is CRITICAL.
-1. **Rhythm:** Use the "Rule of Three" (e.g., "Thump! Thump! Shake!"). Short sentences.
-2. **Sensory:** Ensure every page has Sound, Touch, or Smell.
-3. **Agency:** Ensure the child is the one solving the problem, not adults.
-4. **Formatting:** Keep it to ${language === 'ar' ? 'Arabic' : 'English'}.
-5. **No Unrequested Family:** Ensure no parents/siblings appear in the text unless they were in the input.
-6. **Name Frequency:** Ensure the child's name appears at least once on every page.
-7. **No Stage Directions:** ABSOLUTELY NO text in asterisks (e.g. *sigh*, *giggle*). Pure narrative text only.
+        0. ** Strict Word Count:** MAXIMUM ${maxWords} words per page.This is CRITICAL.
+1. ** Rhythm:** Use the "Rule of Three"(e.g., "Thump! Thump! Shake!").Short sentences.
+2. ** Sensory:** Ensure every page has Sound, Touch, or Smell.
+3. ** Agency:** Ensure the child is the one solving the problem, not adults.
+4. ** Formatting:** Keep it to ${language === 'ar' ? 'Arabic' : 'English'}.
+        5. ** No Unrequested Family:** Ensure no parents / siblings appear in the text unless they were in the input.
+6. ** Name Frequency:** Ensure the child's name appears at least once on every page.
+        7. ** No Stage Directions:** ABSOLUTELY NO text in asterisks(e.g. * sigh *, * giggle *).Pure narrative text only.
 
 DRAFT CONTENT:
 ${JSON.stringify(draft)}
 
-OUTPUT: JSON array of ${settings.defaultSpreadCount * 2} { "text": "string" } (Polished Version).`;
+        OUTPUT: JSON array of ${settings.defaultSpreadCount * 2} { "text": "string" } (Polished Version).`;
 
         const response = await ai().models.generateContent({
             model: settings.targetModel,
@@ -346,14 +351,14 @@ export async function generateThemeStylePreview(mainCharacter: Character, second
         const bible = adminService.getSeriesBible();
 
         // Include Theme Context if provided
-        const themeContext = theme ? `CONTEXT: The child is in a "${theme}" setting. (e.g. Space, Jungle, etc).` : '';
+        const themeContext = theme ? `CONTEXT: The child is in a "${theme}" setting. (e.g.Space, Jungle, etc).` : '';
 
-        const prompt = `TASK: CLOSE-UP PORTRAIT of Main Character. 
-STYLE: ${style}. 
-PROTAGONIST: Child from IMAGE 1. 
-CAMERA: Medium-Close shot (Head & Shoulders). Focus heavily on FACE and EXPRESSION matching.
-${themeContext}
-${bible.masterGuardrails}`;
+        const prompt = `TASK: CLOSE - UP PORTRAIT of Main Character.
+        STYLE: ${style}.
+    PROTAGONIST: Child from IMAGE 1.
+    CAMERA: Medium - Close shot(Head & Shoulders).Focus heavily on FACE and EXPRESSION matching.
+        ${themeContext}
+${bible.masterGuardrails} `;
 
         const contents: any[] = [{ inlineData: { mimeType: 'image/jpeg', data: mainCharacter.imageBases64[0] } }, { text: prompt }];
 

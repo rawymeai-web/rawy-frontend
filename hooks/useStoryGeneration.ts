@@ -44,6 +44,10 @@ export const useStoryGeneration = (
                 displayTitle = `${storyData.childName}'s ${displayTitle}`;
             }
 
+            const coverSceneContext = (storyData.customGoal && storyData.customGoal.length > 5)
+                ? `Scene illustrating: ${storyData.customGoal}`
+                : `${storyData.childName} looking epic and welcoming.`;
+
             const coverPrompt = `TASK: Create a Panoramic 16:9 Book Cover Spread.
 **LAYOUT MANDATE:**
 - **${frontSide} HALF (FRONT COVER):** Hero (${storyData.childName}, Age: ${storyData.childAge}) MUST be here. Focus on the child's face and expression.
@@ -54,7 +58,7 @@ export const useStoryGeneration = (
 TITLE: ${displayTitle} (CONTEXT ONLY - DO NOT RENDER TEXT).
 STYLE: ${storyData.selectedStylePrompt}
 
-**SCENE:** ${storyData.childName} looking epic and welcoming.
+**SCENE:** ${coverSceneContext}
 **INTEGRATION:** Ensure the character is naturally lit and blended into the scene. No "sticker" look.
 **NEGATIVE PROMPT:** TEXT, TITLE, LETTERS, WORDS, TYPOGRAPHY, WATERMARK, ADULTS, PARENTS, SPLIT QUERY, SEPARATE IMAGES.`;
 
@@ -115,8 +119,7 @@ STYLE: ${storyData.selectedStylePrompt}
                     const opp = side === 'left' ? 'right' : 'left';
                     const secondRef = (storyData.useSecondCharacter && storyData.secondCharacter?.imageBases64?.[0]) ? storyData.secondCharacter.imageBases64[0] : undefined;
 
-                    const scenePrompt = `**STYLE MANDATE:** ${storyData.selectedStylePrompt}
-**COMPOSITION: STAGE-LIKE LAYOUT (RULE OF THIRDS)**
+                    const scenePrompt = `**COMPOSITION: STAGE-LIKE LAYOUT (RULE OF THIRDS)**
 - **${side.toUpperCase()} SIDE (Subject):** The Main Character MUST be positioned clearly on this side.
 - **${opp.toUpperCase()} SIDE (Void):** THIS AREA MUST BE EMPTY BACKGROUND / NEGATIVE SPACE. It is reserved for text. DO NOT PUT IMPORTANT ELEMENTS HERE.
 ${secondRef ? `**MANDATORY:** THE SECOND HERO FROM IMAGE 2 MUST BE VISIBLE.` : ''}
@@ -126,36 +129,31 @@ ${prompt}
 **GUIDELINE:** If parents/family are in the scene, DO NOT show their faces. Use POV shots, specific details (hands, feet), or shadows. Fictional characters are allowed.
 NEGATIVE: No vertical seams, no text, VISIBLE PARENTS, MOM'S FACE, DAD'S FACE, REALISTIC SIBLING FACES.`;
 
-                    return geminiService.generateMethod4Image(scenePrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed, secondRef);
+                    // PASS STYLE PROMPT HERE
+                    return geminiService.generateMethod4Image(scenePrompt, storyData.selectedStylePrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed, secondRef);
                 }));
 
                 // Process batch results
                 batchResults.forEach((res, batchIndex) => {
                     const globalIndex = i + batchIndex;
                     const cleanText = (t: string) => t.replace(/{name}/g, storyData.childName).replace(/\*.*?\*/g, '').trim();
-                    const txt1 = cleanText(script[globalIndex * 2]?.text || "");
-                    const txt2 = cleanText(script[globalIndex * 2 + 1]?.text || "");
 
-                    // Re-derive layout info for placement
+                    // ONE TEXT BLOCK PER SPREAD (Fixed Mapping)
+                    // We now generate exactly 8 blocks, one per spread.
+                    const txt1 = cleanText(script[globalIndex]?.text || "");
+
                     const plan = spreadPlan[globalIndex];
                     const side = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
                     const opp = side === 'left' ? 'right' : 'left';
 
+                    // Push a single page object representing the spread's narrative
                     pages.push({
-                        pageNumber: globalIndex * 2 + 1,
+                        pageNumber: globalIndex + 1,
                         text: txt1,
                         illustrationUrl: res.imageBase64,
                         actualPrompt: res.fullPrompt,
-                        textBlocks: [{ text: txt1, position: { top: 20, left: 10, width: 35 }, alignment: 'center' }],
-                        textSide: opp
-                    });
-                    pages.push({
-                        pageNumber: globalIndex * 2 + 2,
-                        text: txt2,
-                        illustrationUrl: res.imageBase64,
-                        actualPrompt: res.fullPrompt,
-                        textBlocks: [{ text: txt2, position: { top: 20, left: 55, width: 35 }, alignment: 'center' }],
-                        textSide: opp
+                        textSide: opp, // Text goes in negative space
+                        textBlocks: [{ text: txt1, position: { top: 10, left: 10, width: 30 }, alignment: 'center' }]
                     });
                 });
 
