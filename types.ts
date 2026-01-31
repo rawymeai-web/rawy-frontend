@@ -1,5 +1,4 @@
 
-
 export type Screen =
   | 'language'
   | 'welcome'
@@ -154,7 +153,7 @@ export interface StoryData {
   spreadPlan?: SpreadDesignPlan;
   finalPrompts?: string[];
   styleReferenceImageBase64?: string;
-  // Added optional fields for debug and advanced comparison workflows to fix missing property errors
+  // Added optional fields for debug and comparison
   coverDebugImages?: CoverDebugImages;
   selectedDebugMethods?: string[];
 }
@@ -240,6 +239,7 @@ export interface StoryPlan {
     name: string;
     roleType: string;
     influence: string;
+    visualKey: string;
   }[];
   phases: {
     phaseNumber: number;
