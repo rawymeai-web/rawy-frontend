@@ -312,6 +312,7 @@ SPECIFIC CHECKS:
 3. **Agency:** Ensure the child is the one solving the problem, not adults.
 4. **Formatting:** Keep it to ${language === 'ar' ? 'Arabic' : 'English'}.
 5. **No Unrequested Family:** Ensure no parents/siblings appear in the text unless they were in the input.
+6. **No Stage Directions:** ABSOLUTELY NO text in asterisks (e.g. *sigh*, *giggle*). Pure narrative text only.
 
 DRAFT CONTENT:
 ${JSON.stringify(draft)}

@@ -132,8 +132,9 @@ NEGATIVE: No vertical seams, no text, VISIBLE PARENTS, MOM'S FACE, DAD'S FACE, R
                 // Process batch results
                 batchResults.forEach((res, batchIndex) => {
                     const globalIndex = i + batchIndex;
-                    const txt1 = script[globalIndex * 2]?.text.replace(/{name}/g, storyData.childName) || "";
-                    const txt2 = script[globalIndex * 2 + 1]?.text.replace(/{name}/g, storyData.childName) || "";
+                    const cleanText = (t: string) => t.replace(/{name}/g, storyData.childName).replace(/\*.*?\*/g, '').trim();
+                    const txt1 = cleanText(script[globalIndex * 2]?.text || "");
+                    const txt2 = cleanText(script[globalIndex * 2 + 1]?.text || "");
 
                     // Re-derive layout info for placement
                     const plan = spreadPlan[globalIndex];
