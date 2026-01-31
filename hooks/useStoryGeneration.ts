@@ -116,9 +116,9 @@ STYLE: ${storyData.selectedStylePrompt}
                     const secondRef = (storyData.useSecondCharacter && storyData.secondCharacter?.imageBases64?.[0]) ? storyData.secondCharacter.imageBases64[0] : undefined;
 
                     const scenePrompt = `**STYLE MANDATE:** ${storyData.selectedStylePrompt}
-**COMPOSITION:**
-- **${side.toUpperCase()} SIDE:** Focus. Hero visible here.
-- **${opp.toUpperCase()} SIDE:** Negative space / Background for text.
+**COMPOSITION: STAGE-LIKE LAYOUT (RULE OF THIRDS)**
+- **${side.toUpperCase()} SIDE (Subject):** The Main Character MUST be positioned clearly on this side.
+- **${opp.toUpperCase()} SIDE (Void):** THIS AREA MUST BE EMPTY BACKGROUND / NEGATIVE SPACE. It is reserved for text. DO NOT PUT IMPORTANT ELEMENTS HERE.
 ${secondRef ? `**MANDATORY:** THE SECOND HERO FROM IMAGE 2 MUST BE VISIBLE.` : ''}
 
 **SCENE ACTION:**

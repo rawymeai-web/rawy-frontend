@@ -181,7 +181,7 @@ Blueprint: ${JSON.stringify(blueprint)}`;
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        spreads: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { spreadNumber: { type: Type.INTEGER }, keyActions: { type: Type.STRING }, mainContentSide: { type: Type.STRING } }, required: ['spreadNumber', 'keyActions', 'mainContentSide'] } }
+                        spreads: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { spreadNumber: { type: Type.INTEGER }, keyActions: { type: Type.STRING }, mainContentSide: { type: Type.STRING, enum: ["Left", "Right"] } }, required: ['spreadNumber', 'keyActions', 'mainContentSide'] } }
                     },
                     required: ['spreads']
                 }
@@ -201,7 +201,7 @@ Plan: ${JSON.stringify(plan)}`;
         const response = await ai().models.generateContent({
             model: settings.targetModel,
             contents: prompt,
-            config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { spreads: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { spreadNumber: { type: Type.INTEGER }, keyActions: { type: Type.STRING }, mainContentSide: { type: Type.STRING } }, required: ['spreadNumber', 'keyActions', 'mainContentSide'] } } }, required: ['spreads'] } }
+            config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { spreads: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { spreadNumber: { type: Type.INTEGER }, keyActions: { type: Type.STRING }, mainContentSide: { type: Type.STRING, enum: ["Left", "Right"] } }, required: ['spreadNumber', 'keyActions', 'mainContentSide'] } } }, required: ['spreads'] } }
         });
         return JSON.parse(cleanJsonString(response.text));
     });
