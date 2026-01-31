@@ -236,13 +236,17 @@ Prompts: ${JSON.stringify(prompts)}`;
     });
 }
 
-export async function generateMethod4Image(prompt: string, referenceBase64: string, characterDescription: string, seed?: number, secondReferenceBase64?: string): Promise<{ imageBase64: string; fullPrompt: string }> {
+export async function generateMethod4Image(prompt: string, referenceBase64: string, characterDescription: string, age: string, seed?: number, secondReferenceBase64?: string): Promise<{ imageBase64: string; fullPrompt: string }> {
     return withRetry(async () => {
         const bible = adminService.getSeriesBible();
 
         let systemInstructions = `TASK: Create a cinematic storybook illustration.
 
-**IDENTITY LOCK 1 (PRIMARY):** Match face structure exactly from REFERENCE 1.
+**MASTER IDENTITY RULE (CRITICAL):**
+1. **FACE/HEAD:** Must match REFERENCE 1 exactly.
+2. **AGE LOCK:** The character MUST be a child aged ${age}.
+3. **CONSISTENCY:** Same person, same age, same face in every shot.
+
 **CLOTHING LOCK:** The character MUST wear: "${characterDescription}". Do not change this outfit unless the prompt specifically requests a costume change.
 ${secondReferenceBase64 ? '**IDENTITY LOCK 2 (SECONDARY):** Match face structure exactly from REFERENCE 2.' : ''}
 

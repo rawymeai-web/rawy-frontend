@@ -101,7 +101,7 @@ const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange:
             }}>
 
             {/* LEFT HALF */}
-            <div className="w-1/2 h-full relative border-r border-white/10 flex flex-col justify-between p-8">
+            <div className="w-1/2 h-full relative flex flex-col justify-between p-8">
                 {isHeroLeft ? (
                     // ENGLISH FRONT (Hero Title Side)
                     <div className="relative z-10 h-full flex flex-col items-center pt-10">

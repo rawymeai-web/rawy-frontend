@@ -46,9 +46,9 @@ export const useStoryGeneration = (
 
             const coverPrompt = `TASK: Create a Panoramic 16:9 Book Cover Spread.
 **LAYOUT MANDATE:**
-- **${frontSide} HALF (FRONT COVER):** Hero (${storyData.childName}) MUST be here. Focus on the child. Top 30% clean sky.
+- **${frontSide} HALF (FRONT COVER):** Hero (${storyData.childName}, Age: ${storyData.childAge}) MUST be here. Focus on the child's face and expression.
 - **${backSide} HALF (BACK COVER):** Empty/Minimal background or pattern only.
-- **NO CENTRAL SEAM:** The image must flow continuously.
+- **NO CENTRAL SEAM:** The image must flow continuously as one single panoramic art piece.
 
 **STORY INFO:**
 TITLE: ${displayTitle} (CONTEXT ONLY - DO NOT RENDER TEXT).
@@ -56,9 +56,9 @@ STYLE: ${storyData.selectedStylePrompt}
 
 **SCENE:** ${storyData.childName} looking epic and welcoming.
 **INTEGRATION:** Ensure the character is naturally lit and blended into the scene. No "sticker" look.
-**NEGATIVE PROMPT:** TEXT, TITLE, LETTERS, WORDS, TYPOGRAPHY, WATERMARK, ADULTS, PARENTS.`;
+**NEGATIVE PROMPT:** TEXT, TITLE, LETTERS, WORDS, TYPOGRAPHY, WATERMARK, ADULTS, PARENTS, SPLIT QUERY, SEPARATE IMAGES.`;
 
-            const coverTask = geminiService.generateMethod4Image(coverPrompt, masterDNA, storyData.mainCharacter.description, storyData.styleSeed).then(res => {
+            const coverTask = geminiService.generateMethod4Image(coverPrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed).then(res => {
                 setGenerationProgress(prev => prev + 10);
                 // Return displayTitle so we can update the story data with it
                 return { ...res, displayTitle };
@@ -126,7 +126,7 @@ ${prompt}
 **GUIDELINE:** If parents/family are in the scene, DO NOT show their faces. Use POV shots, specific details (hands, feet), or shadows. Fictional characters are allowed.
 NEGATIVE: No vertical seams, no text, VISIBLE PARENTS, MOM'S FACE, DAD'S FACE, REALISTIC SIBLING FACES.`;
 
-                    return geminiService.generateMethod4Image(scenePrompt, masterDNA, storyData.mainCharacter.description, storyData.styleSeed, secondRef);
+                    return geminiService.generateMethod4Image(scenePrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed, secondRef);
                 }));
 
                 // Process batch results
