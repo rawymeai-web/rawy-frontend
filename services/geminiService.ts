@@ -302,11 +302,15 @@ OUTPUT: JSON array of ${settings.defaultSpreadCount * 2} { "text": "string" }.`;
 
     // STEP 2: THE SENIOR EDITOR (Polishing)
     return withRetry(async () => {
+        const age = parseInt(blueprint.foundation.targetAge) || 5;
+        const maxWords = age <= 3 ? 10 : (age <= 6 ? 20 : 35);
+
         const editorPrompt = `ROLE: Senior Editor & Stylist.
 ${getContext()}
 
 TASK: Polish the draft below to PERFECTION based on the "Stylistic Guidelines" above.
 SPECIFIC CHECKS:
+0. **Strict Word Count:** MAXIMUM ${maxWords} words per page. This is CRITICAL.
 1. **Rhythm:** Use the "Rule of Three" (e.g., "Thump! Thump! Shake!"). Short sentences.
 2. **Sensory:** Ensure every page has Sound, Touch, or Smell.
 3. **Agency:** Ensure the child is the one solving the problem, not adults.

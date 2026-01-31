@@ -45,7 +45,7 @@ const formatStoryTextHTML = (text: string, childName: string): string => {
 
     // HERO NAME IN BOLD UPPERCASE with visual pop
     if (childFirstName) {
-        formatted = formatted.replace(nameRegex, `<span class="font-black text-brand-navy underline decoration-brand-orange/40 text-110">$1</span>`);
+        formatted = formatted.replace(nameRegex, `<span class="font-black text-brand-navy text-110">$1</span>`);
     }
 
     return formatted;
@@ -63,7 +63,7 @@ const TextContainer: React.FC<{ textBlocks: TextBlock[], storyData: StoryData, l
     return (
         <div className="absolute inset-0 z-20 p-8 flex flex-col justify-center">
             {textBlocks.map((block, i) => (
-                <div key={i} className="bg-white/90 p-6 rounded-2xl shadow-sm backdrop-blur-sm border border-white/50 text-brand-navy"
+                <div key={i} className="bg-white/60 p-6 rounded-2xl shadow-sm backdrop-blur-sm border border-white/50 text-brand-navy"
                     style={{
                         textAlign: block.alignment || 'center',
                     }}>
@@ -89,8 +89,8 @@ const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange:
     // ENGLISH: Hero/Title = LEFT SIDE.
 
     const isAr = language === 'ar';
-    const isHeroRight = isAr; // Arabic = Hero Right half
-    const isHeroLeft = !isAr; // English = Hero Left half
+    const isHeroRight = !isAr; // English = Hero Title on RIGHT Side (Front)
+    const isHeroLeft = isAr;   // Arabic = Hero Title on LEFT Side (Front)
 
     return (
         <div className="w-full h-full relative overflow-hidden flex shadow-2xl rounded-3xl border-8 border-white ring-1 ring-gray-200"
