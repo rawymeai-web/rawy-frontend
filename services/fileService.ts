@@ -284,18 +284,40 @@ export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], 
     const pdfH = pdf.internal.pageSize.getHeight();
 
     // 1. Cover
-    const coverB64 = await blobToBase64(coverBlob);
-    const cleanCover = coverB64.includes(',') ? coverB64.split(',')[1] : coverB64;
-    const cDim = getCoverDimensions(1600, 900, pdfW, pdfH);
-    pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', cDim.x, cDim.y, cDim.w, cDim.h);
+    // 1. Cover
+    let cleanCover = '';
+    if (typeof coverB64 === 'string') {
+        cleanCover = coverB64.includes(',') ? coverB64.split(',')[1] : coverB64;
+    } else {
+        console.warn("Cover Base64 is not a string:", typeof coverB64);
+    }
+
+    if (cleanCover) {
+        const cDim = getCoverDimensions(1600, 900, pdfW, pdfH);
+        try {
+            pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', cDim.x, cDim.y, cDim.w, cDim.h);
+        } catch (e) {
+            console.error("Failed to add cover image to PDF", e);
+        }
+    }
 
     // 2. Spreads
     for (let i = 0; i < spreadBlobs.length; i++) {
         pdf.addPage();
         const spreadB64 = await blobToBase64(spreadBlobs[i]);
-        const cleanSpread = spreadB64.includes(',') ? spreadB64.split(',')[1] : spreadB64;
-        const sDim = getCoverDimensions(1600, 900, pdfW, pdfH);
-        pdf.addImage(`data:image/jpeg;base64,${cleanSpread}`, 'JPEG', sDim.x, sDim.y, sDim.w, sDim.h);
+        let cleanSpread = '';
+        if (typeof spreadB64 === 'string') {
+            cleanSpread = spreadB64.includes(',') ? spreadB64.split(',')[1] : spreadB64;
+        }
+
+        if (cleanSpread) {
+            const sDim = getCoverDimensions(1600, 900, pdfW, pdfH);
+            try {
+                pdf.addImage(`data:image/jpeg;base64,${cleanSpread}`, 'JPEG', sDim.x, sDim.y, sDim.w, sDim.h);
+            } catch (e) {
+                console.error(`Failed to add spread ${i} to PDF`, e);
+            }
+        }
     }
 
     return pdf.output('blob');
