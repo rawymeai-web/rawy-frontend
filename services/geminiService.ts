@@ -103,55 +103,6 @@ const blueprintSchema = {
     required: ['foundation', 'characters', 'structure']
 };
 
-export async function runJuniorWriter(storyData: StoryData, selectedTheme: StoryTheme | undefined): Promise<StoryBlueprint> {
-    const settings = await adminService.getSettings();
-    return withRetry(async () => {
-        if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
-
-        const inputContext = `
-CHILD DETAILS:
-        - Name: ${storyData.childName}
-        - Age: ${storyData.childAge}
-        - Gender: ${storyData.mainCharacter.type === 'person' ? 'Child' : 'Object/Toy'}
-        - Description: ${storyData.mainCharacter.description}
-
-        COMPANION / SIDEKICK(Must be included if present):
-            - Name: ${storyData.secondCharacter?.name || 'None'}
-        - Type: ${storyData.secondCharacter?.type === 'object' ? 'Magical Object/Toy' : 'Person'}
-        - Relationship: ${storyData.secondCharacter?.relationship || 'Unspecified'}
-        - Age: ${storyData.secondCharacter?.age || 'N/A'}
-
-STORY PARAMETERS:
-        - Theme: ${selectedTheme ? selectedTheme.title.en : storyData.theme}
-        - Core Value: ${selectedTheme?.skeleton.storyCores[0] || 'Discovery'}
-        - User's Custom Goal: ${storyData.customGoal || 'None Provided'}
-            - User's Custom Challenge: ${storyData.customChallenge || 'None Provided'}
-`;
-
-        const prompt = `ROLE: Creative Story Architect.
-            ${getContext()}
-
-CUSTOMER INPUT:
-${inputContext}
-
-        TASK: Create ${settings.defaultSpreadCount} -spread blueprint for ${storyData.childName} ${storyData.secondCharacter?.name ? `and ${storyData.secondCharacter.name}` : ''}.
-- ** PRIORITY OVERRIDE:** If "User's Custom Goal/Challenge"(Customer Input) is provided, it ** SUPERSEDES ** the standard Theme rules.You MUST write the story based on the CUSTOMER INPUT.
-- Incorporate the "User's Custom Goal" if provided.
-- Adhere strictly to the "Master Production Rules" in the context above.
-- ** CRITICAL:** The Child's Name is "${storyData.childName}". Use it exactly. 
-            - ** SIDEKICK RULE:** If a Sidekick("${storyData.secondCharacter?.name}") is listed, they MUST appear in the story logic as a main companion.
-
-                OUTPUT: JSON blueprint.`;
-
-        const response = await ai().models.generateContent({
-            model: settings.targetModel,
-            contents: prompt,
-            config: { responseMimeType: "application/json", responseSchema: blueprintSchema } // Removed thinkingConfig for broader compatibility
-        });
-        return JSON.parse(cleanJsonString(response.text));
-    });
-}
-
 export async function runSeniorWriter(blueprint: StoryBlueprint): Promise<StoryBlueprint> {
     const settings = await adminService.getSettings();
     return withRetry(async () => {
@@ -237,6 +188,7 @@ export async function runPromptReviewer(prompts: string[]): Promise<string[]> {
     return withRetry(async () => {
         const prompt = `ROLE: Prompt QA.
             ${getContext()}
+        Audit these prompts for "Series Consistency".
         Prompts: ${JSON.stringify(prompts)} `;
         const response = await ai().models.generateContent({
             model: 'gemini-3-flash-preview',
@@ -251,11 +203,14 @@ export async function generateMethod4Image(prompt: string, stylePrompt: string, 
     return withRetry(async () => {
         const bible = adminService.getSeriesBible();
 
-        let systemInstructions = `TASK: Create a cinematic storybook illustration.
+        // STRATEGY: Structured Prompting (JSON-Logic equivalent for Image Models)
+        // We separate limits/style from the action to prevent "Context Bleed"
+        let styleContext = `TASK: Create a ${stylePrompt || 'cinematic storybook'} illustration.
+** VISUAL STYLE MANDATE (OVERRIDE DEFAULT):** ${stylePrompt}
 
 ** MASTER IDENTITY RULE(CRITICAL):**
             1. ** FACE / HEAD:** Must match REFERENCE 1 exactly.
-2. ** AGE LOCK:** The character MUST be a child aged ${age}.
+            2. ** AGE LOCK:** The character MUST be a child aged ${age}.
         3. ** CONSISTENCY:** Same person, same age, same face in every shot.
 
 ** CLOTHING LOCK:** The character MUST wear: "${characterDescription}".Do not change this outfit unless the prompt specifically requests a costume change.
@@ -265,19 +220,22 @@ ${bible.masterGuardrails}
 
 ${bible.compositionMandates}
 
-** COMPOSITION:** Ultrawide - Angle Panoramic Shot.Use "Negative Space" on the sides(clean background) for text placement.
+** COMPOSITION:** Ultrawide - Angle Panoramic Shot.Use "Negative Space" on the sides(clean background) for text placement.`;
 
-
-** SCENE:** ${prompt} `;
-
-        const contents: any[] = [{ text: systemInstructions }, { inlineData: { mimeType: 'image/jpeg', data: referenceBase64 } }];
+        // The "User Action" is distinct from the "System Context"
+        // This forces the model to treat the Context as "Constant Rules" and the Action as "What to draw NOW"
+        const contents: any[] = [
+            { role: 'user', parts: [{ text: styleContext }] },
+            { role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: referenceBase64 } }] },
+            { role: 'user', parts: [{ text: `NOW GENERATE THIS SPECIFIC SCENE:\n${prompt}` }] }
+        ];
 
         if (secondReferenceBase64) {
-            contents.push({ inlineData: { mimeType: 'image/jpeg', data: secondReferenceBase64 } });
+            contents.splice(2, 0, { role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: secondReferenceBase64 } }] });
         }
 
         const response = await ai().models.generateContent({
-            model: 'gemini-3-pro-image-preview', // Or whatever model you are using that supports multi-image
+            model: 'gemini-3-pro-image-preview',
             contents: contents,
             config: { seed, imageConfig: { aspectRatio: "16:9" } }
         });
