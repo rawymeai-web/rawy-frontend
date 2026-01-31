@@ -18,7 +18,7 @@ export const useStoryGeneration = (
         setError(null);
 
         try {
-            const masterDNA = storyData.styleReferenceImageBase64;
+            const masterDNA = storyData.mainCharacter.imageBases64[0] || storyData.styleReferenceImageBase64;
             if (!masterDNA) throw new Error("No style reference found");
             if (!storyData.blueprint) throw new Error("No blueprint found");
 

@@ -11,6 +11,7 @@ export type Screen =
   | 'size'
   | 'workflow'
   | 'generating'
+  | 'unified-generation'
   | 'preview'
   | 'checkout'
   | 'confirmation'

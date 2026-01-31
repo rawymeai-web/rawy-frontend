@@ -228,6 +228,32 @@ export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], 
     return pdf.output('blob');
 };
 
+
+export const uploadOrderFiles = async (orderNumber: string, zipBlob: Blob): Promise<string | null> => {
+    try {
+        const { supabase } = await import('../utils/supabaseClient');
+        const filename = `${orderNumber}_Package.zip`;
+        const { data, error } = await supabase.storage
+            .from('order-files')
+            .upload(filename, zipBlob, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (error) {
+            console.error("Supabase Storage Upload Error:", error);
+            // Fallback: try creating bucket if it doesn't exist? (Usually admin task, but good to know)
+            return null;
+        }
+
+        const { data: publicData } = supabase.storage.from('order-files').getPublicUrl(filename);
+        return publicData.publicUrl;
+    } catch (e) {
+        console.error("Upload failed exception:", e);
+        return null;
+    }
+};
+
 export const generatePrintPackage = async (storyData: StoryData, shipping: ShippingDetails, language: Language, orderNumber: string) => {
     try {
         const zip = new (window as any).JSZip();
@@ -236,28 +262,50 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         const pdfBlob = await generatePreviewPdf(storyData, language, undefined, orderNumber);
         zip.file(`${orderNumber}_Preview.pdf`, pdfBlob);
 
-        // 2. Add Order Manifest
+        // 2. Full Written Story
+        let storyText = `Title: ${storyData.title}\nAuthor: ${storyData.childName}\n\n`;
+        storyData.pages.forEach(p => {
+            storyText += `[Page ${p.pageNumber}]\n${p.text}\n\n`;
+        });
+        zip.file('story_narrative.txt', storyText);
+
+        // 3. Raw Images (High Res)
+        const imagesFolder = zip.folder("raw_images");
+        if (storyData.coverImageUrl) {
+            const coverB64 = storyData.coverImageUrl.split(',')[1] || storyData.coverImageUrl;
+            imagesFolder.file("cover.jpg", coverB64, { base64: true });
+        }
+        storyData.pages.forEach((p, i) => {
+            if (p.illustrationUrl) {
+                const imgB64 = p.illustrationUrl.split(',')[1] || p.illustrationUrl;
+                imagesFolder.file(`page_${p.pageNumber}.jpg`, imgB64, { base64: true });
+            }
+        });
+
+        // 4. Workflow Artifacts (Debug/Re-creation)
+        const artifactsFolder = zip.folder("workflow_artifacts");
+        if (storyData.blueprint) artifactsFolder.file("1_blueprint.json", JSON.stringify(storyData.blueprint, null, 2));
+        if (storyData.spreadPlan) artifactsFolder.file("3_visual_plan.json", JSON.stringify(storyData.spreadPlan, null, 2));
+        if (storyData.finalPrompts) artifactsFolder.file("5_prompts.json", JSON.stringify(storyData.finalPrompts, null, 2));
+
+        // 5. Order Manifest
         const manifest = {
             orderNumber,
             date: new Date().toISOString(),
             shipping,
-            storyData: {
-                ...storyData,
-                pages: storyData.pages.map(p => ({ ...p, imageBase64: '[REMOVED]', illustrationUrl: p.illustrationUrl }))
+            storySummary: {
+                title: storyData.title,
+                theme: storyData.theme,
+                childName: storyData.childName,
+                pageCount: storyData.pages.length
             }
         };
         zip.file('order_manifest.json', JSON.stringify(manifest, null, 2));
 
-        // 3. Generate Zip
+        // 6. Generate Zip
         const content = await zip.generateAsync({ type: 'blob' });
 
-        // 4. Download
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = `Order_${orderNumber}_Package.zip`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        return content; // Return Blob for upload
 
     } catch (e) {
         console.error("Error generating print package:", e);

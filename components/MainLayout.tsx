@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import * as adminService from '../services/adminService';
 import * as fileService from '../services/fileService';
@@ -10,6 +11,7 @@ import StyleChoiceScreen from './StyleChoiceScreen';
 import ThemeScreen from './ThemeScreen';
 import WorkflowScreen from './WorkflowScreen';
 import GeneratingScreen from './GeneratingScreen';
+import { UnifiedGenerationScreen } from './UnifiedGenerationScreen';
 import PreviewScreen from './PreviewScreen';
 import CheckoutScreen from './CheckoutScreen';
 import ConfirmationScreen from './ConfirmationScreen';
@@ -69,27 +71,76 @@ const MainLayout: React.FC = () => {
         document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     }, [language]);
 
-    const handleWorkflowApprove = async () => {
-        if (workflowStage < 6) {
-            nextStage();
-        } else {
-            setScreen('generating');
-            startGeneration(
-                language,
-                () => setScreen('preview'),
-                () => { /* Stay on generating screen to show error */ }
-            );
+    // Combined Logic: Auto-advance from Workflow to Generation in Unified Screen
+    useEffect(() => {
+        if (screen === 'unified-generation') {
+            if (workflowStage < 6) {
+                if (!isWorkflowLoading) {
+                    // Auto-advance workflow steps rapidly for visual effect or normal pace
+                    const timer = setTimeout(() => nextStage(), 2500);
+                    return () => clearTimeout(timer);
+                }
+            } else if (!isGenerating && !generationProgress) {
+                // Workflow Done, Start Generation
+                startGeneration(
+                    language,
+                    () => setScreen('preview'),
+                    () => { }
+                );
+            }
         }
-    };
+    }, [screen, workflowStage, isWorkflowLoading, isGenerating, generationProgress, nextStage, startGeneration, language]);
+
+    // Calculate Unified Progress
+    // Workflow: 6 stages -> 40% of total
+    // Generation: 0-100% -> 60% of total
+    const unifiedProgress = (() => {
+        if (screen !== 'unified-generation') return 0;
+        // Map 1-6 to 0-40%
+        const wfProgress = ((Math.max(0, workflowStage - 1)) / 5) * 40;
+
+        if (workflowStage < 6) {
+            return wfProgress;
+        }
+        // If workflow done, show 40% + scaled generation
+        return 40 + (generationProgress * 0.6);
+    })();
+
+    const unifiedStatus = (() => {
+        if (workflowStage < 2) return "Characters are waking up...";
+        if (workflowStage < 3) return "Mixing the magic ink...";
+        if (workflowStage < 4) return "Painting the skies...";
+        if (workflowStage < 5) return "Adding sparkle to the story...";
+        if (workflowStage < 6) return "Reviewing with the Chief Wizard...";
+        return generationStatus || "Wrapping up your gift...";
+    })();
 
     const handlePaymentSuccess = useCallback(async (isBypass: boolean = false) => {
         try {
             const newOrderNumber = 'RWY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
             setOrderNumber(newOrderNumber);
             if (shippingDetails) {
+                // 1. Save Order to Database
                 await adminService.saveOrder(newOrderNumber, storyData, shippingDetails);
-                // Attempt PDF gen, but don't block
-                fileService.generatePrintPackage(storyData, shippingDetails, language, newOrderNumber).catch(err => console.error("PDF Gen Error:", err));
+
+                // 2. Generate Full Zip Package
+                console.log("Generating Print Package...");
+                const zipBlob = await fileService.generatePrintPackage(storyData, shippingDetails, language, newOrderNumber);
+
+                // 3. Upload to Cloud (Supabase)
+                console.log("Uploading to Cloud...");
+                const publicUrl = await fileService.uploadOrderFiles(newOrderNumber, zipBlob);
+                if (publicUrl) {
+                    console.log("File Uploaded:", publicUrl);
+                }
+
+                // 4. Trigger Local Download (For User/Testing)
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(zipBlob);
+                link.download = `Order_${newOrderNumber}_Package.zip`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
             setPaymentModalOpen(false);
             setScreen('confirmation');
@@ -125,16 +176,19 @@ const MainLayout: React.FC = () => {
                 content = <ThemeScreen onNext={(data) => { updateStory(data); setScreen('styleSelection'); }} onBack={() => setScreen('styleChoice')} storyData={storyData} language={language} />;
                 break;
             case 'styleSelection':
-                content = <StyleSelectionScreen onNext={(data) => { updateStory(data); setScreen('workflow'); startWorkflow(); }} onBack={() => setScreen('theme')} storyData={storyData} language={language} />;
+                content = <StyleSelectionScreen onNext={(data) => { updateStory(data); setScreen('unified-generation'); startWorkflow(); }} onBack={() => setScreen('theme')} storyData={storyData} language={language} />;
                 break;
-            case 'workflow':
-                content = <WorkflowScreen stage={workflowStage} artifact={workflowArtifact} isLoading={isWorkflowLoading} onApprove={handleWorkflowApprove} onBack={() => { if (workflowStage > 1) { prevStage(); } else { setScreen('styleSelection'); } }} language={language} />;
+            case 'unified-generation':
+                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} onComplete={() => setScreen('preview')} language={language} />;
                 break;
-            case 'generating':
-                content = <GeneratingScreen status={generationStatus} language={language} progress={generationProgress} storyData={storyData} error={generationError} />;
+            case 'workflow': // Navigation fallback to unified
+                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} onComplete={() => setScreen('preview')} language={language} />;
+                break;
+            case 'generating': // Navigation fallback to unified
+                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} onComplete={() => setScreen('preview')} language={language} />;
                 break;
             case 'preview':
-                content = <PreviewScreen storyData={storyData} onOrder={() => setScreen('checkout')} onDownloadPreview={() => { }} onRestart={() => { resetStory(); }} onTitleChange={(t) => updateStory({ title: t })} onRegenerate={() => { setScreen('workflow'); startWorkflow(); /* Technically should jump to stage 6? */ }} language={language} onBack={() => setScreen('workflow')} />;
+                content = <PreviewScreen storyData={storyData} onOrder={() => setScreen('checkout')} onDownloadPreview={() => { }} onRestart={() => { resetStory(); }} onTitleChange={(t) => updateStory({ title: t })} onRegenerate={() => { setScreen('unified-generation'); startWorkflow(); }} language={language} onBack={() => setScreen('unified-generation')} />;
                 break;
             case 'checkout':
                 content = <CheckoutScreen onProceedToPayment={(details) => { setShippingDetails(details); setPaymentModalOpen(true); }} onBack={() => setScreen('preview')} language={language} storyData={storyData} currency={currency} />;
@@ -143,7 +197,7 @@ const MainLayout: React.FC = () => {
                 content = <ConfirmationScreen orderNumber={orderNumber} onRestart={() => { resetStory(); }} language={language} shippingDetails={shippingDetails} storyData={storyData} currency={currency} />;
                 break;
             case 'admin':
-                return <AdminScreen onExit={() => setScreen('welcome')} language={language} />; // Admin screens don't animate usually to separate context
+                return <AdminScreen onExit={() => setScreen('welcome')} language={language} />;
             default:
                 content = <WelcomeScreen onStart={() => setScreen('personalization')} onBack={() => { }} language={language} />;
         }

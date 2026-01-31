@@ -102,6 +102,11 @@ export const ItemMergeGame: React.FC<ItemMergeGameProps> = ({ onComplete }) => {
                 <span className="text-xs font-black text-indigo-500">RES: {score}px</span>
             </div>
 
+            {/* Help Overlay / Instructions */}
+            <div className="absolute top-12 inset-x-0 text-center pointer-events-none opacity-50 z-0">
+                <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">Merge 2 Same Items to Upgrade!</p>
+            </div>
+
             <div className="grid grid-cols-3 gap-3">
                 {grid.map((slot, i) => (
                     <motion.div
