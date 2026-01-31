@@ -371,15 +371,7 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         });
         artifactsFolder.file("debug_creation_prompts.txt", detailedPrompts);
 
-        // 5. Detailed Creation Prompts (Debug)
-        let detailedPrompts = `STORY GENERATION LOG\n--------------------------------\n`;
-        storyData.pages.forEach(p => {
-            detailedPrompts += `PAGE ${p.pageNumber}\n`;
-            detailedPrompts += `TEXT: ${p.text}\n`;
-            detailedPrompts += `PROMPT USED:\n${p.actualPrompt || 'N/A'}\n`;
-            detailedPrompts += `--------------------------------\n\n`;
-        });
-        artifactsFolder.file("debug_creation_prompts.txt", detailedPrompts);
+
 
         // 5. Order Manifest
         const manifest = {
