@@ -76,7 +76,7 @@ export async function getSettings(): Promise<AppSettings> {
       unitProductionCost: 13.250,
       unitAiCost: 0.600,
       unitShippingCost: 1.500,
-      targetModel: 'gemini-3-pro-preview'
+      targetModel: 'gemini-1.5-flash'
     };
   }
   return {
