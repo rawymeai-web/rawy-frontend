@@ -43,8 +43,8 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ emoji, title, description, isSele
   <button
     onClick={onClick}
     className={`relative p-5 text-center rounded-2xl transition-all duration-300 h-full flex flex-col items-center justify-start group ${isSelected
-        ? 'bg-white shadow-xl ring-4 ring-brand-coral/30 translate-y-[-4px]'
-        : 'bg-white/80 hover:bg-white hover:shadow-lg hover:translate-y-[-2px] border border-gray-100 hover:border-brand-baby-blue/30'
+      ? 'bg-white shadow-xl ring-4 ring-brand-coral/30 translate-y-[-4px]'
+      : 'bg-white/80 hover:bg-white hover:shadow-lg hover:translate-y-[-2px] border border-gray-100 hover:border-brand-baby-blue/30'
       }`}
     aria-pressed={isSelected}
   >
@@ -71,6 +71,9 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const [customIllustrationNotes, setCustomIllustrationNotes] = useState(storyData.customIllustrationNotes || '');
   const [customStylePrompt, setCustomStylePrompt] = useState(storyData.selectedStylePrompt || '');
 
+  // New: Second Hero Name for Teamwork/Siblings theme
+  const [secondHeroName, setSecondHeroName] = useState((storyData.secondCharacter as any)?.name || '');
+
   useEffect(() => {
     adminService.getThemes().then(setThemes);
   }, []);
@@ -82,8 +85,12 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   }, [isAdvancedMode, storyData.childAge, customStylePrompt]);
 
   const handleThemeClick = (themeOption: StoryTheme) => {
+    // Always trigger selection to allow re-rolling logic if we wanted, 
+    // but mainly to set the ID and fetch components.
     setSelectedThemeId(themeOption.id);
     setCustomTitle(themeOption.title[language]);
+
+    // Fetch random goal/challenge for this theme
     const components = getGuidelineComponentsForTheme(themeOption.id);
     if (components) {
       setCustomGoal(components.goal);
@@ -114,6 +121,16 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
       customChallenge,
       customIllustrationNotes,
       selectedStylePrompt: finalStylePrompt,
+      // Pass the second hero if applicable
+      ...(selectedThemeId === 'val-teamwork' && secondHeroName ? {
+        secondCharacter: {
+          name: secondHeroName,
+          type: 'person',
+          images: [],
+          imageBases64: [],
+          description: 'The second hero joining the adventure.'
+        }
+      } : {})
     });
   };
 
@@ -127,7 +144,14 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {themes.map((themeOption) => (
-          <ThemeCard key={themeOption.id} emoji={themeOption.emoji} title={themeOption.title[language]} description={themeOption.description[language]} isSelected={selectedThemeId === themeOption.id} onClick={() => handleThemeClick(themeOption)} />
+          <ThemeCard
+            key={themeOption.id}
+            emoji={themeOption.emoji}
+            title={themeOption.title[language]}
+            description={themeOption.description[language]}
+            isSelected={selectedThemeId === themeOption.id}
+            onClick={() => handleThemeClick(themeOption)}
+          />
         ))}
       </div>
     </div>
@@ -136,7 +160,12 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const adventureThemes = themes.filter(t => t.category === 'adventures');
   const valueThemes = themes.filter(t => t.category === 'values');
   const isCustomMode = selectedThemeId === null;
-  const isNextDisabled = !customTitle || (isAdvancedMode && isCustomMode && (!customGoal || !customChallenge)) || (!isAdvancedMode && !selectedThemeId);
+  const isTeamworkSelected = selectedThemeId === 'val-teamwork';
+
+  const isNextDisabled = !customTitle ||
+    (isAdvancedMode && isCustomMode && (!customGoal || !customChallenge)) ||
+    (!isAdvancedMode && !selectedThemeId) ||
+    (isTeamworkSelected && !secondHeroName);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-10">
@@ -144,14 +173,33 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
       <div className="p-8 bg-white/70 backdrop-blur-md rounded-3xl shadow-xl border border-white/50">
         {valueThemes.length > 0 && <ThemeGrid themes={valueThemes} categoryTitle={t('قيم أخلاقية', 'Values')} icon={<ValuesCategoryIcon />} />}
         {adventureThemes.length > 0 && <ThemeGrid themes={adventureThemes} categoryTitle={t('مغامرات شيقة', 'Exciting Adventures')} icon={<AdventuresCategoryIcon />} />}
+
+        {/* Special Input for Teamwork/Siblings Theme */}
+        {isTeamworkSelected && (
+          <div className="mt-8 mb-8 p-6 bg-brand-baby-blue/10 rounded-2xl border-2 border-brand-baby-blue/30 animate-fade-in">
+            <h3 className="text-xl font-bold text-brand-navy mb-4">{t('من هو البطل الثاني؟', 'Who is the Second Hero?')}</h3>
+            <label htmlFor="secondHero" className="block text-sm font-medium text-gray-700 mb-1">{t('اسم الأخ/الأخت/الصديق', 'Sibling/Friend Name')}</label>
+            <input
+              type="text"
+              id="secondHero"
+              value={secondHeroName}
+              onChange={(e) => setSecondHeroName(e.target.value)}
+              className="mt-1 block w-full md:w-1/2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-brand-coral"
+              placeholder={t('مثال: علي', 'Example: Ali')}
+            />
+          </div>
+        )}
+
         <div className="text-center border-t border-gray-200/60 pt-8 mt-4">
           <Button variant="outline" onClick={() => setIsAdvancedMode(prev => !prev)} className="rounded-full px-8">
-            {isAdvancedMode ? t('إخفاء الخيارات المتقدمة', 'Hide Advanced Options') : t('اكتب فكرتك الخاصة (متقدم)', 'Write Your Own Idea (Advanced)')}
+            {isAdvancedMode ? t('إخفاء الخيارات المتقدمة', 'Hide Details') : t('عرض تفاصيل القصة (متقدم)', 'show Details (Advanced)')}
           </Button>
         </div>
+
+        {/* Only show/edit the randomized fields if Advanced Mode is on OR a theme is selected (to show the user what they got) */}
         {isAdvancedMode && (
           <div className="animate-fade-in mt-8">
-            <h3 className="text-xl font-bold text-brand-navy mb-4 flex items-center"><LightbulbIcon />{t('اكتب فكرتك الخاصة', 'Write Your Own Idea')}</h3>
+            <h3 className="text-xl font-bold text-brand-navy mb-4 flex items-center"><LightbulbIcon />{t('تفاصيل القصة', 'Story Details')}</h3>
             <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-inner space-y-6">
               <div>
                 <label htmlFor="storyTitle" className="block text-sm font-medium text-gray-700 mb-1">{t('عنوان القصة', 'Story Title')}</label>
