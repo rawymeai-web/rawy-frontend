@@ -130,7 +130,7 @@ export async function runJuniorWriter(data: StoryData, theme: StoryTheme | undef
         OUTPUT: JSON matching the Blueprint Schema.`;
 
         const response = await ai().models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: "application/json", responseSchema: blueprintSchema }
         });
@@ -147,7 +147,7 @@ export async function runSeniorWriter(blueprint: StoryBlueprint): Promise<StoryB
         AUDIT: Validate the narrative arc against the Story Flow logic.Ensure failure leads to internal growth.
             Blueprint: ${JSON.stringify(blueprint)} `;
         const response = await ai().models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: "application/json", responseSchema: blueprintSchema }
         });
@@ -163,7 +163,7 @@ export async function runVisualDesigner(blueprint: StoryBlueprint): Promise<Spre
             ${getContext()}
         Blueprint: ${JSON.stringify(blueprint)} `;
         const response = await ai().models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -188,7 +188,7 @@ export async function runCreativeDirector(blueprint: StoryBlueprint, plan: Sprea
             ${getContext()}
         Plan: ${JSON.stringify(plan)} `;
         const response = await ai().models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { spreads: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { spreadNumber: { type: Type.INTEGER }, keyActions: { type: Type.STRING }, mainContentSide: { type: Type.STRING, enum: ["Left", "Right"] } }, required: ['spreadNumber', 'keyActions', 'mainContentSide'] } } }, required: ['spreads'] } }
         });
@@ -204,7 +204,7 @@ export async function runPromptEngineer(plan: SpreadDesignPlan, technicalStyleGu
         CRITICAL: You MUST return an array of exactly 8 strings. One for each spread.
             Plan: ${JSON.stringify(plan)}. JSON array output.`;
         const response = await ai().models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } } }
         });
@@ -226,7 +226,7 @@ export async function runPromptReviewer(prompts: string[]): Promise<string[]> {
         Audit these prompts for "Series Consistency".
         Prompts: ${JSON.stringify(prompts)} `;
         const response = await ai().models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } } }
         });
@@ -237,7 +237,7 @@ export async function runPromptReviewer(prompts: string[]): Promise<string[]> {
 async function describeSubject(imageBase64: string): Promise<string> {
     return withRetry(async () => {
         const response = await ai().models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: [
                 { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
                 { text: "Describe this person's physical appearance in significant detail. Focus on hair color/style, eye color, skin tone, facial structure, and age. Be concise but descriptive. Output ONLY the visual description." }
@@ -352,7 +352,7 @@ ${getContext()}
             OUTPUT: JSON array of ${settings.defaultSpreadCount} { "text": "string" }.`;
 
         const response = await ai().models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: draftPrompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING } }, required: ['text'] } } }
         });
@@ -386,7 +386,7 @@ ${JSON.stringify(draft)}
         OUTPUT: JSON array of ${settings.defaultSpreadCount * 2} { "text": "string" } (Polished Version).`;
 
         const response = await ai().models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: editorPrompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING } }, required: ['text'] } } }
         });
@@ -428,12 +428,18 @@ ${bible.masterGuardrails} `;
         let b64 = "";
         try {
             const apiVersion = "v1beta";
-            const modelName = "imagen-3.0-generate-001";
-            // Switched to 3.0 for stability
-            const actualModel = "imagen-3.0-generate-001";
+            const modelName = "imagen-4.0-generate-001";
+            // Reverting to 4.0 as 3.0 is not available for this key
+            const actualModel = "imagen-4.0-generate-001";
+
+            if (!API_KEY) {
+                console.error("DEBUG: API_KEY is missing/empty in GeminisService!");
+                throw new Error("Missing API Key");
+            }
 
             const baseUrl = typeof window !== 'undefined' ? '/api/gemini' : 'https://generativelanguage.googleapis.com';
             const url = `${baseUrl}/${apiVersion}/models/${actualModel}:predict?key=${API_KEY}`;
+            console.log(`DEBUG: Fetching ${url}`);
 
             const payload = {
                 instances: [
@@ -455,8 +461,10 @@ ${bible.masterGuardrails} `;
 
             if (!response.ok) {
                 const txt = await response.text();
-                console.error("Imagen 4 Proxy Failed:", response.status, txt);
-                throw new Error(`Imagen 4 Failed: ${response.status} ${txt}`);
+                console.error("Imagen Proxy Failed:", response.status, txt);
+                if (response.status === 404) throw new Error(`Proxy/Model 404: Endpoint not found. Check vercel.json or Model ID.`);
+                if (response.status === 403) throw new Error(`Auth 403: Check API Key.`);
+                throw new Error(`API Error ${response.status}: ${txt.substring(0, 50)}...`);
             }
 
             const data = await response.json();
@@ -482,7 +490,7 @@ ${bible.masterGuardrails} `;
 export async function generateTechnicalStyleGuide(imageBase64: string, basePrompt: string): Promise<string> {
     return withRetry(async () => {
         const response = await ai().models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: [{ inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }, { text: `Describe palette. 50 words.` }]
         });
         return response.text || "";

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head><title>Proxy Test</title></head>
+<body>
+    <h1>Testing Proxy...</h1>
+    <pre id="output">Running...</pre>
+    <script>
+        const API_KEY = "AIzaSyAXA7DteqTMFjHtZmSVWV1ZOYoDQ3X2_b4";
+        async function runTest() {
+            const out = document.getElementById('output');
+            try {
+                // Test 1: List Models (GET)
+                out.innerText += "\n\nTest 1: GET /models...";
+                const res1 = await fetch(`/api/gemini/v1beta/models?key=${API_KEY}`);
+                out.innerText += "\nStatus: " + res1.status;
+                if (!res1.ok) {
+                    const txt = await res1.text();
+                    out.innerText += "\nBody: " + txt;
+                } else {
+                    const data = await res1.json();
+                    out.innerText += "\nSuccess. Found " + (data.models ? data.models.length : 0) + " models.";
+                }
+
+                // Test 2: Generate Image (POST)
+                out.innerText += "\n\nTest 2: POST generateImages (Imagen 4)...";
+                const payload = {
+                    instances: [{ prompt: "A square red box" }],
+                    parameters: { sampleCount: 1, aspectRatio: "1:1" }
+                };
+                const res2 = await fetch(`/api/gemini/v1beta/models/imagen-4.0-generate-001:predict?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                out.innerText += "\nStatus: " + res2.status;
+                if (!res2.ok) {
+                    const txt = await res2.text();
+                    out.innerText += "\nBody: " + txt;
+                } else {
+                    const data = await res2.json();
+                    out.innerText += "\nSuccess. Received image data.";
+                }
+
+            } catch (e) {
+                out.innerText += "\n\nFATAL ERROR: " + e.message;
+            }
+        }
+        runTest();
+    </script>
+</body>
+</html>
