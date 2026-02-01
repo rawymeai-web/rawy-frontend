@@ -1,12 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/((?!assets/|vite.svg|favicon.ico).*)",
-      "destination": "/index.html"
-    },
-    {
       "source": "/api/gemini/(.*)",
       "destination": "https://generativelanguage.googleapis.com/$1"
+    },
+    {
+      "source": "/((?!assets/|vite.svg|favicon.ico|api/gemini).*)",
+      "destination": "/index.html"
     }
   ]
 }
