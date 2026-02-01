@@ -237,7 +237,7 @@ export async function runPromptReviewer(prompts: string[]): Promise<string[]> {
 async function describeSubject(imageBase64: string): Promise<string> {
     return withRetry(async () => {
         const response = await ai().models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: [
                 { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
                 { text: "Describe this person's physical appearance in significant detail. Focus on hair color/style, eye color, skin tone, facial structure, and age. Be concise but descriptive. Output ONLY the visual description." }
