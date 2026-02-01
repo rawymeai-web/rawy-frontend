@@ -246,9 +246,11 @@ ${bible.compositionMandates}
         // The "User Action" is distinct from the "System Context"
         const finalPrompt = `${styleContext}\n\nNOW GENERATE THIS SPECIFIC SCENE:\n${prompt}`;
 
+        console.log("Generating Image with Prompt Length:", finalPrompt.length);
+
         const response = await ai().models.generateContent({
             model: 'imagen-3.0-generate-001',
-            contents: { role: 'user', parts: [{ text: finalPrompt }] }, // Text ONLY for Imagen 3
+            contents: [{ text: finalPrompt }], // Corrected: Array of Parts
             config: { seed, imageConfig: { aspectRatio: "16:9" } }
         });
 
@@ -353,7 +355,7 @@ ${bible.masterGuardrails} `;
 
         const response = await ai().models.generateContent({
             model: 'imagen-3.0-generate-001', // Use capable model
-            contents: { role: 'user', parts: [{ text: prompt }] }, // Text ONLY
+            contents: [{ text: prompt }], // Corrected: Array of Parts
             config: { seed, imageConfig: { aspectRatio: "1:1" } }
         });
 
