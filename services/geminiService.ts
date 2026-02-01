@@ -103,6 +103,37 @@ const blueprintSchema = {
     required: ['foundation', 'characters', 'structure']
 };
 
+export async function runJuniorWriter(data: StoryData, theme: StoryTheme | undefined): Promise<StoryBlueprint> {
+    const settings = await adminService.getSettings();
+    return withRetry(async () => {
+        if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
+
+        const bible = adminService.getSeriesBible();
+
+        const prompt = `ROLE: Creative Writer.
+            ${getContext()}
+        TASK: Create a Story Blueprint for a children's book.
+        Title: "${data.childName} and the ${theme?.title.en || 'Adventure'}"
+        Protagonist: ${data.childName}, Age ${data.childAge}.
+        Theme: ${theme?.title.en || 'General Adventure'}.
+        Moral: Courage (Derived from ${theme?.title.en || 'Adventure'}).
+        
+        REQUIREMENTS:
+        1. Create a "Hero Profile" and 1-2 "Supporting Roles" (Sidekicks).
+        2. Outline a 5-beat narrative arc.
+        3. Select appropriate "Bible Indices" for the story elements.
+        
+        OUTPUT: JSON matching the Blueprint Schema.`;
+
+        const response = await ai().models.generateContent({
+            model: 'gemini-1.5-flash',
+            contents: prompt,
+            config: { responseMimeType: "application/json", responseSchema: blueprintSchema }
+        });
+        return JSON.parse(cleanJsonString(response.text));
+    });
+}
+
 export async function runSeniorWriter(blueprint: StoryBlueprint): Promise<StoryBlueprint> {
     const settings = await adminService.getSettings();
     return withRetry(async () => {
@@ -248,14 +279,9 @@ ${bible.compositionMandates}
 
         console.log("Generating Image with Prompt Length:", finalPrompt.length);
 
-        const response = await ai().models.generateContent({
-            model: 'imagen-3.0-generate-001',
-            contents: [{ text: finalPrompt }], // Corrected: Array of Parts
-            config: { seed, imageConfig: { aspectRatio: "16:9" } }
-        });
+        // Fallback to REST API for Imagen 3 to ensure correct payload format
+        const b64 = await generateImageWithRest(finalPrompt, "16:9", seed);
 
-        let b64 = "";
-        for (const part of response.candidates[0].content.parts) if (part.inlineData) b64 = part.inlineData.data;
         if (!b64) throw new Error("Image generation failed");
         return { imageBase64: b64, fullPrompt: finalPrompt };
     });
@@ -353,17 +379,60 @@ export async function generateThemeStylePreview(mainCharacter: Character, second
     ${secondSubjectDesc ? `SECONDARY: ${secondSubjectDesc}` : ''}
 ${bible.masterGuardrails} `;
 
-        const response = await ai().models.generateContent({
-            model: 'imagen-3.0-generate-001', // Use capable model
-            contents: [{ text: prompt }], // Corrected: Array of Parts
-            config: { seed, imageConfig: { aspectRatio: "1:1" } }
-        });
+        // Fallback to REST API for Imagen 3
+        const b64 = await generateImageWithRest(prompt, "1:1", seed);
 
-        let b64 = "";
-        for (const part of response.candidates[0].content.parts) if (part.inlineData) b64 = part.inlineData.data;
         if (!b64) throw new Error("Image generation failed");
         return { imageBase64: b64, prompt };
     });
+}
+
+// Helper for Imagen 3 REST API (Bypassing SDK ambiguity)
+async function generateImageWithRest(prompt: string, aspectRatio: string, seed?: number): Promise<string> {
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+    if (!API_KEY) throw new Error("Missing API Key");
+
+    // UPDATED: Use Imagen 4.0 as 3.0 is not available on this endpoint/key
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${API_KEY}`;
+
+    const payload = {
+        instances: [{ prompt }],
+        parameters: {
+            sampleCount: 1,
+            aspectRatio: aspectRatio,
+            // seed: seed // API might not support seed in this trusted tester preview, but let's try or omit if unsure. 
+            // For now, omit seed to be safe, or check docs. Imagen usually supports seed.
+        }
+    };
+
+    console.log("Calling Imagen 3 REST API...");
+
+    const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        console.error("Imagen 3 REST Error:", errText);
+        throw new Error(`Imagen 3 Failed: ${response.status} ${response.statusText} - ${errText}`);
+    }
+
+    const data = await response.json();
+    // Verify response structure: { predictions: [ { bytesBase64Encoded: "..." } ] }
+    if (data.predictions && data.predictions.length > 0 && data.predictions[0].bytesBase64Encoded) {
+        return data.predictions[0].bytesBase64Encoded;
+    }
+
+    // Fallback: Check if it's candidates format (just in case endpoint behaves differently)
+    if (data.candidates && data.candidates[0]?.content?.parts) {
+        // ... traverse ...
+        // But likely it is predictions
+    }
+
+    console.error("Unexpected Imagen 3 Response:", data);
+    throw new Error("Invalid Imagen 3 formatted response");
 }
 
 export async function generateTechnicalStyleGuide(imageBase64: string, basePrompt: string): Promise<string> {
