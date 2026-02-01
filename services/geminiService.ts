@@ -461,10 +461,13 @@ ${bible.masterGuardrails} `;
 
             if (!response.ok) {
                 const txt = await response.text();
-                console.error("Imagen Proxy Failed:", response.status, txt);
-                if (response.status === 404) throw new Error(`Proxy/Model 404: Endpoint not found. Check vercel.json or Model ID.`);
-                if (response.status === 403) throw new Error(`Auth 403: Check API Key.`);
-                throw new Error(`API Error ${response.status}: ${txt.substring(0, 50)}...`);
+                // DEBUG: Log the full URL that failed
+                const failedUrl = response.url || url;
+                console.error(`Imagen Proxy Failed (${failedUrl}):`, response.status, txt);
+
+                if (response.status === 404) throw new Error(`Proxy/Model 404 at ${failedUrl}: Endpoint not found.`);
+                if (response.status === 403) throw new Error(`Auth 403 at ${failedUrl}: Check API Key.`);
+                throw new Error(`API Error ${response.status} at ${failedUrl}: ${txt}`);
             }
 
             const data = await response.json();
