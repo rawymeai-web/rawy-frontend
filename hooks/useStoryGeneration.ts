@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { StoryData, Language, Page } from '../types';
 import * as geminiService from '../services/geminiService';
 
@@ -9,20 +9,48 @@ export const useStoryGeneration = (
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStatus, setGenerationStatus] = useState('');
     const [generationProgress, setGenerationProgress] = useState(0);
-    const [timeLeft, setTimeLeft] = useState<string>(''); // New Time Estimation State
+    const [timeLeft, setTimeLeft] = useState<string>('');
+    const [currentQuote, setCurrentQuote] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
+
+    // Comic Quotes Rotation
+    useEffect(() => {
+        if (!isGenerating) return;
+        const quotes = [
+            "Every artist was first an amateur. - Ralph Waldo Emerson",
+            "Creativity takes courage. - Henri Matisse",
+            "Drawing is creating a world that never existed before.",
+            "The best way to predict the future is to create it.",
+            "Logic will get you from A to B. Imagination will take you everywhere. - Einstein",
+            "Every child is an artist. The problem is how to remain an artist once we grow up. - Picasso"
+        ];
+        let i = 0;
+        setCurrentQuote(quotes[0]);
+        const interval = setInterval(() => {
+            i = (i + 1) % quotes.length;
+            setCurrentQuote(quotes[i]);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [isGenerating]);
 
     const startGeneration = async (language: Language, onComplete: () => void, onError: () => void) => {
         setIsGenerating(true);
-        setGenerationStatus(language === 'ar' ? 'بدء المعالجة المتوازية...' : 'Initializing Production (Est. ~2 mins)...');
+        setGenerationStatus(language === 'ar' ? 'بدء المعالجة...' : 'Initializing Production...');
         setGenerationProgress(2);
         setTimeLeft('~120s');
         setError(null);
 
-        // Progress Weights:
-        // - Setup: 5%
-        // - Text (Script/Plan): 30%
-        // - Images: 65% (Roughly 7% per image for 9 images)
+        // Progress Weights (Total 100%)
+        // Planning (35%):
+        // - Script Draft: 5%
+        // - Script Polish: 5%
+        // - Cover: 10%
+        // - Visual Plan: 5%
+        // - Prompt Eng: 5%
+        // - Prompt QA: 5%
+        // Production (65%):
+        // - 8 Spreads + Cover Uploads
+
         let currentProgress = 5;
         const updateProgress = (increment: number, status?: string) => {
             currentProgress = Math.min(99, currentProgress + increment);
@@ -35,15 +63,21 @@ export const useStoryGeneration = (
             if (!masterDNA) throw new Error("No style reference found");
             if (!storyData.blueprint) throw new Error("No blueprint found");
 
-            // --- 1. PARALLEL TEXT & COVER PHASE (0% -> 35%) ---
+            // --- PHASE 1: SCRIPT & COVER (Async Parallel) ---
 
-            // Task A: Script (10%)
-            const scriptTask = geminiService.generateFinalScript(storyData.blueprint, language, storyData.childName).then(res => {
-                updateProgress(10, language === 'ar' ? 'تم كتابة القصة...' : 'Story written...');
-                return res;
-            });
+            // 1A. Script (Draft + Polish) - 10%
+            const scriptTask = (async () => {
+                updateProgress(2, language === 'ar' ? 'استدعاء الحكواتي...' : 'Summoning the Story Weaver...');
+                const draft = await geminiService.generateScriptDraft(storyData.blueprint!, language, storyData.childName);
 
-            // Task B: Cover (10%) - Starts immediately
+                updateProgress(4, language === 'ar' ? 'كتابة المسودة الأولى...' : 'Finding the golden quill (Drafting)...');
+                const polished = await geminiService.polishScript(draft, storyData.blueprint!, language);
+
+                updateProgress(4, language === 'ar' ? 'تنقيح الكلمات...' : 'Polishing the rhymes (Editing)...');
+                return polished;
+            })();
+
+            // 1B. Cover (10%)
             const isAr = language === 'ar';
             const frontSide = isAr ? 'LEFT' : 'RIGHT';
             const backSide = isAr ? 'RIGHT' : 'LEFT';
@@ -70,31 +104,41 @@ STYLE: ${storyData.selectedStylePrompt}
 **NEGATIVE PROMPT:** TEXT, TITLE, LETTERS, WORDS, TYPOGRAPHY, WATERMARK, ADULTS, PARENTS, SPLIT QUERY, SEPARATE IMAGES.`;
 
             const coverTask = geminiService.generateMethod4Image(coverPrompt, storyData.selectedStylePrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed).then(res => {
-                updateProgress(10); // Cover is worth 10%
+                updateProgress(10); // Silent progress update
                 return { ...res, displayTitle };
             });
 
-            // Task C: Prompts + Plan (10%)
+            // 1C. Prompts (Design -> Eng -> QA) - 15%
             const promptsTask = (async () => {
+                updateProgress(2, language === 'ar' ? 'تخيل المشاهد...' : 'Dreaming up the scenes...');
+
                 let prompts = storyData.finalPrompts;
+                let spreadPlan = storyData.spreadPlan;
+
                 if (!prompts || prompts.length === 0) {
-                    let effectiveSpreadPlan = storyData.spreadPlan;
-                    if (!effectiveSpreadPlan) {
-                        effectiveSpreadPlan = await geminiService.runVisualDesigner(storyData.blueprint!);
+                    if (!spreadPlan) {
+                        updateProgress(3, language === 'ar' ? 'تخطيط الصفحات...' : 'Sketching the layout...');
+                        spreadPlan = await geminiService.runVisualDesigner(storyData.blueprint!);
                     }
-                    prompts = await geminiService.runPromptEngineer(effectiveSpreadPlan, storyData.technicalStyleGuide || '', storyData.selectedStylePrompt, storyData.blueprint!);
+
+                    updateProgress(5, language === 'ar' ? 'مزج الألوان السحرية...' : 'Mixing the magic paints (Prompts)...');
+                    prompts = await geminiService.runPromptEngineer(spreadPlan, storyData.technicalStyleGuide || '', storyData.selectedStylePrompt, storyData.blueprint!);
+
+                    updateProgress(5, language === 'ar' ? 'مراجعة الرسامين...' : 'Consulting the Art Elves (QA)...');
                     prompts = await geminiService.runPromptReviewer(prompts);
-                    updateProgress(10, language === 'ar' ? 'تم تصميم المشاهد...' : 'Scenes designed...');
-                    return { prompts, spreadPlan: effectiveSpreadPlan };
+
+                    return { prompts, spreadPlan };
                 }
-                updateProgress(10);
+
+                updateProgress(15);
                 return { prompts, spreadPlan: storyData.spreadPlan };
             })();
 
+            // Wait for all planning to finish
             const [script, coverResult, promptsResult] = await Promise.all([scriptTask, coverTask, promptsTask]);
 
             const prompts = promptsResult.prompts;
-            const spreadPlan = promptsResult.spreadPlan?.spreads || [];
+            const finalSpreadPlan = promptsResult.spreadPlan?.spreads || [];
 
             // Update intermediate state
             const interimStoryData = {
@@ -107,32 +151,27 @@ STYLE: ${storyData.selectedStylePrompt}
             };
             updateStory(interimStoryData);
 
-            // --- 2. SPREAD GENERATION PHASE (35% -> 100%) ---
-            // Remaining 65% split among 8 spreads (~8% per spread)
-            const spreadWeight = 65 / prompts.length;
+            // --- PHASE 2: SPREAD GENERATION (65%) ---
 
             const pages: Page[] = [];
-            const completedSpreads: any[] = [];
 
-            // We use a concurrency limit of 4 to be safe but faster than 6/2 split
-            // Or just run 4 then 4.
+            // Remaining progress allocated to spreads
+            const spreadWeight = 65 / prompts.length;
             const BATCH_SIZE = 4;
 
             for (let i = 0; i < prompts.length; i += BATCH_SIZE) {
                 const batch = prompts.slice(i, i + BATCH_SIZE);
-
-                // Track batch start for status
                 const remaining = prompts.length - i;
-                const estSeconds = remaining * 12; // Approx 12s per image
+                const estSeconds = remaining * 12;
                 setTimeLeft(`~${estSeconds}s`);
-                setGenerationStatus(language === 'ar'
-                    ? `جاري رسم الصفحات ${i + 1}-${Math.min(i + BATCH_SIZE, prompts.length)} من ${prompts.length}...`
-                    : `Painting pages ${i + 1}-${Math.min(i + BATCH_SIZE, prompts.length)} of ${prompts.length}...`);
 
-                // Run batch with individual progress tracking
+                setGenerationStatus(language === 'ar'
+                    ? `جاري رسم الصفحات ${i + 1}-${Math.min(i + BATCH_SIZE, prompts.length)}...`
+                    : `Painting pages ${i + 1}-${Math.min(i + BATCH_SIZE, prompts.length)}...`);
+
                 const batchResults = await Promise.all(batch.map(async (prompt, batchIndex) => {
                     const globalIndex = i + batchIndex;
-                    const plan = spreadPlan[globalIndex];
+                    const plan = finalSpreadPlan[globalIndex];
                     const side = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
                     const opp = side === 'left' ? 'right' : 'left';
                     const secondRef = (storyData.useSecondCharacter && storyData.secondCharacter?.imageBases64?.[0]) ? storyData.secondCharacter.imageBases64[0] : undefined;
@@ -147,20 +186,17 @@ ${prompt}
 **GUIDELINE:** Filter out adults. Focus on child hero.
 NEGATIVE: No vertical seams, no text, VISIBLE PARENTS, MOM'S FACE, DAD'S FACE.`;
 
-                    // Generate Image
                     const res = await geminiService.generateMethod4Image(scenePrompt, storyData.selectedStylePrompt, masterDNA, storyData.mainCharacter.description, storyData.childAge, storyData.styleSeed, secondRef);
 
-                    // Update Progress PER IMAGE
                     updateProgress(spreadWeight);
                     return res;
                 }));
 
-                // Process Results
                 batchResults.forEach((res, batchIndex) => {
                     const globalIndex = i + batchIndex;
                     const cleanText = (t: string) => t.replace(/{name}/g, storyData.childName).replace(/\*.*?\*/g, '').trim();
                     const txt1 = cleanText(script[globalIndex]?.text || "");
-                    const plan = spreadPlan[globalIndex];
+                    const plan = finalSpreadPlan[globalIndex];
                     const side = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
                     const opp = side === 'left' ? 'right' : 'left';
 
@@ -174,28 +210,27 @@ NEGATIVE: No vertical seams, no text, VISIBLE PARENTS, MOM'S FACE, DAD'S FACE.`;
                     });
                 });
             }
-        }
 
-            // Ensure pages are sorted just in case
             pages.sort((a, b) => a.pageNumber - b.pageNumber);
+            updateStory({ ...interimStoryData, pages });
+            onComplete();
 
-        updateStory({ ...currentStoryData, pages });
-        onComplete();
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || "Generation failed");
+            onError();
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
-    } catch (e: any) {
-        console.error(e);
-        setError(e.message || "Generation failed");
-        onError();
-    } finally {
-        setIsGenerating(false);
-    }
-};
-
-return {
-    isGenerating,
-    generationStatus,
-    generationProgress,
-    error,
-    startGeneration
-};
+    return {
+        isGenerating,
+        generationStatus,
+        generationProgress,
+        timeLeft,
+        currentQuote,
+        error,
+        startGeneration
+    };
 };

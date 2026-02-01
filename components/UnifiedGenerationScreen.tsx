@@ -15,9 +15,10 @@ interface UnifiedGenerationScreenProps {
     statusMessage: string;
     onComplete: () => void;
     language: Language;
+    quote?: string;
 }
 
-export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = ({ progress, statusMessage, onComplete, language }) => {
+export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = ({ progress, statusMessage, onComplete, language, quote }) => {
     const { storyData } = useStory();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -83,9 +84,16 @@ export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = (
                             <Spinner />
                             <div className="absolute inset-0 flex items-center justify-center text-4xl animate-bounce">✨</div>
                         </div>
-                        <div className="text-center space-y-2">
+                        <div className="text-center space-y-2 px-8">
                             <h3 className="text-3xl font-black text-brand-navy">{t('يتم تجهيز قصتك...', 'Crafting your story...')}</h3>
                             <p className="text-brand-navy/60 font-medium">{t('أشياء عظيمة تستغرق وقتاً', 'Good things take time')}</p>
+                            {quote && (
+                                <div className="mt-8 p-6 bg-white/50 backdrop-blur-sm rounded-2xl border border-dashed border-brand-orange/30 max-w-lg mx-auto transform rotate-1 transition-all hover:rotate-0">
+                                    <p className="text-brand-orange font-handwriting text-xl italic leading-relaxed">
+                                        "{quote}"
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <Button onClick={() => setIsGameHidden(false)} variant="outline" className="mt-8 rounded-full px-8">
                             {t('لعب الألعاب', 'Play Games')}

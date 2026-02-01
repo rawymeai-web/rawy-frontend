@@ -247,11 +247,9 @@ ${bible.compositionMandates}
     });
 }
 
-export async function generateFinalScript(blueprint: StoryBlueprint, language: Language, childName: string): Promise<{ text: string }[]> {
+export async function generateScriptDraft(blueprint: StoryBlueprint, language: Language, childName: string): Promise<{ text: string }[]> {
     const settings = await adminService.getSettings();
-
-    // STEP 1: THE AUTHOR (Drafting)
-    const draft = await withRetry(async () => {
+    return withRetry(async () => {
         if (settings.generationDelay > 0) await new Promise(r => setTimeout(r, settings.generationDelay));
         const draftPrompt = `ROLE: Children's Book Author. 
 ${getContext()}
@@ -278,8 +276,10 @@ ${getContext()}
         });
         return JSON.parse(cleanJsonString(response.text));
     });
+}
 
-    // STEP 2: THE SENIOR EDITOR (Polishing)
+export async function polishScript(draft: { text: string }[], blueprint: StoryBlueprint, language: Language): Promise<{ text: string }[]> {
+    const settings = await adminService.getSettings();
     return withRetry(async () => {
         const age = parseInt(blueprint.foundation.targetAge) || 5;
         const maxWords = age <= 3 ? 10 : (age <= 6 ? 20 : 35);
@@ -310,6 +310,11 @@ ${JSON.stringify(draft)}
         });
         return JSON.parse(cleanJsonString(response.text));
     });
+}
+
+export async function generateFinalScript(blueprint: StoryBlueprint, language: Language, childName: string): Promise<{ text: string }[]> {
+    const draft = await generateScriptDraft(blueprint, language, childName);
+    return polishScript(draft, blueprint, language);
 }
 
 export async function generateThemeStylePreview(mainCharacter: Character, secondCharacter: Character | undefined, theme: string, style: string, seed?: number): Promise<{ imageBase64: string; prompt: string }> {

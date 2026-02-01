@@ -61,7 +61,8 @@ const MainLayout: React.FC = () => {
         generationStatus,
         generationProgress,
         error: generationError,
-        startGeneration
+        startGeneration,
+        currentQuote
     } = useStoryGeneration(storyData, updateStory);
 
     const [orderNumber, setOrderNumber] = useState('');
@@ -185,13 +186,13 @@ const MainLayout: React.FC = () => {
                 content = <StyleSelectionScreen onNext={(data) => { updateStory(data); setScreen('unified-generation'); startWorkflow(); }} onBack={() => setScreen('theme')} storyData={storyData} language={language} />;
                 break;
             case 'unified-generation':
-                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} onComplete={() => setScreen('preview')} language={language} />;
+                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} quote={currentQuote} onComplete={() => setScreen('preview')} language={language} />;
                 break;
             case 'workflow': // Navigation fallback to unified
-                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} onComplete={() => setScreen('preview')} language={language} />;
+                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} quote={currentQuote} onComplete={() => setScreen('preview')} language={language} />;
                 break;
             case 'generating': // Navigation fallback to unified
-                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} onComplete={() => setScreen('preview')} language={language} />;
+                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} quote={currentQuote} onComplete={() => setScreen('preview')} language={language} />;
                 break;
             case 'preview':
                 content = <PreviewScreen storyData={storyData} onOrder={() => setScreen('checkout')} onDownloadPreview={() => { }} onRestart={() => { resetStory(); }} onTitleChange={(t) => updateStory({ title: t })} onRegenerate={() => { setScreen('unified-generation'); startWorkflow(); }} language={language} onBack={() => setScreen('unified-generation')} />;
