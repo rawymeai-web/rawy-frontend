@@ -3,6 +3,10 @@
     {
       "source": "/((?!assets/|vite.svg|favicon.ico).*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/api/gemini/(.*)",
+      "destination": "https://generativelanguage.googleapis.com/$1"
     }
   ]
 }

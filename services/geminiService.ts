@@ -4,7 +4,11 @@ import type { Character, StoryData, Language, StoryBlueprint, SpreadDesignPlan, 
 import * as adminService from './adminService';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || "";
-const ai = () => new GoogleGenAI({ apiKey: API_KEY });
+const ai = () => new GoogleGenAI({
+    apiKey: API_KEY,
+    // Use local proxy if in browser to avoid CORS. Node.js scripts won't use this.
+    baseURL: typeof window !== 'undefined' ? '/api/gemini' : undefined
+} as any);
 
 const getContext = () => {
     const bible = adminService.getSeriesBible();
@@ -275,28 +279,49 @@ ${bible.compositionMandates}
         // The "User Action" is distinct from the "System Context"
         const finalPrompt = `${styleContext}\n\nNOW GENERATE THIS SPECIFIC SCENE:\n${prompt}`;
 
-        console.log("Generating Image (Gemini 2.0) with Prompt Length:", finalPrompt.length);
+        console.log("Generating Image (Imagen 4) with Prompt Length:", finalPrompt.length);
 
-        // Attempt 2: Use Gemini 2.0 Flash (Supports generateContent)
-        const response = await ai().models.generateContent({
-            model: 'gemini-2.0-flash-exp',
-            contents: [{ text: finalPrompt }],
-            config: {
-                responseMimeType: 'image/jpeg', // Requesting image output
-                seed
+        // Attempt 2: Use Imagen 4 via direct Proxy Fetch
+        console.log("Generating Image (Imagen 4) via Proxy...");
+
+        const apiVersion = "v1beta";
+        const actualModel = "imagen-4.0-generate-001";
+
+        const baseUrl = typeof window !== 'undefined' ? '/api/gemini' : 'https://generativelanguage.googleapis.com';
+        const url = `${baseUrl}/${apiVersion}/models/${actualModel}:predict?key=${API_KEY}`;
+
+        const payload = {
+            instances: [
+                { prompt: finalPrompt }
+            ],
+            parameters: {
+                sampleCount: 1,
+                aspectRatio: "16:9"
             }
+        };
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
         });
 
+        if (!response.ok) {
+            const txt = await response.text();
+            console.error("Imagen 4 Proxy Failed:", response.status, txt);
+            throw new Error(`Imagen 4 Failed: ${response.status} ${txt}`);
+        }
+
+        const data = await response.json();
         let b64 = "";
-        // Safely extract image from SDK response
-        if (response.candidates && response.candidates[0].content.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData) b64 = part.inlineData.data;
-            }
+        if (data.predictions && data.predictions.length > 0) {
+            b64 = data.predictions[0].bytesBase64Encoded;
         }
 
         if (!b64) {
-            console.error("Gemini 2.0 No Image Data:", JSON.stringify(response, null, 2));
+            console.error("Imagen 4 No Image Data:", JSON.stringify(data, null, 2));
             throw new Error("Image generation failed - No Data");
         }
 
@@ -396,26 +421,61 @@ export async function generateThemeStylePreview(mainCharacter: Character, second
     ${secondSubjectDesc ? `SECONDARY: ${secondSubjectDesc}` : ''}
 ${bible.masterGuardrails} `;
 
-        // Attempt 2: Use Gemini 2.0 Flash (Supports generateContent)
-        const response = await ai().models.generateContent({
-            model: 'gemini-2.0-flash-exp',
-            contents: [{ text: prompt }],
-            config: {
-                responseMimeType: 'image/jpeg',
-                seed
-            }
-        });
+        // Attempt 2: Use Imagen 4 via generateImages
+        // Attempt 2: Use Imagen 4 via direct Proxy Fetch (Bypassing SDK to ensure correct endpoint)
+        console.log("Generating Image (Imagen 4) via Proxy...");
 
         let b64 = "";
-        // Safely extract image from SDK response
-        if (response.candidates && response.candidates[0].content.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData) b64 = part.inlineData.data;
+        try {
+            const apiVersion = "v1beta";
+            const modelName = "imagen-3.0-generate-001";
+            // Switched to 3.0 for stability
+            const actualModel = "imagen-3.0-generate-001";
+
+            const baseUrl = typeof window !== 'undefined' ? '/api/gemini' : 'https://generativelanguage.googleapis.com';
+            const url = `${baseUrl}/${apiVersion}/models/${actualModel}:predict?key=${API_KEY}`;
+
+            const payload = {
+                instances: [
+                    { prompt: prompt }
+                ],
+                parameters: {
+                    sampleCount: 1,
+                    aspectRatio: "1:1"
+                }
+            };
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const txt = await response.text();
+                console.error("Imagen 4 Proxy Failed:", response.status, txt);
+                throw new Error(`Imagen 4 Failed: ${response.status} ${txt}`);
             }
+
+            const data = await response.json();
+            if (data.predictions && data.predictions.length > 0) {
+                b64 = data.predictions[0].bytesBase64Encoded;
+            }
+        } catch (err) {
+            console.error("Direct Proxy Fetch Error:", err);
+            throw err;
         }
 
-        if (!b64) throw new Error("Image generation failed");
+        if (!b64) {
+            console.error("Image generation failed. No B64 Data.");
+            throw new Error("Image generation failed");
+        }
         return { imageBase64: b64, prompt };
+    }, 0).catch(e => {
+        console.error("generateThemeStylePreview ERROR:", e);
+        throw e;
     });
 }
 
