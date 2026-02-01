@@ -399,7 +399,7 @@ export async function generateFinalScript(blueprint: StoryBlueprint, language: L
     return polishScript(draft, blueprint, language);
 }
 
-export async function generateThemeStylePreview(mainCharacter: Character, secondCharacter: Character | undefined, theme: string, style: string, seed?: number): Promise<{ imageBase64: string; prompt: string }> {
+export async function generateThemeStylePreview(mainCharacter: Character, secondCharacter: Character | undefined, theme: string, style: string, age: string, seed?: number): Promise<{ imageBase64: string; prompt: string }> {
     return withRetry(async () => {
         const bible = adminService.getSeriesBible();
 
@@ -412,15 +412,16 @@ export async function generateThemeStylePreview(mainCharacter: Character, second
 
         // Include Theme Context if provided
         const prompt = `task: Apply a style transfer to the attached visual description.
-        context: The subject is in a "${theme}" setting.
+        context: The subject is in a "${theme}" setting. Capture a MEDIUM-WIDE SHOT allowing the environment to be visible around the subject.
         style_instruction: Reinterpret the subject in the style of "${style}". Transform the rendering into clean, refined high-definition art.
         subject_description: ${subjectDescription}
+        subject_age_lock: ${age || "Child"} (The subject MUST appear to be this age).
         ${secondSubjectDesc ? `secondary_subject: ${secondSubjectDesc}` : ''}
         
         CRITICAL FOCUS:
         1. Facial Features & Likeness (Eye shape, distinct markers).
         2. Soft cel-shading or semi-realistic lighting (depending on style).
-        3. High fidelity to the subject's age and structure.`;
+        3. High fidelity to the subject's AGE (${age}). Do not age them up.`;
 
         // Attempt 2: Use Imagen 4 via generateImages
         // Attempt 2: Use Imagen 4 via direct Proxy Fetch (Bypassing SDK to ensure correct endpoint)

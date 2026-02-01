@@ -61,7 +61,7 @@ const StyleCard: React.FC<{
                     </div>
                 )}
                 {isSelected && (
-                    <div className="absolute inset-0 bg-brand-coral/20 flex items-center justify-center backdrop-blur-[1px]">
+                    <div className="absolute inset-0 border-4 border-brand-coral flex items-start justify-end p-2">
                         <div className="bg-white text-brand-coral rounded-full p-2 shadow-lg transform scale-125">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         </div>
@@ -106,6 +106,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                         undefined,
                         storyData.theme || "Likeness Portrait",
                         storyData.selectedStylePrompt,
+                        storyData.childAge || "5",
                         Math.floor(Math.random() * 1000000) // Random seed for variations
                     );
                     setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'done', imageBase64 } : p));
