@@ -199,9 +199,30 @@ export async function runPromptReviewer(prompts: string[]): Promise<string[]> {
     });
 }
 
+async function describeSubject(imageBase64: string): Promise<string> {
+    return withRetry(async () => {
+        const response = await ai().models.generateContent({
+            model: 'gemini-1.5-flash',
+            contents: [
+                { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+                { text: "Describe this person's physical appearance in significant detail. Focus on hair color/style, eye color, skin tone, facial structure, and age. Be concise but descriptive. Output ONLY the visual description." }
+            ]
+        });
+        return response.text?.trim() || "A child";
+    });
+}
+
 export async function generateMethod4Image(prompt: string, stylePrompt: string, referenceBase64: string, characterDescription: string, age: string, seed?: number, secondReferenceBase64?: string): Promise<{ imageBase64: string; fullPrompt: string }> {
     return withRetry(async () => {
         const bible = adminService.getSeriesBible();
+
+        // Step 1: Get Visual Description of the Subject(s) from Gemini 1.5 Flash
+        // Imagen 3 does not support image-to-image directly via this API pattern yet.
+        const subjectDescription = await describeSubject(referenceBase64);
+        let secondSubjectDesc = "";
+        if (secondReferenceBase64) {
+            secondSubjectDesc = await describeSubject(secondReferenceBase64);
+        }
 
         // STRATEGY: Structured Prompting (JSON-Logic equivalent for Image Models)
         // We separate limits/style from the action to prevent "Context Bleed"
@@ -209,12 +230,12 @@ export async function generateMethod4Image(prompt: string, stylePrompt: string, 
 ** VISUAL STYLE MANDATE (OVERRIDE DEFAULT):** ${stylePrompt}
 
 ** MASTER IDENTITY RULE(CRITICAL):**
-            1. ** FACE / HEAD:** Must match REFERENCE 1 exactly.
+            1. ** FACE / HEAD:** ${subjectDescription}
             2. ** AGE LOCK:** The character MUST be a child aged ${age}.
         3. ** CONSISTENCY:** Same person, same age, same face in every shot.
 
 ** CLOTHING LOCK:** The character MUST wear: "${characterDescription}".Do not change this outfit unless the prompt specifically requests a costume change.
-            ${secondReferenceBase64 ? '**IDENTITY LOCK 2 (SECONDARY):** Match face structure exactly from REFERENCE 2.' : ''}
+            ${secondReferenceBase64 ? `**IDENTITY LOCK 2 (SECONDARY):** ${secondSubjectDesc}` : ''}
 
 ${bible.masterGuardrails}
 
@@ -223,27 +244,18 @@ ${bible.compositionMandates}
 ** COMPOSITION:** Ultrawide - Angle Panoramic Shot.Use "Negative Space" on the sides(clean background) for text placement.`;
 
         // The "User Action" is distinct from the "System Context"
-        // This forces the model to treat the Context as "Constant Rules" and the Action as "What to draw NOW"
-        const contents: any[] = [
-            { role: 'user', parts: [{ text: styleContext }] },
-            { role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: referenceBase64 } }] },
-            { role: 'user', parts: [{ text: `NOW GENERATE THIS SPECIFIC SCENE:\n${prompt}` }] }
-        ];
-
-        if (secondReferenceBase64) {
-            contents.splice(2, 0, { role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: secondReferenceBase64 } }] });
-        }
+        const finalPrompt = `${styleContext}\n\nNOW GENERATE THIS SPECIFIC SCENE:\n${prompt}`;
 
         const response = await ai().models.generateContent({
-            model: 'gemini-3-pro-image-preview',
-            contents: contents,
+            model: 'imagen-3.0-generate-001',
+            contents: { role: 'user', parts: [{ text: finalPrompt }] }, // Text ONLY for Imagen 3
             config: { seed, imageConfig: { aspectRatio: "16:9" } }
         });
 
         let b64 = "";
         for (const part of response.candidates[0].content.parts) if (part.inlineData) b64 = part.inlineData.data;
         if (!b64) throw new Error("Image generation failed");
-        return { imageBase64: b64, fullPrompt: styleContext + "\nSCENE: " + prompt };
+        return { imageBase64: b64, fullPrompt: finalPrompt };
     });
 }
 
@@ -321,26 +333,27 @@ export async function generateThemeStylePreview(mainCharacter: Character, second
     return withRetry(async () => {
         const bible = adminService.getSeriesBible();
 
+        // Step 1: Describe the subject
+        const subjectDescription = await describeSubject(mainCharacter.imageBases64[0]);
+        let secondSubjectDesc = "";
+        if (secondCharacter && secondCharacter.imageBases64 && secondCharacter.imageBases64[0]) {
+            secondSubjectDesc = await describeSubject(secondCharacter.imageBases64[0]);
+        }
+
         // Include Theme Context if provided
         const themeContext = theme ? `CONTEXT: The child is in a "${theme}" setting. (e.g.Space, Jungle, etc).` : '';
 
         const prompt = `TASK: CLOSE - UP PORTRAIT of Main Character.
         STYLE: ${style}.
-    PROTAGONIST: Child from IMAGE 1.
-    CAMERA: Medium - Close shot(Head & Shoulders).Focus heavily on FACE and EXPRESSION matching.
+    PROTAGONIST: ${subjectDescription}
+    CAMERA: Medium - Close shot(Head & Shoulders).Focus heavily on FACE and EXPRESSION.
         ${themeContext}
+    ${secondSubjectDesc ? `SECONDARY: ${secondSubjectDesc}` : ''}
 ${bible.masterGuardrails} `;
-
-        const contents: any[] = [{ inlineData: { mimeType: 'image/jpeg', data: mainCharacter.imageBases64[0] } }, { text: prompt }];
-
-        if (secondCharacter && secondCharacter.imageBases64 && secondCharacter.imageBases64[0]) {
-            contents.push({ inlineData: { mimeType: 'image/jpeg', data: secondCharacter.imageBases64[0] } });
-            contents[1].text += `\nSECONDARY CHARACTER: Match face from IMAGE 2.`;
-        }
 
         const response = await ai().models.generateContent({
             model: 'imagen-3.0-generate-001', // Use capable model
-            contents: contents,
+            contents: { role: 'user', parts: [{ text: prompt }] }, // Text ONLY
             config: { seed, imageConfig: { aspectRatio: "1:1" } }
         });
 
