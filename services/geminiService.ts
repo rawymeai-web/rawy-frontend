@@ -112,7 +112,7 @@ export async function runSeniorWriter(blueprint: StoryBlueprint): Promise<StoryB
         AUDIT: Validate the narrative arc against the Story Flow logic.Ensure failure leads to internal growth.
             Blueprint: ${JSON.stringify(blueprint)} `;
         const response = await ai().models.generateContent({
-            model: settings.targetModel,
+            model: 'gemini-1.5-flash',
             contents: prompt,
             config: { responseMimeType: "application/json", responseSchema: blueprintSchema }
         });
@@ -128,7 +128,7 @@ export async function runVisualDesigner(blueprint: StoryBlueprint): Promise<Spre
             ${getContext()}
         Blueprint: ${JSON.stringify(blueprint)} `;
         const response = await ai().models.generateContent({
-            model: settings.targetModel,
+            model: 'gemini-1.5-flash',
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -153,7 +153,7 @@ export async function runCreativeDirector(blueprint: StoryBlueprint, plan: Sprea
             ${getContext()}
         Plan: ${JSON.stringify(plan)} `;
         const response = await ai().models.generateContent({
-            model: settings.targetModel,
+            model: 'gemini-1.5-flash',
             contents: prompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { spreads: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { spreadNumber: { type: Type.INTEGER }, keyActions: { type: Type.STRING }, mainContentSide: { type: Type.STRING, enum: ["Left", "Right"] } }, required: ['spreadNumber', 'keyActions', 'mainContentSide'] } } }, required: ['spreads'] } }
         });
@@ -272,7 +272,7 @@ ${getContext()}
             OUTPUT: JSON array of ${settings.defaultSpreadCount} { "text": "string" }.`;
 
         const response = await ai().models.generateContent({
-            model: settings.targetModel,
+            model: 'gemini-1.5-flash',
             contents: draftPrompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING } }, required: ['text'] } } }
         });
@@ -304,7 +304,7 @@ ${JSON.stringify(draft)}
         OUTPUT: JSON array of ${settings.defaultSpreadCount * 2} { "text": "string" } (Polished Version).`;
 
         const response = await ai().models.generateContent({
-            model: settings.targetModel,
+            model: 'gemini-1.5-flash',
             contents: editorPrompt,
             config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING } }, required: ['text'] } } }
         });
@@ -334,7 +334,7 @@ ${bible.masterGuardrails} `;
         }
 
         const response = await ai().models.generateContent({
-            model: 'gemini-3-pro-image-preview', // Use capable model
+            model: 'imagen-3.0-generate-001', // Use capable model
             contents: contents,
             config: { seed, imageConfig: { aspectRatio: "1:1" } }
         });
