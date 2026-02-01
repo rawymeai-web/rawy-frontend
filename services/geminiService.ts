@@ -275,13 +275,16 @@ ${bible.compositionMandates}
         // The "User Action" is distinct from the "System Context"
         const finalPrompt = `${styleContext}\n\nNOW GENERATE THIS SPECIFIC SCENE:\n${prompt}`;
 
-        console.log("Generating Image (Imagen 4.0) with Prompt Length:", finalPrompt.length);
+        console.log("Generating Image (Gemini 2.0) with Prompt Length:", finalPrompt.length);
 
-        // Attempt 2: Use SDK with correct Imagen 4.0 model (v3 was 404)
+        // Attempt 2: Use Gemini 2.0 Flash (Supports generateContent)
         const response = await ai().models.generateContent({
-            model: 'imagen-4.0-generate-001',
+            model: 'gemini-2.0-flash-exp',
             contents: [{ text: finalPrompt }],
-            config: { seed, imageConfig: { aspectRatio: "16:9" } }
+            config: {
+                responseMimeType: 'image/jpeg', // Requesting image output
+                seed
+            }
         });
 
         let b64 = "";
@@ -293,7 +296,7 @@ ${bible.compositionMandates}
         }
 
         if (!b64) {
-            console.error("Imagen 4.0 No Image Data:", JSON.stringify(response, null, 2));
+            console.error("Gemini 2.0 No Image Data:", JSON.stringify(response, null, 2));
             throw new Error("Image generation failed - No Data");
         }
 
@@ -393,11 +396,14 @@ export async function generateThemeStylePreview(mainCharacter: Character, second
     ${secondSubjectDesc ? `SECONDARY: ${secondSubjectDesc}` : ''}
 ${bible.masterGuardrails} `;
 
-        // Attempt 2: Use SDK with correct Imagen 4.0 model
+        // Attempt 2: Use Gemini 2.0 Flash (Supports generateContent)
         const response = await ai().models.generateContent({
-            model: 'imagen-4.0-generate-001',
+            model: 'gemini-2.0-flash-exp',
             contents: [{ text: prompt }],
-            config: { seed, imageConfig: { aspectRatio: "1:1" } }
+            config: {
+                responseMimeType: 'image/jpeg',
+                seed
+            }
         });
 
         let b64 = "";
