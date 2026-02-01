@@ -428,9 +428,9 @@ ${bible.masterGuardrails} `;
         let b64 = "";
         try {
             const apiVersion = "v1beta";
-            const modelName = "imagen-4.0-ultra-generate-001";
-            // Upgraded to Ultra for best quality
-            const actualModel = "imagen-4.0-ultra-generate-001";
+            const modelName = "imagen-4.0-generate-001";
+            // Reverted to Standard 4.0 per user preference
+            const actualModel = "imagen-4.0-generate-001";
 
             if (!API_KEY) {
                 console.error("DEBUG: API_KEY is missing/empty in GeminisService!");
