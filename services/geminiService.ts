@@ -462,8 +462,8 @@ export async function generateThemeStylePreview(mainCharacter: Character, second
 
             if (!response.ok) {
                 const txt = await response.text();
-                // DEBUG: Log the full URL that failed
-                const failedUrl = response.url || url;
+                // DEBUG: Log the full URL that failed (Sanitized)
+                const failedUrl = (response.url || url).replace(/key=([^&]+)/, 'key=REDACTED');
                 console.error(`Imagen Proxy Failed (${failedUrl}):`, response.status, txt);
 
                 if (response.status === 404) throw new Error(`Proxy/Model 404 at ${failedUrl}: Endpoint not found.`);
