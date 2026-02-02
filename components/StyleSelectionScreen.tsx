@@ -127,13 +127,25 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
 
         setIsLocking(true);
         try {
-            const guide = await geminiService.generateTechnicalStyleGuide(selected.imageBase64, selected.prompt);
+            // Parallel: Get Style Guide AND Detailed Character Description (for consistency)
+            const [guide, charDesc] = await Promise.all([
+                geminiService.generateTechnicalStyleGuide(selected.imageBase64, selected.prompt),
+                geminiService.describeSubject(selected.imageBase64)
+            ]);
+
             onNext({
                 styleReferenceImageBase64: selected.imageBase64,
                 technicalStyleGuide: guide,
-                styleSeed: Math.floor(Math.random() * 1000000)
+                styleSeed: Math.floor(Math.random() * 1000000),
+                // CRITICAL: Save the generated description to the character so prompts use it!
+                mainCharacter: {
+                    ...storyData.mainCharacter,
+                    description: charDesc
+                }
             });
         } catch (e) {
+            console.error("Locking failed:", e);
+            // Fallback: Proceed without description if it fails (better than blocking)
             onNext({ styleReferenceImageBase64: selected.imageBase64 });
         } finally {
             setIsLocking(false);

@@ -25,12 +25,11 @@ export async function generateVisualPlan(
             - Rules: ${JSON.stringify(GUIDEBOOK.visual)}
     
             INSTRUCTIONS:
-            For EACH spread (1-8):
-            1. Analyze the text to find the MAIN ACTION.
-            2. Design the scene.
-            3. INJECT the Visual DNA (e.g. if DNA says "Space/Neon", the scene MUST be "Space/Neon").
-            4. "No Text" rule is absolute. Description is for IMAGES only.
-    
+            1. **DESIGN THE COVER (Spread 0):** This is the most critical art. It must be 16:9 panoramic. Front Half (Right) = Hero. Back Half (Left) = Open Scenic Space.
+            2. **DESIGN THE SPREADS (1-${script.length}):** Sequential visual storytelling.
+            3. **INJECT Visual DNA:** If DNA says "Space/Neon", the scene MUST be "Space/Neon".
+            4. **NO TEXT:** Description is for IMAGES only.
+
             OUTPUT JSON:
             {
                 "visualAnchors": {
@@ -42,7 +41,23 @@ export async function generateVisualPlan(
                 },
                 "spreads": [
                     { 
+                        "spreadNumber": 0,
+                        "setting": "Cover Scene (Epic)",
+                        "environmentType": "Cover Art",
+                        "timeOfDay": "...", 
+                        "lighting": "Cinematic/High-Key",
+                        "mainContentSide": "Right", 
+                        "keyActions": "Hero looking confident...",
+                        "mood": "Magical/Inviting",
+                        "emotion": "Wonder",
+                        "cameraAngle": "Wide/Epic",
+                        "colorPalette": "Rich/Saturated",
+                        "props": "...",
+                        "continuityNotes": "Title placed on Left (Empty Space)" 
+                    },
+                    { 
                         "spreadNumber": 1, 
+                        // ... normal spread fields
                         "setting": "Specific location name",
                         "environmentType": "Indoor/Outdoor/Abstract",
                         "timeOfDay": "Day/Night/Golden Hour",
@@ -55,8 +70,8 @@ export async function generateVisualPlan(
                         "colorPalette": "Dominant colors",
                         "props": "Key items",
                         "continuityNotes": "Notes for consistency"
-                    },
-                    ...
+                    }
+                    // ... up to spread 8
                 ]
             }
             `;
@@ -74,7 +89,7 @@ export async function generateVisualPlan(
             }
 
             return {
-                result: plan,
+                result: { ...plan, characters: blueprint.characters }, // Pass through characters for PromptEngineer
                 log: {
                     stage: 'Visual Plan',
                     timestamp: startTime,

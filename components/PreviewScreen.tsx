@@ -83,14 +83,25 @@ const Endpaper: React.FC = () => (
     </div>
 );
 
-const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange: (v: string) => void, type: 'spread' }> = ({ storyData, language, onTitleChange, type }) => {
+const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange: (v: string) => void, type: 'spread' | 'front' }> = ({ storyData, language, onTitleChange, type }) => {
     // LAYOUT LOGIC:
     // ARABIC: Hero/Title = RIGHT SIDE.
     // ENGLISH: Hero/Title = LEFT SIDE.
 
     const isAr = language === 'ar';
-    const isHeroRight = !isAr; // English = Hero Title on RIGHT Side (Front)
-    const isHeroLeft = isAr;   // Arabic = Hero Title on LEFT Side (Front)
+    const isHeroRight = !isAr; // English = Title Right (Front)
+    const isHeroLeft = isAr;   // Arabic = Title Left (Front)
+
+    // STYLING: Match PDF "Logo" Look
+    const titleStyle: React.CSSProperties = {
+        fontFamily: "'Luckiest Guy', cursive",
+        color: '#FFFFFF',
+        textShadow: language === 'en'
+            ? '4px 4px 0 #203A72, -2px -2px 0 #203A72, 2px -2px 0 #203A72, -2px 2px 0 #203A72, 2px 2px 0 #203A72, 0 8px 15px rgba(0,0,0,0.3)'
+            : '2px 2px 0 #203A72, -1px -1px 0 #203A72, 1px -1px 0 #203A72, -1px 1px 0 #203A72, 1px 1px 0 #203A72',
+        lineHeight: 1.1,
+        letterSpacing: language === 'en' ? '2px' : '0'
+    };
 
     return (
         <div className="w-full h-full relative overflow-hidden flex shadow-2xl rounded-3xl border-8 border-white ring-1 ring-gray-200"
@@ -103,45 +114,42 @@ const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange:
             {/* LEFT HALF */}
             <div className="w-1/2 h-full relative flex flex-col justify-between p-8">
                 {isHeroLeft ? (
-                    // ENGLISH FRONT (Hero Title Side)
-                    <div className="relative z-10 h-full flex flex-col items-center pt-10">
+                    // ARABIC FRONT (Hero Title Side)
+                    <div className="relative z-10 h-full flex flex-col items-center pt-2">
                         <div
                             contentEditable
                             suppressContentEditableWarning
                             onBlur={(e) => onTitleChange(e.currentTarget.innerText)}
-                            style={{ fontFamily: '"Titan One", sans-serif', WebkitTextStroke: '3px white', textShadow: '0px 8px 0px rgba(0,0,0,0.2)' }}
-                            className="text-5xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-brand-yellow to-brand-orange drop-shadow-2xl text-center transform -rotate-2"
+                            style={titleStyle}
+                            className="text-5xl md:text-7xl text-center transform -rotate-2 cursor-text uppercase"
                         >
                             {storyData.title}
                         </div>
                     </div>
                 ) : (
-                    // ARABIC BACK - Clean, no metadata for preview
-                    <div className="relative z-10 h-full flex flex-col justify-end items-center pb-8 opacity-80 mix-blend-multiply">
-                        {/* Metadata hidden for preview as per user request */}
-                    </div>
+                    // ENGLISH BACK - Empty
+                    <div className="relative z-10 h-full flex flex-col justify-end items-center pb-8 opacity-80 mix-blend-multiply"></div>
                 )}
             </div>
 
             {/* RIGHT HALF */}
             <div className="w-1/2 h-full relative flex flex-col justify-between p-8">
                 {isHeroRight ? (
-                    // ARABIC FRONT (Hero Title Side)
-                    <div className="relative z-10 h-full flex flex-col items-center pt-10">
+                    // ENGLISH FRONT (Hero Title Side)
+                    <div className="relative z-10 h-full flex flex-col items-center pt-2">
                         <div
                             contentEditable
                             suppressContentEditableWarning
                             onBlur={(e) => onTitleChange(e.currentTarget.innerText)}
-                            className={`text-white drop-shadow-2xl bg-black/20 p-6 rounded-[3rem] backdrop-blur-md border border-white/20 text-center ${getTitleFontSizeClass(storyData.title, language)}`}
+                            style={titleStyle}
+                            className="text-5xl md:text-7xl text-center transform -rotate-2 cursor-text uppercase"
                         >
                             {storyData.title}
                         </div>
                     </div>
                 ) : (
-                    // ENGLISH BACK - Clean, no metadata for preview
-                    <div className="relative z-10 h-full flex flex-col justify-end items-center pb-8 opacity-80 mix-blend-multiply">
-                        {/* Metadata hidden for preview as per user request */}
-                    </div>
+                    // ARABIC BACK - Empty
+                    <div className="relative z-10 h-full flex flex-col justify-end items-center pb-8 opacity-80 mix-blend-multiply"></div>
                 )}
             </div>
 
@@ -150,15 +158,16 @@ const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange:
     );
 };
 
+interface BookProps {
+    storyData: StoryData;
+    language: Language;
+    onTitleChange: (v: string) => void;
+}
+
 const PresentationView: React.FC<BookProps> = ({ storyData, language, onTitleChange }) => {
-    // ... logic to show Cover as first item ...
     const spreads = useMemo(() => {
-        const result = [];
-        for (let i = 0; i < storyData.pages.length; i += 2) {
-            const p = storyData.pages[i];
-            if (p) result.push(p);
-        }
-        return result;
+        // v4 Workflow: 1 Page Item = 1 Full Spread
+        return storyData.pages;
     }, [storyData.pages]);
 
     const views = useMemo(() => ['cover', ...spreads.map((_, i) => i)], [spreads]);
@@ -176,12 +185,6 @@ const PresentationView: React.FC<BookProps> = ({ storyData, language, onTitleCha
                 </div>
             );
         }
-
-        // Removed separate 'back' view as user requested standard stitching?? 
-        // User said: "cover front and back should be stiched in 1 spread view on the preview screen"
-        // So the "Back Cover" view at end is probably not needed if it's already shown in the full spread?
-        // Or maybe they just meant the *preview* of the cover should be one piece.
-        // I'll keep the inner pages logic same.
 
         const spreadPage = spreads[currentView as number];
         return (
@@ -218,20 +221,10 @@ const PresentationView: React.FC<BookProps> = ({ storyData, language, onTitleCha
     );
 };
 
-interface BookProps {
-    storyData: StoryData;
-    language: Language;
-    onTitleChange: (v: string) => void;
-}
-
 const ScrollView: React.FC<BookProps> = ({ storyData, language, onTitleChange }) => {
     const spreads = useMemo(() => {
-        const result = [];
-        for (let i = 0; i < storyData.pages.length; i += 2) {
-            const p = storyData.pages[i];
-            if (p) result.push(p);
-        }
-        return result;
+        // v4 Workflow: 1 Page Item = 1 Full Spread
+        return storyData.pages;
     }, [storyData.pages]);
 
     return (

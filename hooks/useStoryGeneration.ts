@@ -76,6 +76,7 @@ export const useStoryGeneration = (
             if (!themeObj) throw new Error(`Theme not found: ${storyData.theme}`);
 
             // 1. BLUEPRINT (Station 2)
+            const tBlueprintStart = performance.now();
             updateProgress(5, "STATION 2: Architecting Story Blueprint...");
             const blueprintResult = await geminiService.generateBlueprint({
                 childName: storyData.childName,
@@ -84,22 +85,26 @@ export const useStoryGeneration = (
                 themeTitle: themeObj.title.en,
                 themeData: themeObj
             });
+            console.log(`[TIMING] Blueprint: ${((performance.now() - tBlueprintStart) / 1000).toFixed(2)}s`);
             addLog(blueprintResult.log);
             updateStory({ blueprint: blueprintResult.result });
             if (blueprintResult.log.status === 'Failed') throw new Error("Blueprint Failed");
 
 
             // 2. DRAFTING (Station 3)
+            const tDraftStart = performance.now();
             updateProgress(10, "STATION 3: Drafting Narrative...");
             const scriptResult = await geminiService.generateScript(
                 blueprintResult.result,
                 language,
                 parseInt(storyData.childAge) || 5
             );
+            console.log(`[TIMING] Narrative Draft: ${((performance.now() - tDraftStart) / 1000).toFixed(2)}s`);
             addLog(scriptResult.log);
             if (scriptResult.log.status === 'Failed') throw new Error("Drafting Failed");
 
             // 3. VISUAL PLAN (Station 4)
+            const tVisualStart = performance.now();
             updateProgress(10, "STATION 4: Designing Visuals...");
             const visualDNA = `Style: ${storyData.selectedStylePrompt}. Theme: ${themeObj.visualDNA}`;
             const visualPlanResult = await geminiService.generateVisualPlan(
@@ -107,11 +112,13 @@ export const useStoryGeneration = (
                 blueprintResult.result,
                 visualDNA
             );
+            console.log(`[TIMING] Visual Plan: ${((performance.now() - tVisualStart) / 1000).toFixed(2)}s`);
             addLog(visualPlanResult.log);
             updateStory({ spreadPlan: visualPlanResult.result });
             if (visualPlanResult.log.status === 'Failed') throw new Error("Visual Plan Failed");
 
             // 4. PROMPTS (Station 5)
+            const tPromptStart = performance.now();
             updateProgress(10, "STATION 5: Engineering Prompts...");
             const promptResult = await geminiService.generatePrompts(
                 visualPlanResult.result,
@@ -119,12 +126,15 @@ export const useStoryGeneration = (
                 storyData.childAge,
                 storyData.mainCharacter.description
             );
+            console.log(`[TIMING] Prompt Engineering: ${((performance.now() - tPromptStart) / 1000).toFixed(2)}s`);
             addLog(promptResult.log);
             if (promptResult.log.status === 'Failed') throw new Error("Prompts Failed");
 
             // 5. QA (Station 6)
+            const tQaStart = performance.now();
             updateProgress(5, "STATION 6: Quality Assurance...");
             const qaResult = await geminiService.runQualityAssurance(promptResult.result);
+            console.log(`[TIMING] QA Check: ${((performance.now() - tQaStart) / 1000).toFixed(2)}s`);
             addLog(qaResult.log);
             updateStory({ finalPrompts: qaResult.result });
             if (qaResult.log.status === 'Failed') throw new Error("QA Failed");
@@ -135,28 +145,37 @@ export const useStoryGeneration = (
 
             // --- PHASE 2: PRODUCTION (Images) ---
 
-            // 6. Spreads Loop
-            const pages: Page[] = [];
-            const remainingWeight = 40; // 40% for spreads
-            const weightPerSpread = remainingWeight / finalPrompts.length;
+            // NEW LOGIC (Feb 2):
+            // finalPrompts[0] is now the COVER.
+            // finalPrompts[1..8] are the PAGES.
 
-            for (let i = 0; i < finalPrompts.length; i++) {
-                updateProgress(weightPerSpread, `PRODUCTION: Painting Spread ${i + 1}/${finalPrompts.length}...`);
-                const prompt = finalPrompts[i];
-                const plan = finalPlan[i];
+            const dynamicCoverPrompt = finalPrompts[0];
+            const pagePrompts = finalPrompts.slice(1);
+            const pagePlans = finalPlan.slice(1); // Assuming finalPlan also has Cover at index 0 now
+
+            // 6. Spreads Loop (Pages 1-N)
+            const pages: Page[] = [];
+            const remainingWeight = 40;
+            const weightPerSpread = remainingWeight / pagePrompts.length;
+
+            for (let i = 0; i < pagePrompts.length; i++) {
+                const tSpreadStart = performance.now();
+                updateProgress(weightPerSpread, `PRODUCTION: Painting Spread ${i + 1}/${pagePrompts.length}...`);
+                const prompt = pagePrompts[i];
+                const plan = pagePlans[i];
 
                 // VisualPlan prompt now fully contains composition rules.
-                // We just need to determine text side for the UI.
                 const imageSide = plan?.mainContentSide?.toLowerCase().includes('left') ? 'left' : 'right';
                 const textSide = imageSide === 'left' ? 'right' : 'left';
 
                 const imgRes = await geminiService.generateMethod4Image(
-                    prompt, // Pass the Super Prompt directly
+                    prompt,
                     storyData.selectedStylePrompt,
                     masterDNA,
                     storyData.mainCharacter.description,
                     storyData.childAge
                 );
+                console.log(`[TIMING] Illustration Spread ${i + 1}: ${((performance.now() - tSpreadStart) / 1000).toFixed(2)}s`);
 
                 const txt = finalScript[i].text.replace(/{name}/g, storyData.childName);
 
@@ -177,50 +196,18 @@ export const useStoryGeneration = (
                 updateStory({ pages: [...pages] });
             }
 
-            // 7. Cover Generation (LAST)
+            // 7. Cover Generation (LAST) using valid index 0 prompt
+            const tCoverStart = performance.now();
             updateProgress(10, "PRODUCTION: Painting Cover (Final Step)...");
-            const isAr = language === 'ar';
-            const frontSide = isAr ? 'left' : 'right'; // Correct visual logic
-            const backSide = isAr ? 'right' : 'left';
-
-            const coverPrompt = `Prompt for Cover:
-**GOAL:** Generate a 16:9 panoramic illustration matching the internal style with **high-impact commercial appeal**.
-
-**REFERENCE INPUTS:**
-- **Character Photo:** Included via DNA.
-- **Style:** ${visualDNA}
-
-**STRICT CHARACTER LOCK:**
-- Render the child with exact facial topology and hair pattern from the reference photo.
-- **Outfit:** Hero Outfit (Special/Magical if applicable).
-- Description: ${storyData.mainCharacter.description}
-
-**COMPOSITION RULES:**
-- 16:9 Full Bleed.
-- **${frontSide.toUpperCase()} SIDE (FRONT COVER):** Focus on the Child / Hero. Clear, happy, engaging.
-- **${backSide.toUpperCase()} SIDE (BACK COVER):** Scenery, landscape, or secondary characters. Minimal detail.
-- **NEGATIVE SPACE:** DO NOT add any text. Leave clean areas for the title overlay.
-- Camera: Eye-level or Low-angle (Heroic).
-
-**SCENE DESCRIPTION:**
-- Setting: ${blueprintResult.result.foundation.masterSetting} (The core world of the book).
-- Action: The hero standing confidently or exploring, inviting the reader in.
-
-**EMOTIONAL & DESIGN NOTES:**
-- Mood: Magical, Inviting, Wonder.
-- Palette: Rich, saturated colors.
-
-**MANDATORY OUTPUT RULES:**
-- No text, no watermarks.
-- No split screen line — continuous art.`;
 
             const coverRes = await geminiService.generateMethod4Image(
-                coverPrompt,
+                dynamicCoverPrompt,
                 storyData.selectedStylePrompt,
                 masterDNA,
                 storyData.mainCharacter.description,
                 storyData.childAge
             );
+            console.log(`[TIMING] Illustration Cover: ${((performance.now() - tCoverStart) / 1000).toFixed(2)}s`);
 
             updateStory({
                 coverImageUrl: coverRes.imageBase64,

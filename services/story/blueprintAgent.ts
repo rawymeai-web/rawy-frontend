@@ -24,6 +24,7 @@ export async function generateBlueprint(
             
             INPUT DATA:
             - Child: ${storyData.childName} (${storyData.childAge} years old).
+            - Base Appearance (MUST RESPECT): ${storyData.mainCharacter?.description || "Not provided"}.
             - Theme: ${storyData.theme}.
             - Moral/Goal: ${storyData.customGoal || "Standard theme goal"}.
             - Challenge: ${storyData.customChallenge || "Standard theme challenge"}.
@@ -32,6 +33,22 @@ export async function generateBlueprint(
             - Characters: STRICTLY No parents (${GUIDEBOOK.narrative.forbiddenCharacters.join(', ')}).
             - Structure: ${JSON.stringify(GUIDEBOOK.narrative.structure)}
             - Language: ${language === 'ar' ? 'Arabic (Fusha)' : 'English'}
+            
+            **HERO VISUALS (CRITICAL):**
+            - Use the "Base Appearance" provided above as the core.
+            - You MAY add accessories (hats, capes, backpacks) if the Theme requires it.
+            - Do NOT remove core recognizable details (e.g. glasses, hair color) unless necessary for a costume.
+
+            **CHARACTER PACING RULES (CRITICAL):**
+            1. **Page 1:** SOLO HERO ONLY. Establish the normal world.
+            2. **Sequencing:** Introduce max 1 Support Character per spread.
+            3. **Explicit Introductions:** You MUST list which character enters on which spread.
+
+            **COGNITIVE LOAD & PACING:**
+            - **ONE ACTION PER SPREAD:** Do NOT combine events.
+              - *Bad:* "He found the map and walked to the cave." (2 Actions).
+              - *Good:* "Spread 2: He finds the map. Spread 3: He walks to the cave."
+            - **ONE EMOTION PER SPREAD:** Focus deeply on a single feeling.
             
             OUTPUT JSON FORMAT:
             {
@@ -56,7 +73,15 @@ export async function generateBlueprint(
                 "structure": {
                     "arcSummary": "3 sentence plot",
                     "spreads": [
-                        { "spreadNumber": 1, "narrative": "Plot point", "emotionalBeat": "Happy/Sad", "specificLocation": "Kitchen", "environmentType": "Indoor", "timeOfDay": "Morning" },
+                        { 
+                            "spreadNumber": 1, 
+                            "narrative": "Plot point", 
+                            "emotionalBeat": "Happy/Sad", 
+                            "specificLocation": "Kitchen", 
+                            "environmentType": "Indoor", 
+                            "timeOfDay": "Morning",
+                            "newCharacters": ["None"]  // LIST WHO ENTERS HERE
+                        },
                         ... (8 spreads total)
                     ]
                 }

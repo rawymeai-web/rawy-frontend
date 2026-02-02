@@ -75,14 +75,14 @@ async function renderTextBlobToImage(text: string, widthPx: number, heightPx: nu
         finalHtml = finalHtml.replace(nameRegex, `<span style="font-weight: 900; color: #000000; font-size: 1.1em;">$1</span>`);
     }
 
-    // STYLING (Match PreviewScreen: bg-white/60, rounded-2xl, shadow-sm, border-white/50)
+    // STYLING (Updated per user feedback: tighter box, bigger font)
     container.style.cssText = `
         width: 1000px;
-        min-height: 400px;
+        min-height: 200px; /* Reduced from 400px to allow tighter fit */
         background-color: rgba(255, 255, 255, 0.6);
-        border-radius: 40px; /* rounded-2xl approximation for high-res */
-        color: #000000; /* FORCE BLACK TEXT */
-        padding: 80px;
+        border-radius: 50px; /* Highly rounded */
+        color: #000000;
+        padding: 40px; /* Reduced from 80px */
         font-family: ${language === 'ar' ? 'Tajawal, sans-serif' : 'Nunito, sans-serif'};
         font-weight: 700;
         font-size: ${fontSize}px;
@@ -92,8 +92,8 @@ async function renderTextBlobToImage(text: string, widthPx: number, heightPx: nu
         align-items: center;
         text-align: center;
         box-sizing: border-box;
-        border: 2px solid rgba(255,255,255,0.5);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* shadow-sm */
+        border: 4px solid rgba(255,255,255,0.8); /* Thicker, more visible border */
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1); 
     `;
 
     container.innerHTML = finalHtml;
@@ -178,7 +178,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             tx = (pdfW * 0.75) - (tw / 2);
         }
 
-        const ty = pdfH * 0.15; // Top positioning
+        const ty = pdfH * 0.08; // Moved UP from 0.15 to 0.08 to avoid covering Hero
         pdf.addImage(titleB64, 'PNG', tx, ty, tw, th);
     }
 
@@ -207,52 +207,56 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
-        // Draw Text Blobs (Fix Stretching)
+        // Draw Text Blobs (Fix Stretching & Positioning)
         const blocks = spread.textBlocks || [];
         for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
             const block = blocks[bIdx];
             const isLeft = spread.textSide === 'left';
 
-            // Calculate dynamic font size based on age
+            // Calculate dynamic font size based on age (UPDATED: Larger Fonts)
             const ageNum = parseInt(storyData.childAge, 10) || 6;
-            let fontSize = 42;
-            if (ageNum >= 10) fontSize = 24;
-            else if (ageNum >= 7) fontSize = 28;
-            else if (ageNum >= 4) fontSize = 32;
+            let fontSize = 48; // Default Base
+            if (ageNum >= 10) fontSize = 32; // Older kids -> Smaller (but bigger than before)
+            else if (ageNum >= 7) fontSize = 40;
+            else if (ageNum >= 4) fontSize = 48; // Young kids -> Huge font
 
             const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language, fontSize, storyData.childName);
 
             // Layout Logic:
-            // Layout Logic:
             // Box Width: 35% of PDF Width (approx 70% of a page)
             const rectW = pdfW * 0.35;
 
-            // DYNAMIC HEIGHT (User Request):
-            // Calculate height based on the actual generated image's aspect ratio
-            // to prevents stretching or squashing.
+            // DYNAMIC HEIGHT: Match blob aspect ratio exactly
             let rectH = rectW * 0.6; // Fallback
             if (blobImg && blobImg.width > 0) {
                 rectH = rectW * (blobImg.height / blobImg.width);
             }
 
+            // DYNAMIC POSITIONING (User Request: "Not centered 1 location")
+            // Use 5% Margin from edge
             const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.60;
-            // Center Vertically? Or Top Align?
-            // Usually text bubbles look better centered or slightly higher. 
-            // Let's keep vertically centered for now as per original design.
-            const rectY = (pdfH - rectH) / 2;
+
+            // VERTICAL POSITION: Top-Third / Golden Ratio (38%)
+            // This prevents the "dead center" look and usually frames nicely above the ground
+            const rectY = (pdfH * 0.382) - (rectH / 2);
 
             if (blobImg && blobImg.dataUrl) {
                 pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);
             }
         }
 
-        // METADATA STRIP LOGIC (Only if orderNumber is provided)
+        // METADATA STRIP LOGIC (Fix Stretching)
         if (orderNumber) {
-            const stripWidthMm = 6; // Wider for readability
+            const stripWidthMm = 7; // Slightly wider
             const stripHeightMm = pdfH;
 
-            const stripPxW = 150;
-            const stripPxH = 2000;
+            // Source Canvas needs to match the Aspect Ratio of the Target PDF Area
+            // Target Ratio = 7 / 200 = 0.035
+            // So if Height is 2000px, Width should be ~70px.
+            // Let's use high res: 200px Width -> 5714px Height (Too big)
+            // Let's settle on: 140px Width -> 4000px Height.
+            const stripPxW = 140;
+            const stripPxH = 4000;
 
             const html2canvas = getHtml2Canvas();
             const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
@@ -387,6 +391,17 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
 
         // 5. Detailed Creation Prompts (Debug)
         let detailedPrompts = `STORY GENERATION LOG\n--------------------------------\n`;
+
+        // Add Cover Prompt
+        if (storyData.actualCoverPrompt) {
+            detailedPrompts += `COVER PROMPT\n`;
+            detailedPrompts += `${storyData.actualCoverPrompt}\n`;
+            detailedPrompts += `--------------------------------\n\n`;
+
+            // Allow separate artifact for easy reading
+            artifactsFolder.file("0_cover_prompt.txt", storyData.actualCoverPrompt);
+        }
+
         storyData.pages.forEach(p => {
             detailedPrompts += `PAGE ${p.pageNumber}\n`;
             detailedPrompts += `TEXT: ${p.text}\n`;
@@ -394,8 +409,6 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
             detailedPrompts += `--------------------------------\n\n`;
         });
         artifactsFolder.file("debug_creation_prompts.txt", detailedPrompts);
-
-
 
         // 5. Order Manifest
         const manifest = {

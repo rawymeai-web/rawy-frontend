@@ -69,6 +69,7 @@ export interface StoryBlueprint {
       specificLocation: string;
       environmentType: string;
       timeOfDay: string;
+      newCharacters?: string[]; // New: List of characters entering for the first time
     }[];
   };
 }
@@ -205,6 +206,7 @@ export interface SpreadDesignPlan {
     persistentProps: string;
     spatialLogic: string;
   };
+  characters?: StoryBlueprint['characters']; // NEW: Propagate Blueprint characters for consistency
   spreads: {
     spreadNumber: number;
     setting: string;
