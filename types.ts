@@ -12,6 +12,7 @@ export type Screen =
   | 'generating'
   | 'unified-generation'
   | 'preview'
+  | 'debug-view' // NEW: For showing the live logs
   | 'checkout'
   | 'confirmation'
   | 'admin'
@@ -156,6 +157,16 @@ export interface StoryData {
   // Added optional fields for debug and comparison
   coverDebugImages?: CoverDebugImages;
   selectedDebugMethods?: string[];
+  workflowLogs?: WorkflowLog[];
+}
+
+export interface WorkflowLog {
+  stage: 'Blueprint' | 'Drafting' | 'Visual Plan' | 'Prompt Engineering' | 'QA' | 'Production';
+  timestamp: number;
+  inputs: any;
+  outputs: any;
+  status: 'Success' | 'Failed';
+  durationMs: number;
 }
 
 export type OrderStatus = 'New Order' | 'Processing' | 'Shipping' | 'Completed';
@@ -203,6 +214,9 @@ export interface SpreadDesignPlan {
     mainContentSide: string;
     keyActions: string;
     mood: string;
+    emotion: string; // NEW: Specific emotional resonance
+    cameraAngle: string; // NEW: Cinematic camera placement
+    colorPalette: string; // NEW: Specific color tones for this spread
     props: string;
     continuityNotes: string;
   }[];

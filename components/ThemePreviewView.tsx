@@ -137,7 +137,8 @@ export const ThemePreviewView: React.FC<{ language: Language }> = ({ language })
                 character,
                 undefined,
                 themeDescription,
-                stylePrompt
+                stylePrompt,
+                "5" // Default age for preview
             );
             setGeneratedPreviews(prev => [...prev, {
                 styleName: styleName,

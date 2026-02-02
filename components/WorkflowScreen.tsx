@@ -2,9 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
-// Added missing Logo import
 import { Logo } from './Logo';
+import { WorkflowDebugger } from './WorkflowDebugger';
 import type { Language } from '../types';
+import { useStory } from '../context/StoryContext';
+import * as adminService from '../services/adminService';
+import { FlyingHeroGame } from './games/FlyingHeroGame';
+import { ColorSortGame } from './games/ColorSortGame';
+import { ItemMergeGame } from './games/ItemMergeGame';
 
 interface WorkflowScreenProps {
     stage: number;
@@ -16,17 +21,12 @@ interface WorkflowScreenProps {
     language: Language;
 }
 
-import { useStory } from '../context/StoryContext';
-import * as adminService from '../services/adminService';
-import { FlyingHeroGame } from './games/FlyingHeroGame';
-import { ColorSortGame } from './games/ColorSortGame';
-import { ItemMergeGame } from './games/ItemMergeGame';
-
 const WorkflowScreen: React.FC<WorkflowScreenProps> = ({ stage, artifact, previousArtifact, isLoading, onApprove, onBack, language }) => {
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const [simulatedProgress, setSimulatedProgress] = useState(0);
     const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
     const [isDebug, setIsDebug] = useState(false);
+    const [showLogs, setShowLogs] = useState(false); // Manual Debug Toggle
 
     useEffect(() => {
         adminService.getSettings().then(s => setIsDebug(s.enableDebugView));
@@ -152,6 +152,15 @@ const WorkflowScreen: React.FC<WorkflowScreenProps> = ({ stage, artifact, previo
                         {isDebug ? stages[stage - 1]?.name : t('السحر يحدث الآن', 'Magic is Happening')}
                     </h2>
                 </div>
+                {/* Floating Debug Button */}
+                {storyData.workflowLogs && storyData.workflowLogs.length > 0 && (
+                    <button
+                        onClick={() => setShowLogs(true)}
+                        className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-mono py-2 px-4 rounded-full border border-slate-600 shadow-xl transition-all"
+                    >
+                        GUIDEBOOK LOGS ({storyData.workflowLogs.length})
+                    </button>
+                )}
             </div>
 
             <div className="relative min-h-[300px] md:min-h-[480px] bg-white/80 backdrop-blur-2xl border border-white/50 rounded-[3rem] shadow-2xl p-8 flex flex-col items-center justify-center">
@@ -210,6 +219,10 @@ const WorkflowScreen: React.FC<WorkflowScreenProps> = ({ stage, artifact, previo
                     {isLoading ? t('جاري المعالجة...', 'Thinking...') : (stage === 6 ? t('اعتماد وبدء الرسم!', 'Start Painting Now!') : t('موافقة ومتابعة', 'Approve & Continue'))}
                 </Button>
             </div>
+            {/* Log Debugger Overlay */}
+            {showLogs && storyData.workflowLogs && (
+                <WorkflowDebugger logs={storyData.workflowLogs} onClose={() => setShowLogs(false)} />
+            )}
         </div>
     );
 };

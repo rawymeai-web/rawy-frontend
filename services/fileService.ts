@@ -223,23 +223,22 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language, fontSize, storyData.childName);
 
             // Layout Logic:
+            // Layout Logic:
             // Box Width: 35% of PDF Width (approx 70% of a page)
             const rectW = pdfW * 0.35;
-            // Calculate Height to maintain aspect ratio (prevent stretching)
-            // Blob Canvas is 1000px wide. We need its height.
-            // Since we don't know exact canvas height here easily without async load, 
-            // We rely on renderTextBlobToImage returning an image. 
-            // A better way for PDF is to fix the aspect ratio.
-            // Let's assume the blob is approx 1000x500 (~2:1) but dynamic.
 
-            // FIX: Use 'auto' height equivalent by just setting width and letting PDF engine handle? 
-            // jsPDF addImage(img, format, x, y, w, h). If we know aspect ratio.
-            // The blob image is generated at 1000px width.
-            // We'll set a reasonable fixed height that isn't "stretched" looking, 
-            // OR ideally we'd get image dimensions. 
-            // For now, let's assume a slightly squarer ratio for text bubbles to avoid thin stretching.
-            const rectH = rectW * 0.6; // 5:3 ratio (1.66) instead of 16:9 vertical stretch
+            // DYNAMIC HEIGHT (User Request):
+            // Calculate height based on the actual generated image's aspect ratio
+            // to prevents stretching or squashing.
+            let rectH = rectW * 0.6; // Fallback
+            if (blobImg && blobImg.width > 0) {
+                rectH = rectW * (blobImg.height / blobImg.width);
+            }
+
             const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.60;
+            // Center Vertically? Or Top Align?
+            // Usually text bubbles look better centered or slightly higher. 
+            // Let's keep vertically centered for now as per original design.
             const rectY = (pdfH - rectH) / 2;
 
             if (blobImg && blobImg.dataUrl) {

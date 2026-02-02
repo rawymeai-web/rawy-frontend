@@ -118,7 +118,8 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
                     mockCharacter,
                     undefined,
                     task.themeDesc,
-                    task.stylePrompt
+                    task.stylePrompt,
+                    "5" // Default age for batch generation
                 );
 
                 setThumbnails(prev => [...prev, {

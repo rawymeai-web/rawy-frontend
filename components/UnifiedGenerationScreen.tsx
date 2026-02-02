@@ -8,6 +8,7 @@ import { FlyingHeroGame } from './games/FlyingHeroGame';
 import { ColorSortGame } from './games/ColorSortGame';
 import { ItemMergeGame } from './games/ItemMergeGame';
 import { useStory } from '../context/StoryContext';
+import { WorkflowDebugger } from './WorkflowDebugger';
 import type { Language } from '../types';
 
 interface UnifiedGenerationScreenProps {
@@ -23,6 +24,7 @@ export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = (
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
     const [showPopup, setShowPopup] = useState(true);
+    const [showLogs, setShowLogs] = useState(false);
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [activeGameIndex, setActiveGameIndex] = useState(0);
@@ -71,6 +73,15 @@ export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = (
                             ></div>
                         </div>
                     </div>
+                    {/* NEW: Guidebook Logs Button */}
+                    {storyData.workflowLogs && storyData.workflowLogs.length > 0 && (
+                        <button
+                            onClick={() => setShowLogs(true)}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-4 rounded-xl text-xs uppercase tracking-wider transition-colors"
+                        >
+                            Logs ({storyData.workflowLogs.length})
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -185,6 +196,12 @@ export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = (
                     </div>
                 </div>
             )}
+
+            {/* Log Debugger Overlay */}
+            {showLogs && storyData.workflowLogs && (
+                <WorkflowDebugger logs={storyData.workflowLogs} onClose={() => setShowLogs(false)} />
+            )}
         </div>
     );
 };
+
