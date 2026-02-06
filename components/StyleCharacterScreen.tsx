@@ -30,8 +30,8 @@ const StyleCard: React.FC<{
         onClick={onClick}
         disabled={preview.status !== 'done'}
         className={`p-4 text-center rounded-xl shadow-md transition-all h-full flex flex-col items-center justify-start border-2 w-full ${isSelected
-                ? 'bg-brand-baby-blue/30 border-brand-coral scale-105 ring-2 ring-brand-coral ring-offset-2'
-                : 'bg-white hover:bg-gray-50 hover:border-brand-baby-blue border-gray-200'
+            ? 'bg-brand-baby-blue/30 border-brand-coral scale-105 ring-2 ring-brand-coral ring-offset-2'
+            : 'bg-white hover:bg-gray-50 hover:border-brand-baby-blue border-gray-200'
             } ${preview.status !== 'done' ? 'cursor-not-allowed' : ''}`}
         aria-pressed={isSelected}
     >
@@ -53,33 +53,49 @@ const StyleCharacterScreen: React.FC<StyleCharacterScreenProps> = ({ onNext, onB
     );
     const [selectedStyleName, setSelectedStyleName] = useState<string | null>(null);
 
+    const generationStarted = React.useRef(false);
+
     useEffect(() => {
+        let isMounted = true;
+
         const generateAllPreviews = async () => {
             if (!storyData.mainCharacter.imageBases64) return;
+            if (generationStarted.current) return;
+            generationStarted.current = true;
 
             // Use a dummy theme description for style generation
             const themeDescription = "A magical adventure in a wondrous land.";
 
             for (const option of ART_STYLE_OPTIONS) {
+                if (!isMounted) break;
+
+                // Only trigger if pending (though we init as pending)
                 setPreviews(prev => prev.map(p => p.name === option.name ? { ...p, status: 'loading' } : p));
+
                 try {
-                    // FIX: Destructure imageBase64 from response object
                     const { imageBase64 } = await geminiService.generateThemeStylePreview(
                         storyData.mainCharacter,
-                        undefined,
+                        undefined, // No specific style name arg needed as prompt has it
                         themeDescription,
                         option.prompt,
                         String(storyData.childAge || "5")
                     );
-                    setPreviews(prev => prev.map(p => p.name === option.name ? { ...p, status: 'done', imageBase64 } : p));
+
+                    if (isMounted) {
+                        setPreviews(prev => prev.map(p => p.name === option.name ? { ...p, status: 'done', imageBase64 } : p));
+                    }
                 } catch (error) {
                     console.error(`Failed to generate preview for ${option.name}:`, error);
-                    setPreviews(prev => prev.map(p => p.name === option.name ? { ...p, status: 'error' } : p));
+                    if (isMounted) {
+                        setPreviews(prev => prev.map(p => p.name === option.name ? { ...p, status: 'error' } : p));
+                    }
                 }
             }
         };
 
         generateAllPreviews();
+
+        return () => { isMounted = false; };
     }, [storyData.mainCharacter.imageBases64]);
 
     const handleNext = () => {

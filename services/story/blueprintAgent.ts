@@ -1,7 +1,6 @@
 
 import { ai, cleanJsonString, withRetry } from '../generation/modelGateway';
 import { Validator } from '../rules/validator';
-import { GUIDEBOOK } from '../rules/guidebook';
 import { StoryData, StoryBlueprint, WorkflowLog } from '../../types';
 
 // Helper to accumulate logs if passed (optional, or we return the log)
@@ -29,54 +28,92 @@ export async function generateBlueprint(
             - Moral/Goal: ${storyData.customGoal || "Standard theme goal"}.
             - Challenge: ${storyData.customChallenge || "Standard theme challenge"}.
             
-            GUIDEBOOK RULES:
-            - Characters: STRICTLY No parents (${GUIDEBOOK.narrative.forbiddenCharacters.join(', ')}).
-            - Structure: ${JSON.stringify(GUIDEBOOK.narrative.structure)}
-            - Language: ${language === 'ar' ? 'Arabic (Fusha)' : 'English'}
-            
+            **IMMEDIATE FAMILY RESTRICTION (CRITICAL):**
+            - Do NOT include real-life immediate family members: mother, father, siblings, grandparents, aunts, uncles, cousins.
+            - *Reason:* These roles are personal to the child. We must not misrepresent them.
+            - **Exceptions:** You MAY include generic adults (guides, shopkeepers, owls, neighbors) ONLY IF they are NOT presented as family and do NOT act as saviors.
+            - **Rule:** Adults may guide or observe, but the **HERO MUST SOLVE THE PROBLEM**.
+
             **HERO VISUALS (CRITICAL):**
             - **SPECIES LOCK:** You MUST NOT change the biological species of the main character.
-                - If the "Base Appearance" describes a HUMAN CHILD, the hero MUST remain a HUMAN CHILD. 
-                - Do NOT turn them into an animal (bear, rabbit, etc.) even if the theme is "Forest" or "Jungle".
-                - The theme applies to the *World* and *Costume*, not the child's biology.
-            - Use the "Base Appearance" provided above as the immutable core.
-            - You MAY add accessories (hats, capes, backpacks) if the Theme requires it.
-            - Do NOT remove core recognizable details (e.g. glasses, hair color) unless necessary for a costume.
+            - Use the "Base Appearance" as the immutable core.
+            - You MAY add accessories if the Theme requires it.
 
-            **CHARACTER PACING RULES (CRITICAL):**
-            1. **Page 1:** SOLO HERO ONLY. Establish the normal world.
-            2. **Sequencing:** Introduce max 1 Support Character per spread.
-            3. **Explicit Introductions:** You MUST list which character enters on which spread.
-            ${parseInt(storyData.childAge) < 6 ?
-                    `4. **AGE CONSTRAINT (Under 6):**
-               - **MAXIMUM 2 SUPPORT CHARACTERS** in the entire story (e.g. 1 Helper + 1 Animal).
-               - Do NOT crowd the story with many new faces. Keep it simple and focused.`
-                    : ''}
+            **VISUAL CONTINUITY RULES (NON-NEGOTIABLE):**
+            1. **PRIMARY VISUAL ANCHOR:** Choose ONE object (e.g., backpack, kite, hat) that stays with the hero throughout. Everything else can change.
+            2. **LOCATION PROGRESSION:** Do NOT redraw the same full background unless it's the final resolution.
+               - *Good Flow:* Room -> Path -> Forest Edge -> Clearing -> Hill -> Home.
+               - *Bad Flow:* Room -> Room -> Room -> Room.
+            3. **CHARACTER CONTINUITY:** Supporting characters should appear in consecutive spreads. Avoid random appearing/disappearing.
+            
+            **NARRATIVE ARC REQUIREMENTS (8 SPREADS):**
+            1. **Spread 1:** Normal World + Desire (Solitary Hero start).
+            2. **Spread 2:** Catalyst (The Problem appears).
+            3. **Spread 3:** First Attempt (Hero tries and fails/struggles).
+            4. **Spread 4:** Complication (It gets harder; Support Char enters?).
+            5. **Spread 5:** Lowest Point / Deepest location.
+            6. **Spread 6:** Insight / Strategy Shift (The "Aha" moment).
+            7. **Spread 7:** Final Attempt (Success through new method).
+            8. **Spread 8:** Resolution + Moral (Return to new normal).
+
+            **HERO DESIRE CONSISTENCY (REQUIRED):**
+            - **Spread 1:** MUST clearly establish the hero's desire (Goal).
+            - **Spread 3:** MUST show the hero ACTIVELY attempting to achieve that desire.
+            - **Spread 7 or 8:** MUST resolve that same desire.
+            - Do NOT change the hero's core goal mid-story. The "Moral" is what they learn, the "Desire" is what they want.
+
+            **CHARACTER ROLE RULES:**
+            - **Limit:** Max 1 Support Character introduced per spread.
+            - **Constraint:** Max 2 Support Characters TOTAL for Age < 6.
+            - **Function:** Must be Helper, Obstacle, or Companion.
+            
+            **SUPPORTING CHARACTER IMPACT RULE (REVISED):**
+            - A supporting character does NOT need to appear visually in multiple spreads.
+            - However, their influence MUST be felt across more than one phase of the story.
+            - Their impact may be:
+              - Direct (appearing in one spread)
+              - Indirect (their advice, action, or effect carries forward)
+            - The blueprint MUST specify:
+              - The spread where the character appears (visual presence).
+              - The spread(s) where their influence affects the hero's decisions or outcome.
 
             **COGNITIVE LOAD & PACING:**
-            - **ONE ACTION PER SPREAD:** Do NOT combine events.
-              - *Bad:* "He found the map and walked to the cave." (2 Actions).
-              - *Good:* "Spread 2: He finds the map. Spread 3: He walks to the cave."
-            - **ONE EMOTION PER SPREAD:** Focus deeply on a single feeling.
+            - **ONE ACTION PER SPREAD.**
+            - **ONE EMOTION PER SPREAD.**
+            - **TEXT BUDGET (Narrative Summary):** 
+                - Age < 6: 1-2 short sentences.
+                - Age 6-7: 2-3 sentences.
+                - Age 8+: 3-4 sentences.
+
+            **TIME CONTINUITY RULE (CRITICAL):**
+            - The story must progress through continuous action and consequence.
+            - Do NOT use time-skip framing such as "the next day", "later that week", or similar shortcuts.
+            - Time may only pass if the waiting passage itself is part of the tension.
+            - Progress must feel earned, not skipped.
             
+            **TRANSITION QUALITY RULE (CRITICAL):**
+            - A transition hook must create anticipation, tension, or curiosity.
+            - Invalid hooks include time jumps ("The next day..."), summaries, or passive statements.
+            - Each hook must answer: "Why must the reader turn the page?"
+
             OUTPUT JSON FORMAT:
             {
                 "foundation": {
                     "title": "Story Title",
                     "targetAge": "${storyData.childAge}",
                     "storyCore": "1 sentence summary",
-                    "masterSetting": "Where it happens",
                     "heroDesire": "What they want",
                     "mainChallenge": "What stops them",
-                    "catalyst": "The incicting incident",
-                    "limiter": "The ticking clock/constraint",
+                    "primaryVisualAnchor": "The object that stays with hero (e.g. Red Scarf)",
                     "moral": "The lesson",
-                    "signatureAccessory": "Visual prop"
+                    "failedAttemptSpread": 3,
+                    "insightSpread": 6,
+                    "finalSolutionMethod": "How they fixed it"
                 },
                 "characters": {
                     "heroProfile": "Visual description",
                     "supportingRoles": [
-                        { "name": "Name", "role": "Role", "visualKey": "Visual traits" }
+                        { "name": "Name", "role": "Helper/Obstacle/Companion", "functionType": "Why they exist", "appearanceSpreads": [4], "influenceSpreads": [4, 5, 8], "visualKey": "Visual traits" }
                     ]
                 },
                 "structure": {
@@ -84,12 +121,15 @@ export async function generateBlueprint(
                     "spreads": [
                         { 
                             "spreadNumber": 1, 
-                            "narrative": "Plot point", 
-                            "emotionalBeat": "Happy/Sad", 
-                            "specificLocation": "Kitchen", 
+                            "purpose": "Normal World",
+                            "narrative": "Plot point summary (Age appropriate length)", 
+                            "transitionHook": "What makes reader flip page? (e.g. 'But then a noise...')",
+                            "visualFocus": "What is visually new? (e.g. 'The dark cave entrance')",
+                            "emotionalBeat": "Curious", 
+                            "specificLocation": "Bedroom", 
                             "environmentType": "Indoor", 
                             "timeOfDay": "Morning",
-                            "newCharacters": ["None"]  // LIST WHO ENTERS HERE
+                            "newCharacters": ["None"]
                         },
                         ... (8 spreads total)
                     ]

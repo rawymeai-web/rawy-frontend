@@ -36,14 +36,19 @@ export interface StoryBlueprint {
     title: string;
     targetAge: string;
     storyCore: string;
-    masterSetting: string;
     heroDesire: string;
     mainChallenge: string;
-    catalyst: string;
-    limiter: string;
+    primaryVisualAnchor: string; // NEW
     moral: string;
-    signatureAccessory: string;
-    bibleSelections: {
+    failedAttemptSpread?: number; // NEW
+    insightSpread?: number; // NEW
+    finalSolutionMethod?: string; // NEW
+    // Legacy fields kept optional for backward compat if needed
+    masterSetting?: string;
+    catalyst?: string;
+    limiter?: string;
+    signatureAccessory?: string;
+    bibleSelections?: {
       coreIndex: number;
       catalystIndex: number;
       limiterIndex: number;
@@ -56,20 +61,26 @@ export interface StoryBlueprint {
     supportingRoles: {
       name: string;
       role: string;
-      influence: string;
-      visualKey: string; // NEW: Strict visual description for consistency
+      functionType?: string; // NEW
+      appearanceSpreads?: number[]; // NEW
+      influenceSpreads?: number[]; // NEW
+      influence?: string;
+      visualKey: string;
     }[];
   };
   structure: {
     arcSummary: string;
     spreads: {
       spreadNumber: number;
+      purpose?: string; // NEW
       narrative: string;
+      transitionHook?: string; // NEW
+      visualFocus?: string; // NEW
       emotionalBeat: string;
       specificLocation: string;
       environmentType: string;
       timeOfDay: string;
-      newCharacters?: string[]; // New: List of characters entering for the first time
+      newCharacters?: string[];
     }[];
   };
 }

@@ -90,14 +90,23 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
     );
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
+    const generationStarted = React.useRef(false);
+
     useEffect(() => {
+        let isMounted = true;
         const generateVariations = async () => {
             if (storyData.mainCharacter.imageBases64.length === 0) return;
+            if (generationStarted.current) return;
+            generationStarted.current = true;
+
             const settings = await adminService.getSettings();
 
             for (let i = 0; i < previews.length; i++) {
+                if (!isMounted) break;
                 if (previews[i].status === 'done') continue;
+
                 if (i > 0) await new Promise(resolve => setTimeout(resolve, settings.generationDelay));
+                if (!isMounted) break;
 
                 setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'loading' } : p));
                 try {
@@ -109,15 +118,21 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                         storyData.childAge || "5",
                         Math.floor(Math.random() * 1000000) // Random seed for variations
                     );
-                    setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'done', imageBase64 } : p));
-                    if (selectedIndex === null) setSelectedIndex(i); // Auto-select first done
+
+                    if (isMounted) {
+                        setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'done', imageBase64 } : p));
+                        if (selectedIndex === null) setSelectedIndex(i); // Auto-select first done
+                    }
                 } catch (e: any) {
                     console.error(`Preview ${i} failed:`, e);
-                    setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'error', errorMessage: e.message || "Unknown error" } : p));
+                    if (isMounted) {
+                        setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'error', errorMessage: e.message || "Unknown error" } : p));
+                    }
                 }
             }
         };
         generateVariations();
+        return () => { isMounted = false; };
     }, [storyData.mainCharacter, storyData.selectedStylePrompt]);
 
     const handleNext = async () => {
