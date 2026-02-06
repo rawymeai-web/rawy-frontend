@@ -162,7 +162,7 @@ export async function generateMethod4Image(
                 }
             },
             {
-                text: `${prompt}\n\n**VISUAL INSTRUCTION:**\nThe IMAGE attached is the **Verified Hero Design**. You MUST use this exact character in the scene described above. Maintain strict consistency with their face, hair, and costume styles.`
+                text: `${prompt}\n\n**VISUAL INSTRUCTION:**\nThe IMAGE attached is the **Verified Hero Design**. You MUST use this exact character in the scene described above. Maintain strict consistency with their face, hair, and costume styles.\n\n**GLOBAL ART STYLE:** ${stylePrompt}`
             }
         ];
 

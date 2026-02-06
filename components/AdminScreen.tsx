@@ -19,7 +19,7 @@ interface AdminScreenProps {
     language: Language;
 }
 
-type AdminView = 'orders' | 'customers' | 'products' | 'themes' | 'bible' | 'prompts' | 'settings' | 'themePreview' | 'stitching';
+type AdminView = 'orders' | 'customers' | 'products' | 'themes' | 'bible' | 'prompts' | 'settings' | 'themePreview' | 'stitching' | 'metadata';
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color?: string }> = ({ title, value, icon, color = 'bg-brand-navy/5' }) => (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4 rtl:space-x-reverse">
@@ -27,6 +27,9 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
         <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{title}</p><p className="text-2xl font-black text-brand-navy leading-none mt-1">{value}</p></div>
     </div>
 );
+// ...
+// ...
+
 
 const GuidelinesView: React.FC = () => {
     const [bible, setBible] = useState(adminService.getSeriesBible());
@@ -92,11 +95,13 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const [orders, setOrders] = useState<AdminOrder[]>([]);
     const [settings, setSettings] = useState<AppSettings | null>(null);
+    const [connection, setConnection] = useState<{ connected: boolean; reason?: string } | null>(null);
 
     useEffect(() => {
         // Initial Fetch
         adminService.getOrders().then(setOrders);
         adminService.getSettings().then(setSettings);
+        adminService.checkConnection().then(setConnection);
     }, []);
 
     const stats = React.useMemo(() => {
@@ -114,6 +119,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
             case 'settings': return <SettingsView />;
             case 'themePreview': return <ThemePreviewView language={language} />;
             case 'stitching': return <StitchingScreen onExit={() => setView('orders')} language={language} />;
+            case 'metadata': return <MetadataView />;
             default: return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} />;
         }
     }
@@ -124,13 +130,14 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
             <aside className="w-full md:w-72 bg-white p-6 space-y-8 border-r border-gray-100 flex flex-col shrink-0 z-20">
                 <Logo />
                 <nav className="space-y-1.5 flex-grow overflow-y-auto no-scrollbar">
-                    <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} label="Performance" onClick={() => setView('orders')} isActive={view === 'orders'} />
+                    <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} label="Performance" onClick={() => setView('orders')} isActive={view === 'orders'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 6.253v11.494m-9-5.747h18" /></svg>} label="Guidelines" onClick={() => setView('bible')} isActive={view === 'bible'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} label="Themes" onClick={() => setView('themes')} isActive={view === 'themes'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M4 6h16M4 12h16m-7 6h7" /></svg>} label="Products" onClick={() => setView('products')} isActive={view === 'products'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M14 10h4.757a2 2 0 110 4H14M4 10h4.757a2 2 0 110 4H4M9 5h6v14H9z" /></svg>} label="Visual Lab" onClick={() => setView('themePreview')} isActive={view === 'themePreview'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} label="Tech Prompts" onClick={() => setView('prompts')} isActive={view === 'prompts'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>} label="Stitching" onClick={() => setView('stitching')} isActive={view === 'stitching'} />
+                    <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 4v16m8-8H4" /></svg>} label="Metadata" onClick={() => setView('metadata')} isActive={view === 'metadata'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} label="Config" onClick={() => setView('settings')} isActive={view === 'settings'} />
                 </nav>
                 <div className="pt-4 border-t">
@@ -139,6 +146,20 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
             </aside>
 
             <main className="flex-1 p-6 md:p-10 space-y-10 overflow-y-auto max-h-screen no-scrollbar bg-[#fcfcfc]">
+                {/* Header */}
+                <header className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-black text-brand-navy uppercase tracking-tight">Command Center</h1>
+                        <p className="text-sm text-gray-400 font-medium">System Overview & Controls</p>
+                    </div>
+
+                    {/* DB Status Badge */}
+                    <div className={`px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 ${connection?.connected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                        <div className={`w-2 h-2 rounded-full ${connection?.connected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                        {connection?.connected ? 'DB Connected' : `DB Error: ${connection?.reason || 'Unknown'}`}
+                    </div>
+                </header>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <StatCard title="Global Revenue" value={`${stats.totalRevenue.toFixed(3)} ${t('د.ك', 'KWD')}`} icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0-2.08.402-2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} color="bg-brand-orange/10" />
                     <StatCard title="Books Printed" value={stats.orderCount} icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 6.253v11.494m-9-5.747h18" /></svg>} color="bg-brand-teal/10" />
@@ -206,9 +227,36 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
         }
     };
 
+    const handleCreateTestOrder = async () => {
+        const confirm = window.confirm("Create a fake test order for debugging?");
+        if (!confirm) return;
+
+        const dummyId = `RWY-TEST-${Math.floor(Math.random() * 10000)}`;
+        const dummyShipping = { name: "Debug User", email: "debug@rawy.com", phone: "12345678", address: "123 Test St", city: "Kuwait City" };
+        // Minimal valid story data structure
+        const dummyStory: any = {
+            childName: "Test Child", childAge: "5", title: "The Test Adventure", theme: "Space",
+            size: "A4", coverImageUrl: "", pages: [], mainCharacter: { description: "Test" }
+        };
+
+        try {
+            await adminService.saveOrder(dummyId, dummyStory, dummyShipping);
+            alert(`Test Order ${dummyId} created! Refreshing list...`);
+            refreshOrders();
+        } catch (e) {
+            alert("Failed to create test order. Check console.");
+            console.error(e);
+        }
+    };
+
     return (
         <div className="space-y-4 animate-enter-forward">
             {previewingOrder && <OrderPreviewModal order={previewingOrder} onClose={() => setPreviewingOrder(null)} language={language} />}
+            <div className="flex justify-end px-2">
+                <Button onClick={handleCreateTestOrder} variant="secondary" className="!px-4 !py-2 text-[10px] font-black uppercase bg-gray-200 text-gray-600 hover:bg-gray-300">
+                    + Generate Debug Order
+                </Button>
+            </div>
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                 <table className="w-full text-xs text-left text-gray-500">
                     <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 border-b">
@@ -441,5 +489,53 @@ const SettingsView: React.FC = () => {
         </div>
     );
 };
+
+// DEBUGGER COMPONENT
+const MetadataView: React.FC = () => {
+    const canvasRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        if (!canvasRef.current) return;
+
+        // Clear previous
+        canvasRef.current.innerHTML = '';
+
+        // CREATE STRIP using the actual function
+        // We simulate a high-res environment by scaling it down with CSS for viewing
+        const strip = fileService.createMetadataStripElement('RWY-DEBUG-1234', 1, 300, 5000); // Actual Dimensions from fileService.ts
+
+        // CSS transform to fit in screen
+        strip.style.transformOrigin = 'top left';
+        strip.style.transform = 'scale(0.1)'; // Scale down to see it
+        strip.style.marginBottom = '-4400px'; // Compensate for scale layout
+
+        canvasRef.current.appendChild(strip);
+
+    }, []);
+
+    return (
+        <div className="space-y-6 animate-enter-forward">
+            <div><h2 className="text-2xl font-black text-brand-navy uppercase tracking-tight">Metadata Inspector</h2></div>
+            <div className="flex gap-10">
+                <div className="w-[350px] bg-gray-200 p-4 rounded-xl overflow-hidden border border-gray-300">
+                    <p className="text-xs font-bold mb-2 text-gray-500">Rendered Strip (Scaled 0.1x)</p>
+                    <div ref={canvasRef} className="bg-white shadow-lg origin-top-left"></div>
+                </div>
+                <div className="flex-1 space-y-4">
+                    <div className="p-4 bg-blue-50 text-blue-800 rounded-xl text-xs font-mono">
+                        <p className="font-bold">Specs:</p>
+                        <p>DPI Width: 300px</p>
+                        <p>DPI Height: 5000px</p>
+                        <p>CSS Width: ~12mm</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// Add to AdminView Type
+// Check line 22 for AdminView type definition update, or casting
+
 
 export default AdminScreen;

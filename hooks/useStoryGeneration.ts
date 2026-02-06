@@ -106,11 +106,14 @@ export const useStoryGeneration = (
             // 3. VISUAL PLAN (Station 4)
             const tVisualStart = performance.now();
             updateProgress(10, "STATION 4: Designing Visuals...");
-            const visualDNA = `Style: ${storyData.selectedStylePrompt}. Theme: ${themeObj.visualDNA}`;
+
+            // Director needs BOTH Style and Theme to describe the scenes correctly (e.g. "Neon props" in a "Cyberpunk" style)
+            const directorDNA = `Style: ${storyData.selectedStylePrompt}. Theme Visuals: ${themeObj.visualDNA}`;
+
             const visualPlanResult = await geminiService.generateVisualPlan(
                 scriptResult.result,
                 blueprintResult.result,
-                visualDNA
+                directorDNA
             );
             console.log(`[TIMING] Visual Plan: ${((performance.now() - tVisualStart) / 1000).toFixed(2)}s`);
             addLog(visualPlanResult.log);
@@ -120,11 +123,18 @@ export const useStoryGeneration = (
             // 4. PROMPTS (Station 5)
             const tPromptStart = performance.now();
             updateProgress(10, "STATION 5: Engineering Prompts...");
+
+            // Renderer needs ONLY the Style. 
+            // Theme details are now embedded in the VisualPlan's scene descriptions by the Director.
+            // We do NOT want to pass "Theme: Watercolor" to the renderer if the style is "Pixar 3D".
+            const rendererStyle = storyData.selectedStylePrompt;
+
             const promptResult = await geminiService.generatePrompts(
                 visualPlanResult.result,
-                visualDNA,
+                rendererStyle,
                 storyData.childAge,
-                storyData.mainCharacter.description
+                storyData.mainCharacter.description,
+                language
             );
             console.log(`[TIMING] Prompt Engineering: ${((performance.now() - tPromptStart) / 1000).toFixed(2)}s`);
             addLog(promptResult.log);

@@ -57,50 +57,71 @@ function getCoverDimensions(imgW: number, imgH: number, targetW: number, targetH
  * Creates a high-res image of a text blob to be inserted into the PDF.
  * This ensures the PDF blobs look exactly like the UI blobs.
  */
-async function renderTextBlobToImage(text: string, widthPx: number, heightPx: number, blobIndex: number, language: Language, fontSize: number = 42, childName: string = ''): Promise<{ dataUrl: string; width: number; height: number }> {
+async function renderTextBlobToImage(
+    text: string,
+    widthPx: number,
+    heightPx: number,
+    blobIndex: number,
+    language: Language,
+    fontSize: number = 42,
+    childName: string = '',
+    style: 'clean' | 'box' = 'clean'
+): Promise<{ dataUrl: string; width: number; height: number }> {
     const html2canvas = getHtml2Canvas();
     const container = document.createElement('div');
-    container.dir = language === 'ar' ? 'rtl' : 'ltr';
-    // container.spellcheck = false; // Not needed on div
+    const isAr = language === 'ar';
+    container.dir = isAr ? 'rtl' : 'ltr';
 
-    // HIGHLIGHTING LOGIC (Match PreviewScreen)
+    // HIGHLIGHTING LOGIC
     let finalHtml = text.split('\n\n').map(p => `<p style="margin-bottom: 24px; line-height: 1.6;">${p.trim()}</p>`).join('');
 
     if (childName) {
         const childFirstName = childName.trim().split(/\s+/)[0];
         const escapedName = childFirstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // Match name with word boundaries
         const nameRegex = new RegExp(`\\b(${escapedName})\\b`, 'gi');
-        // Apply Bold + Black
-        finalHtml = finalHtml.replace(nameRegex, `<span style="font-weight: 900; color: #000000; font-size: 1.1em;">$1</span>`);
+        finalHtml = finalHtml.replace(nameRegex, `<span style="font-weight: 900; color: ${style === 'clean' && !isAr ? 'white' : 'black'}; font-size: 1.1em;">$1</span>`);
     }
 
-    // STYLING (Updated per user feedback: tighter box, bigger font)
-    container.style.cssText = `
-        width: 1000px;
-        min-height: 200px; /* Reduced from 400px to allow tighter fit */
-        background-color: rgba(255, 255, 255, 0.6);
-        border-radius: 50px; /* Highly rounded */
-        color: #000000;
-        padding: 40px; /* Reduced from 80px */
-        font-family: ${language === 'ar' ? 'Tajawal, sans-serif' : 'Nunito, sans-serif'};
+    // BASE CSS
+    let css = `
+        width: ${widthPx}px;
+        min-height: 200px;
+        font-family: ${isAr ? 'Tajawal, sans-serif' : 'Nunito, sans-serif'};
         font-weight: 700;
         font-size: ${fontSize}px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        text-align: center;
+        text-align: ${style === 'clean' ? (isAr ? 'right' : 'left') : 'center'};
         box-sizing: border-box;
-        border: 4px solid rgba(255,255,255,0.8); /* Thicker, more visible border */
-        box-shadow: 0 8px 16px rgba(0,0,0,0.1); 
+        padding: 40px;
     `;
 
+    // STYLE SPECIFIC CSS
+    if (style === 'box') {
+        css += `
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 50px;
+            color: #000000;
+            border: 4px solid rgba(255,255,255,0.8);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1); 
+        `;
+    } else {
+        // CLEAN STYLE
+        css += `
+            background-color: transparent;
+            color: ${isAr ? '#000000' : '#FFFFFF'};
+            text-shadow: ${isAr ? 'none' : '2px 2px 4px rgba(0,0,0,0.8)'};
+        `;
+    }
+
+    container.style.cssText = css;
     container.innerHTML = finalHtml;
 
     document.body.appendChild(container);
-    // Use scale 2 for crisp text
-    const canvas = await html2canvas(container, { backgroundColor: null, scale: 2 });
+    // Use scale 3 for crisp text
+    const canvas = await html2canvas(container, { backgroundColor: null, scale: 3 });
     document.body.removeChild(container);
     return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height };
 }
@@ -169,17 +190,96 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
 
         let tx;
         if (isAr) {
-            // Front is LEFT: Center in 0-50% range
-            // Center = 25% w - half title width
+            // ARABIC logic: 
+            // User says "Hero should be on Right". 
+            // So we place Title on LEFT (0.25) to avoid covering the Hero.
             tx = (pdfW * 0.25) - (tw / 2);
         } else {
-            // Front is RIGHT: Center in 50-100% range
-            // Center = 75% w - half title width
+            // ENGLISH logic (Unchanged):
+            // Front is RIGHT (Standard). Title centered on Right side (0.75).
             tx = (pdfW * 0.75) - (tw / 2);
         }
 
         const ty = pdfH * 0.08; // Moved UP from 0.15 to 0.08 to avoid covering Hero
         pdf.addImage(titleB64, 'PNG', tx, ty, tw, th);
+
+        // METADATA STRIP (COVER)
+        if (orderNumber) {
+            const stripWidthMm = 3; // FIXED: 3mm strictly as requested
+            const stripHeightMm = pdfH;
+
+            // Canvas Dimensions (300 DPI calculation)
+            // 3mm = 0.118 inch. 0.118 * 300 = ~35 pixels.
+            // Let's use 50px for sharpness, but keep it narrow.
+            const stripPxW = 50;
+            const stripPxH = 5000; // High enough for vertical text
+
+            const html2canvas = getHtml2Canvas();
+            // Spread Index 0 for Cover
+            const metaContainer = createMetadataStripElement(orderNumber, 0, stripPxW, stripPxH);
+            document.body.appendChild(metaContainer);
+            const metaCanvas = await html2canvas(metaContainer, { backgroundColor: null, scale: 2 });
+            document.body.removeChild(metaContainer);
+            const metaImg = metaCanvas.toDataURL('image/png');
+
+            pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
+
+            // 2. BACK COVER ELEMENTS
+            // Dimensions
+            const barcodeW = 50; // 5cm
+            const barcodeH = 3;  // 3mm
+
+            const logoW = 30; // 3cm width for Logo
+            const logoH = 15; // 1.5cm height
+
+            // Y Position: Both at bottom, aligned center-Y
+            // Let's place them 15mm from bottom
+            const bottomMargin = 15;
+            const logoY = pdfH - bottomMargin - logoH;
+            // Center barcode on the Logo's Y-midpoint
+            // Logo Mid: logoY + logoH/2
+            // Barcode Y: (logoY + logoH/2) - (barcodeH/2)
+            const barcodeY = (logoY + (logoH / 2)) - (barcodeH / 2);
+
+            let barcodeX, logoX;
+
+            // Spacing from edges of the Back Cover page
+            const sideMargin = 20;
+
+            if (isAr) {
+                // ARABIC (Back Cover = RIGHT Page: 50% to 100%)
+                // Barcode: Right Side (Outer) -> pdfW - sideMargin - barcodeW
+                // Logo: Left Side (Spine) -> (pdfW/2) + sideMargin
+                barcodeX = pdfW - sideMargin - barcodeW;
+                logoX = (pdfW / 2) + sideMargin;
+            } else {
+                // ENGLISH (Back Cover = LEFT Page: 0% to 50%)
+                // Barcode: Left Side (Outer) -> sideMargin
+                // Logo: Right Side (Spine) -> (pdfW/2) - sideMargin - logoW
+                barcodeX = sideMargin;
+                logoX = (pdfW / 2) - sideMargin - logoW;
+            }
+
+            // A. RENDER BARCODE
+            const bcPxW = 600; // High res
+            const bcPxH = 36;  // Proportionalish (actually just needs to be distinct)
+            const bcEl = createBarcodeStripElement(orderNumber, bcPxW, bcPxH);
+            document.body.appendChild(bcEl);
+            const bcCanvas = await html2canvas(bcEl, { backgroundColor: null, scale: 2 });
+            document.body.removeChild(bcEl);
+            const bcImg = bcCanvas.toDataURL('image/png');
+            pdf.addImage(bcImg, 'PNG', barcodeX, barcodeY, barcodeW, barcodeH);
+
+            // B. RENDER LOGO
+            const logoPxW = 400;
+            const logoPxH = 200;
+            const logoEl = createRawyLogoElement(logoPxW, logoPxH);
+            document.body.appendChild(logoEl);
+            const logoCanvas = await html2canvas(logoEl, { backgroundColor: null, scale: 2 });
+            document.body.removeChild(logoEl);
+            const logoImg = logoCanvas.toDataURL('image/png');
+            pdf.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH);
+        }
     }
 
     // 2. Handle Spreads
@@ -220,7 +320,17 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             else if (ageNum >= 7) fontSize = 40;
             else if (ageNum >= 4) fontSize = 48; // Young kids -> Huge font
 
-            const blobImg = await renderTextBlobToImage(block.text, 800, 600, bIdx, language, fontSize, storyData.childName);
+            // Scale 3 for sharper text
+            const blobImg = await renderTextBlobToImage(
+                block.text,
+                800,
+                600,
+                bIdx,
+                language,
+                fontSize,
+                storyData.childName,
+                'clean'
+            );
 
             // Layout Logic:
             // Box Width: 35% of PDF Width (approx 70% of a page)
@@ -234,7 +344,15 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
 
             // DYNAMIC POSITIONING (User Request: "Not centered 1 location")
             // Use 5% Margin from edge
-            const rectX = isLeft ? pdfW * 0.05 : pdfW * 0.60;
+            // ARABIC FIX: Mirror the text placement because the book flow is reversed?
+            // Or if AI generates "text on left", does it mean "Left of Hero"?
+            // If User says "Text covering hero", we should probably just SWAP the side for Arabic.
+            let finalIsLeft = isLeft;
+            if (language === 'ar') {
+                finalIsLeft = !isLeft; // Swap sides for Arabic
+            }
+
+            const rectX = finalIsLeft ? pdfW * 0.05 : pdfW * 0.60;
 
             // VERTICAL POSITION: Top-Third / Golden Ratio (38%)
             // This prevents the "dead center" look and usually frames nicely above the ground
@@ -245,18 +363,12 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             }
         }
 
-        // METADATA STRIP LOGIC (Fix Stretching)
+        // METADATA STRIP (SPREADS)
         if (orderNumber) {
-            const stripWidthMm = 7; // Slightly wider
+            const stripWidthMm = 3; // FIXED: Consistent 3mm
             const stripHeightMm = pdfH;
-
-            // Source Canvas needs to match the Aspect Ratio of the Target PDF Area
-            // Target Ratio = 7 / 200 = 0.035
-            // So if Height is 2000px, Width should be ~70px.
-            // Let's use high res: 200px Width -> 5714px Height (Too big)
-            // Let's settle on: 140px Width -> 4000px Height.
-            const stripPxW = 140;
-            const stripPxH = 4000;
+            const stripPxW = 50;
+            const stripPxH = 5000;
 
             const html2canvas = getHtml2Canvas();
             const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
@@ -272,10 +384,15 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
     return pdf.output('blob');
 };
 
-// ... generateStitchedPdf ...
-
-export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], sizeConfig: ProductSize): Promise<Blob> => {
-    // ... same fix for stitched pdf images ...
+export const generateStitchedPdf = async (
+    coverBlob: Blob,
+    spreadBlobs: Blob[],
+    sizeConfig: ProductSize,
+    storyDetails: { title: string, childName: string, childAge: string },
+    pages: { text: string }[],
+    language: 'en' | 'ar' = 'en',
+    orderNumber?: string
+): Promise<Blob> => {
     const jsPDF = getJsPDF();
     if (!jsPDF) throw new Error("jsPDF not loaded");
 
@@ -289,21 +406,97 @@ export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], 
     const pdfH = pdf.internal.pageSize.getHeight();
 
     // 1. Cover
-    // 1. Cover
     const coverB64 = await blobToBase64(coverBlob);
     let cleanCover = '';
     if (typeof coverB64 === 'string') {
         cleanCover = coverB64.includes(',') ? coverB64.split(',')[1] : coverB64;
-    } else {
-        console.warn("Cover Base64 is not a string:", typeof coverB64);
     }
 
     if (cleanCover) {
-        const cDim = getCoverDimensions(1600, 900, pdfW, pdfH);
+        const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
         try {
-            pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', cDim.x, cDim.y, cDim.w, cDim.h);
-        } catch (e) {
-            console.error("Failed to add cover image to PDF", e);
+            pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
+        } catch (e) { console.warn("PDF Cover Add Failed", e); }
+
+        // Add Title Overlay to Cover
+        const isAr = language === 'ar';
+        const titleB64 = await createTextImage({ title: storyDetails.title }, language);
+
+        const tw = pdfW * 0.4;
+        const titleAspect = 1000 / 200;
+        const th = tw / titleAspect;
+        let tx;
+        if (isAr) {
+            tx = (pdfW * 0.25) - (tw / 2);
+        } else {
+            tx = (pdfW * 0.75) - (tw / 2);
+        }
+        const ty = pdfH * 0.08;
+        pdf.addImage(titleB64, 'PNG', tx, ty, tw, th);
+
+        // LOGO & BARCODE (COVER ONLY)
+        if (orderNumber) {
+            // METADATA STRIP (COVER)
+            const stripWidthMm = 3;
+            const stripHeightMm = pdfH;
+            const stripPxW = 50;
+            const stripPxH = 5000;
+            const html2canvas = getHtml2Canvas();
+
+            // Strip
+            const metaContainer = createMetadataStripElement(orderNumber, 0, stripPxW, stripPxH);
+            document.body.appendChild(metaContainer);
+            const metaCanvas = await html2canvas(metaContainer, { backgroundColor: null, scale: 2 });
+            document.body.removeChild(metaContainer);
+            const metaImg = metaCanvas.toDataURL('image/png');
+            pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
+
+            // BACK COVER ELEMENTS (Barcode + Logo)
+            const backCoverW = pdfW / 2;
+            const barcodeW = 50;
+            const barcodeH = 3;
+            const logoW = 30;
+            const logoH = 15;
+            const bottomMargin = 15;
+            const logoY = pdfH - bottomMargin - logoH;
+            const barcodeY = (logoY + (logoH / 2)) - (barcodeH / 2);
+
+            let barcodeX, logoX;
+            const sideMargin = 20;
+
+            if (isAr) {
+                // ARABIC (Back Cover = RIGHT Page 50-100%)
+                // Barcode: Right Edge
+                barcodeX = pdfW - sideMargin - barcodeW;
+                // Logo: Spine (Left of Right Page)
+                logoX = (pdfW / 2) + sideMargin;
+            } else {
+                // ENGLISH (Back Cover = LEFT Page 0-50%)
+                // Barcode: Left Edge
+                barcodeX = sideMargin;
+                // Logo: Spine (Right of Left Page)
+                logoX = (pdfW / 2) - sideMargin - logoW;
+            }
+
+            // Render Barcode
+            const bcPxW = 600;
+            const bcPxH = 36;
+            const bcEl = createBarcodeStripElement(orderNumber, bcPxW, bcPxH);
+            document.body.appendChild(bcEl);
+            const bcCanvas = await html2canvas(bcEl, { backgroundColor: null, scale: 2 });
+            document.body.removeChild(bcEl);
+            const bcImg = bcCanvas.toDataURL('image/png');
+            pdf.addImage(bcImg, 'PNG', barcodeX, barcodeY, barcodeW, barcodeH);
+
+            // Render Logo
+            const logoPxW = 400;
+            const logoPxH = 200;
+            const logoEl = createRawyLogoElement(logoPxW, logoPxH);
+            document.body.appendChild(logoEl);
+            const logoCanvas = await html2canvas(logoEl, { backgroundColor: null, scale: 2 });
+            document.body.removeChild(logoEl);
+            const logoImg = logoCanvas.toDataURL('image/png');
+            pdf.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH);
         }
     }
 
@@ -317,12 +510,64 @@ export const generateStitchedPdf = async (coverBlob: Blob, spreadBlobs: Blob[], 
         }
 
         if (cleanSpread) {
-            const sDim = getCoverDimensions(1600, 900, pdfW, pdfH);
             try {
-                pdf.addImage(`data:image/jpeg;base64,${cleanSpread}`, 'JPEG', sDim.x, sDim.y, sDim.w, sDim.h);
+                pdf.addImage(`data:image/jpeg;base64,${cleanSpread}`, 'JPEG', 0, 0, pdfW, pdfH);
             } catch (e) {
                 console.error(`Failed to add spread ${i} to PDF`, e);
             }
+        }
+
+        // TEXT OVERLAY
+        if (pages && pages[i] && pages[i].text) {
+            const text = pages[i].text;
+            const fontSize = 42;
+            const blobImg = await renderTextBlobToImage(
+                text,
+                800,
+                600,
+                i,
+                language,
+                fontSize,
+                storyDetails.childName,
+                'box' // CHANGED: 'clean' -> 'box' for black text on white box
+            );
+
+            // Positioning (Same as before)
+            const txtW = pdfW * 0.35;
+            const ratio = blobImg.width / blobImg.height;
+            const txtH = txtW / ratio;
+            const marginX = pdfW * 0.05;
+            const marginY = pdfH * 0.08;
+
+            // Logic: Consistent side for text? Or per spread?
+            // User requested "Not centered", "Usually frames nicely".
+            // Defaulting to Left for English, Right for Arabic (via logic below)
+            let isLeft = true; // Default
+            if (language === 'ar') isLeft = false; // Swap
+
+            const txtX = isLeft ? marginX : (pdfW - txtW - marginX);
+            const txtY = pdfH - txtH - marginY;
+
+            const cleanData = blobImg.dataUrl.includes(',') ? blobImg.dataUrl.split(',')[1] : blobImg.dataUrl;
+            try {
+                pdf.addImage(`data:image/png;base64,${cleanData}`, 'PNG', txtX, txtY, txtW, txtH);
+            } catch (e) { console.warn("Text Add Failed", e); }
+        }
+
+        // METADATA STRIP (SPREADS)
+        if (orderNumber) {
+            const stripWidthMm = 3;
+            const stripHeightMm = pdfH;
+            const stripPxW = 50;
+            const stripPxH = 5000;
+            const html2canvas = getHtml2Canvas();
+
+            const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
+            document.body.appendChild(metaContainer);
+            const metaCanvas = await html2canvas(metaContainer, { backgroundColor: null, scale: 2 });
+            document.body.removeChild(metaContainer);
+            const metaImg = metaCanvas.toDataURL('image/png');
+            pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
         }
     }
 
@@ -371,23 +616,50 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         zip.file('story_narrative.txt', storyText);
 
         // 3. Raw Images (High Res)
+        // 3. Raw Images (High Res)
         const imagesFolder = zip.folder("raw_images");
+
+        // Helper to get Base64 from URL or Raw String
+        const getBase64Data = async (input: string): Promise<string> => {
+            if (input.startsWith('http')) {
+                try {
+                    const resp = await fetch(input);
+                    const blob = await resp.blob();
+                    return await blobToBase64(blob).then(res => res.split(',')[1]);
+                } catch (e) {
+                    console.error("Failed to fetch image for zip:", input);
+                    return "";
+                }
+            }
+            return input.includes(',') ? input.split(',')[1] : input;
+        };
+
         if (storyData.coverImageUrl) {
-            const coverB64 = storyData.coverImageUrl.split(',')[1] || storyData.coverImageUrl;
-            imagesFolder.file("cover.jpg", coverB64, { base64: true });
+            const coverB64 = await getBase64Data(storyData.coverImageUrl);
+            if (coverB64) imagesFolder.file("cover.jpg", coverB64, { base64: true });
         }
-        storyData.pages.forEach((p, i) => {
+
+        // Use Promise.all for parallel fetching with better error handling
+        const pagePromises = storyData.pages.map(async (p, i) => {
             if (p.illustrationUrl) {
-                const imgB64 = p.illustrationUrl.split(',')[1] || p.illustrationUrl;
-                imagesFolder.file(`page_${p.pageNumber}.jpg`, imgB64, { base64: true });
+                const imgB64 = await getBase64Data(p.illustrationUrl);
+                if (imgB64) {
+                    imagesFolder.file(`page_${p.pageNumber}.jpg`, imgB64, { base64: true });
+                } else {
+                    console.warn(`Failed to package image for page ${p.pageNumber}`);
+                }
             }
         });
+        await Promise.all(pagePromises);
 
         // 4. Workflow Artifacts (Debug/Re-creation)
         const artifactsFolder = zip.folder("workflow_artifacts");
         if (storyData.blueprint) artifactsFolder.file("1_blueprint.json", JSON.stringify(storyData.blueprint, null, 2));
         if (storyData.spreadPlan) artifactsFolder.file("3_visual_plan.json", JSON.stringify(storyData.spreadPlan, null, 2));
         if (storyData.finalPrompts) artifactsFolder.file("5_prompts.json", JSON.stringify(storyData.finalPrompts, null, 2));
+
+        // Also save the raw Story Data for full reconstruction
+        artifactsFolder.file("full_story_data.json", JSON.stringify(storyData, null, 2));
 
         // 5. Detailed Creation Prompts (Debug)
         let detailedPrompts = `STORY GENERATION LOG\n--------------------------------\n`;
@@ -419,8 +691,14 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
                 title: storyData.title,
                 theme: storyData.theme,
                 childName: storyData.childName,
+                childAge: storyData.childAge, // Added for Stitcher
+                size: storyData.size,         // Added for Stitcher
                 pageCount: storyData.pages.length
-            }
+            },
+            pages: storyData.pages.map(p => ({
+                pageNumber: p.pageNumber,
+                text: p.text
+            }))
         };
         zip.file('order_manifest.json', JSON.stringify(manifest, null, 2));
 
@@ -470,10 +748,10 @@ export function createMetadataStripElement(orderNumber: string, spreadIndex: num
         writing-mode: vertical-rl;
         text-orientation: mixed;
         font-family: monospace;
-        font-size: 48px; /* INCREASED SIZE */
+        font-size: 92px; /* INCREASED from 74px */
         font-weight: 900;
         color: black;
-        letter-spacing: 4px;
+        letter-spacing: 16px; /* Increased spacing */
     `;
     topText.innerText = `ORDER #${orderNumber}`;
     container.appendChild(topText);
@@ -484,7 +762,9 @@ export function createMetadataStripElement(orderNumber: string, spreadIndex: num
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 40px;
+        gap: 100px; /* Increased gap */
+        width: 100%;
+        padding-bottom: 40px;
     `;
 
     const spreadText = document.createElement('div');
@@ -492,21 +772,22 @@ export function createMetadataStripElement(orderNumber: string, spreadIndex: num
         writing-mode: vertical-rl;
         text-orientation: mixed;
         font-family: monospace;
-        font-size: 32px; /* INCREASED SIZE */
+        font-size: 72px; /* INCREASED from 60px */
         font-weight: bold;
-        color: #555;
+        color: #333; /* Darker gray */
     `;
     spreadText.innerText = `SPREAD ${spreadIndex}`;
     bottomGroup.appendChild(spreadText);
 
-    // Better Barcode Simulation
+    // Better Barcode Simulation (Fixed Height & High Contrast)
     const bcContainer = document.createElement('div');
-    bcContainer.style.cssText = "display:flex; flex-direction:column; align-items:center; gap:4px;";
-    // Random bars
-    for (let k = 0; k < 15; k++) {
+    bcContainer.style.cssText = "display:flex; flex-direction:column; align-items:center; gap:16px; width: 100%; padding: 0 10px;"; // Increased gap to 16px
+
+    // Explicit Bars for visibility
+    for (let k = 0; k < 14; k++) { // Increased bar count slightly
         const bar = document.createElement('div');
-        bar.style.width = Math.random() > 0.5 ? '80%' : '60%';
-        bar.style.height = Math.random() > 0.5 ? '8px' : '4px'; /* Thicker bars */
+        bar.style.width = Math.random() > 0.5 ? '100%' : '70%'; // Wide bars
+        bar.style.height = Math.random() > 0.5 ? '80px' : '40px'; /* MUCH THICKER BARS (was 40/22) */
         bar.style.backgroundColor = 'black';
         bcContainer.appendChild(bar);
     }
@@ -527,7 +808,8 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 export async function createTextImage(titleData: { title: string }, lang: Language): Promise<string> {
     // Ensure font is loaded for High-Res Capture
     const fontLink = document.createElement('link');
-    fontLink.href = 'https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap';
+    // Load ALL necessary fonts: Luckiest Guy (En), Tajawal (Ar UI), Amiri (Ar Body)
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Tajawal:wght@400;700;900&family=Amiri:wght@400;700&display=swap';
     fontLink.rel = 'stylesheet';
     document.head.appendChild(fontLink);
     // Wait a moment for font to load (heuristic) - in real prod use document.fonts.ready
@@ -538,14 +820,19 @@ export async function createTextImage(titleData: { title: string }, lang: Langua
 
     // Typography Logic
     const isEn = lang !== 'ar';
+    // Use Tajawal Black for Titles
     const fontFamily = isEn ? "'Luckiest Guy', cursive" : "'Tajawal', sans-serif";
-    const letterSpacing = isEn ? '2px' : '0';
-    // Heavier stroke for English "Logo" look
+    const letterSpacing = isEn ? '2px' : 'normal'; // standard spacing for Arabic
+
+    // Arabic: Text-based (Simple, Black, No Shadow)
+    // English: Logo-style (White, Shadow, Rotated)
+    const color = isEn ? '#FFFFFF' : '#000000';
     const textShadow = isEn
         ? '4px 4px 0 #203A72, -2px -2px 0 #203A72, 2px -2px 0 #203A72, -2px 2px 0 #203A72, 2px 2px 0 #203A72, 0 8px 15px rgba(0,0,0,0.3)'
-        : '2px 2px 0 #203A72, -1px -1px 0 #203A72, 1px -1px 0 #203A72, -1px 1px 0 #203A72, 1px 1px 0 #203A72';
+        : 'none';
+    const transform = isEn ? 'rotate(-2deg)' : 'none';
 
-    container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:#FFFFFF;background:transparent;font-weight:900;text-shadow:${textShadow};padding:20px;text-align:center;width:1000px;line-height:1.1;font-size:90px;text-transform:uppercase;letter-spacing:${letterSpacing};transform: rotate(-2deg);`; // Added slight rotation for "Fun" feel
+    container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:${color};background:transparent;font-weight:900;text-shadow:${textShadow};padding:20px;text-align:center;width:1000px;line-height:1.1;font-size:90px;text-transform:uppercase;letter-spacing:${letterSpacing};transform:${transform};`;
 
     container.dir = lang === 'ar' ? 'rtl' : 'ltr';
     container.innerHTML = titleData.title;
@@ -615,4 +902,42 @@ export function createPrintableTextBlockElement(text: string, language: Language
 
     container.innerHTML = formattedText;
     return container;
+}
+
+export function createRawyLogoElement(width: number, height: number): HTMLElement {
+    const container = document.createElement('div');
+    container.style.cssText = `width:${width}px;height:${height}px;background:transparent;display:flex;align-items:center;justify-content:center;`;
+
+    // LOGO "RAWY"
+    const logo = document.createElement('div');
+    logo.style.cssText = "font-family:sans-serif;font-weight:900;font-size:62px;letter-spacing:6px;color:black;text-transform:uppercase;";
+    logo.innerText = "RAWY";
+    container.appendChild(logo);
+
+    return container;
+}
+
+export function createBarcodeStripElement(orderNumber: string, width: number, height: number): HTMLElement {
+    const container = document.createElement('div');
+    // 3mm is very thin, so we need full height bars
+    container.style.cssText = `width:${width}px;height:${height}px;background:white;display:flex;align-items:stretch;justify-content:center;gap:2px;overflow:hidden;`;
+
+    // Barcode Lines (Dense)
+    for (let k = 0; k < 60; k++) {
+        const bar = document.createElement('div');
+        const isThick = Math.random() > 0.6;
+        bar.style.width = isThick ? '6px' : '2px';
+        bar.style.height = '100%';
+        bar.style.backgroundColor = 'black';
+        // Add some spacing
+        bar.style.marginLeft = Math.random() > 0.5 ? '2px' : '0';
+        container.appendChild(bar);
+    }
+
+    return container;
+}
+
+// DEPRECATED: Old Back Cover Element (Kept for safety if referenced elsewhere, though unlikely)
+export function createBackCoverElement(orderNumber: string, width: number, height: number): HTMLElement {
+    return createRawyLogoElement(width, height);
 }

@@ -1,4 +1,4 @@
-
+﻿
 import { ai, cleanJsonString, withRetry } from '../generation/modelGateway';
 import { Validator } from '../rules/validator';
 import { getWordCountForAge } from '../rules/guidebook';
@@ -30,39 +30,29 @@ export async function generateStoryDraft(
             ${language === 'ar' ? '- Language: Arabic (Modern Standard but simple / Fusha). Diacritics (Harakat) are OPTIONAL but good for style.' : '- Language: English.'}
     
             **CRITICAL QUALITY GUIDELINES (Must Follow):**
-            ${age < 6 ?
-                    `1. **RHYTHM IS KING (SIMPLE RHYME MODE):** 
-               - Use **Strict Anapestic Tetrameter** (da-da-DUM, da-da-DUM).
-               - **CLARITY FIRST:** If a rhyme makes the sentence weird, DROP THE RHYME.
-                   - *Bad:* "To the forest did he quickly go." (Inverted/Weird).
-                   - *Good:* "He ran to the woods with a smile on his face." (Natural).
-               - **VOCABULARY CAP:** Use words a 4-year-old knows. No abstract concepts.`
-                    : age < 8 ?
-                        `1. **RHYTHM IS KING (STANDARD RHYME MODE):** Use **Strict Anapestic Tetrameter** (da-da-DUM, da-da-DUM).
+            ${age < 8 ?
+                    `1. **RHYTHM IS KING (RHYME MODE):** Use **Strict Anapestic Tetrameter** (da-da-DUM, da-da-DUM).
                - *Bad:* "The cat sat on the mat." (Flat).
-               - *Good:* "And the *cat* in the *hat* came to *visit* the *brat*." (Bouncy).`
-                        :
-                        `1. **RHYTHM IS KING (PROSE MODE):** Do NOT Rhyme. Use **Rhythmic Prose**.
+               - *Good:* "And the *cat* in the *hat* came to *visit* the *brat*." (Bouncy).
+               - If the rhythm stumbles, the page fails. Read it aloud mentally.
+             ` :
+                    `1. **RHYTHM IS KING (PROSE MODE):** Do NOT Rhyme. Use **Rhythmic Prose**.
                - Write like a Middle-Grade Novel (e.g. Roald Dahl).
-               - Focus on flow, alliteration, and sentence variety.`}
-            2. **ADJECTIVE BAN:** Do NOT use abstract adjectives (e.g. "magical", "wondrous").
-               - Use ONLY Concrete Adjectives (Size, Color, Texture).
-            3. **COGNITIVE LOAD (CRITICAL):** 
-               - **ONE NEW THING PER PAGE:** A page can have a new location OR a new character, NOT BOTH.
-               - Keep the action simple linear: A -> B.
-            4. **CHARACTER ROLES:** Characters must ACT, not just look. They must help solve the specific page's problem.
-            5. **SHOW, DON'T TELL:** Do not explain the lesson. Show the character making a choice.
-            6. **LOGIC:** Before writing the verse, ensure the logic holds: B must happen BECAUSE of A.
-            
-            ${age <= 8 ? `
-            **AGE ${age} SPECIAL CONSTRAINTS (STRICT):**
-            A. **NO PRONOUNS:** NEVER use "He" or "She". Always use the character's Name (e.g. "Zayn runs").
-               - *Reason:* Young kids get confused by pronouns.
-            B. **WORD COUNT CAP:** ABSOLUTE MAXIMUM ${wordCountRule.max} WORDS.
-               - If you can say it in 5 words, do not use 10.
-               - *Good:* "Zayn finds the bear." (4 words).
-               - *Bad:* "He looked around and suddenly he saw the bear." (9 words + Pronouns).
-            ` : ''}
+               - Focus on flow, alliteration, and sentence variety.
+               - *Bad:* "He went to the store. He bought milk." (Robotic).
+               - *Good:* "He dashed to the store, his coins jingling in his pocket, focused on only one thing: milk." (Flowing).
+             `}
+            2. **ADJECTIVE BAN:** Do NOT use abstract adjectives (e.g. "magical", "wondrous", "beautiful").
+               - Use ONLY Concrete Adjectives (Size, Color, Temperature, Texture).
+               - *Bad:* "The magical flower."
+               - *Good:* "The prickly purple flower."
+            3. **CLARITY OVER CLEVERNESS:** If a child needs to pause to understand, simplify it.
+            4. **COGNITIVE LOAD:** Introduce ONLY ONE new idea/action/emotion per page.
+            5. **CHARACTER INTRODUCTIONS:** Check the Blueprint 'newCharacters' field.
+               - If 'newCharacters' has a name, introduce them here with ONE visual trait.
+               - If a character is NOT in 'newCharacters' and hasn't appeared yet, DO NOT MENTION THEM.
+            6. **SHOW, DON'T TELL:** Do not explain the lesson. Show the character making a choice.
+            7. **LOGIC:** Before writing the verse, ensure the logic holds: B must happen BECAUSE of A.
 
             **BAD EXAMPLES (AVOID):**
             - "Kind thoughts made the plant bloom." (Abstract).

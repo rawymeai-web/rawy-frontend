@@ -1,4 +1,4 @@
-
+﻿
 import { ai, cleanJsonString, withRetry } from '../generation/modelGateway';
 import { Validator } from '../rules/validator';
 import { GUIDEBOOK } from '../rules/guidebook';
@@ -35,11 +35,7 @@ export async function generateBlueprint(
             - Language: ${language === 'ar' ? 'Arabic (Fusha)' : 'English'}
             
             **HERO VISUALS (CRITICAL):**
-            - **SPECIES LOCK:** You MUST NOT change the biological species of the main character.
-                - If the "Base Appearance" describes a HUMAN CHILD, the hero MUST remain a HUMAN CHILD. 
-                - Do NOT turn them into an animal (bear, rabbit, etc.) even if the theme is "Forest" or "Jungle".
-                - The theme applies to the *World* and *Costume*, not the child's biology.
-            - Use the "Base Appearance" provided above as the immutable core.
+            - Use the "Base Appearance" provided above as the core.
             - You MAY add accessories (hats, capes, backpacks) if the Theme requires it.
             - Do NOT remove core recognizable details (e.g. glasses, hair color) unless necessary for a costume.
 
@@ -47,11 +43,6 @@ export async function generateBlueprint(
             1. **Page 1:** SOLO HERO ONLY. Establish the normal world.
             2. **Sequencing:** Introduce max 1 Support Character per spread.
             3. **Explicit Introductions:** You MUST list which character enters on which spread.
-            ${parseInt(storyData.childAge) < 6 ?
-                    `4. **AGE CONSTRAINT (Under 6):**
-               - **MAXIMUM 2 SUPPORT CHARACTERS** in the entire story (e.g. 1 Helper + 1 Animal).
-               - Do NOT crowd the story with many new faces. Keep it simple and focused.`
-                    : ''}
 
             **COGNITIVE LOAD & PACING:**
             - **ONE ACTION PER SPREAD:** Do NOT combine events.

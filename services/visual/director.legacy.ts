@@ -1,4 +1,4 @@
-
+﻿
 import { ai, cleanJsonString, withRetry } from '../generation/modelGateway';
 import { Validator } from '../rules/validator';
 import { GUIDEBOOK } from '../rules/guidebook';
@@ -28,20 +28,7 @@ export async function generateVisualPlan(
             1. **DESIGN THE COVER (Spread 0):** This is the most critical art. It must be 16:9 panoramic. Front Half (Right) = Hero. Back Half (Left) = Open Scenic Space.
             2. **DESIGN THE SPREADS (1-${script.length}):** Sequential visual storytelling.
             3. **INJECT Visual DNA:** If DNA says "Space/Neon", the scene MUST be "Space/Neon".
-            4. **VISUAL CONSISTENCY MANDATE (GLOBAL STYLE LOCK):**
-               - **Cinematic Realism ONLY:** Natural exposure, no studio lighting, no illustrative glow.
-               - **Lighting Decay:** Shadows MUST deepen progressively from Spread 3 onward.
-                   - Spread 4: 70% ambient.
-                   - Spread 5: 55% ambient.
-                   - Spread 6: 45% ambient (Darker!).
-               - **Color Decay:** Saturation must NEVER increase after Spread 4. Muted, earthy tones only.
-               - **NO HERO FRAMING:** Do NOT Center the subject or isolate them. They must be embedded in the environment.
-           
-            5. **VOCABULARY BAN (CLARITY TRAPS):**
-               - NEVER use: "clearly visible", "waiting to be found", "readable from a distance", "spotlighted".
-               - INSTEAD use: "partially obscured", "hidden amongst", "revealed by light", "blending in".
-
-            6. **NO TEXT:** Description is for IMAGES only.
+            4. **NO TEXT:** Description is for IMAGES only.
 
             OUTPUT JSON:
             {

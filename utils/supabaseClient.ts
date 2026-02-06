@@ -7,16 +7,24 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const getSupabaseClient = () => {
     if (!supabaseUrl || !supabaseAnonKey) {
         console.warn("Missing Supabase environment variables! Using fallback client.");
-        // Return a dummy client that warns on use but doesn't crash app load
+        // Return a dummy client that warns on use but triggers error handling
+        const dummyError = { message: "No Supabase Config (Dev Mode)" };
         return {
             from: () => ({
-                select: () => ({ single: () => Promise.resolve({ data: null, error: { message: "No Supabase Config" } }), order: () => ({}), eq: () => ({ single: () => Promise.resolve({ data: null }) }) }),
-                upsert: () => Promise.resolve({ error: null }),
-                insert: () => Promise.resolve({ error: null }),
-                update: () => ({ eq: () => Promise.resolve({ error: null }) })
+                select: () => ({
+                    single: () => Promise.resolve({ data: null, error: dummyError }),
+                    order: () => Promise.resolve({ data: [], error: dummyError }), // Correct return shape
+                    eq: () => ({ single: () => Promise.resolve({ data: null, error: dummyError }) })
+                }),
+                upsert: () => Promise.resolve({ error: dummyError }), // Trigger fallback
+                insert: () => Promise.resolve({ error: dummyError }), // Trigger fallback
+                update: () => ({ eq: () => Promise.resolve({ error: dummyError }) })
             }),
             storage: {
-                from: () => ({ upload: () => Promise.resolve({ data: null, error: { message: "No Storage Config" } }), getPublicUrl: () => ({ data: { publicUrl: "" } }) })
+                from: () => ({
+                    upload: () => Promise.resolve({ data: null, error: dummyError }),
+                    getPublicUrl: () => ({ data: { publicUrl: "" } })
+                })
             }
         } as any;
     }

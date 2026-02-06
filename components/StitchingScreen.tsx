@@ -49,6 +49,11 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
     const [processingStatus, setProcessingStatus] = useState('');
     const [error, setError] = useState('');
     const [stitchedResults, setStitchedResults] = useState<StitchedResults | null>(null);
+    const [selectedLanguage, setSelectedLanguage] = useState<Language>(language);
+
+    useEffect(() => {
+        setSelectedLanguage(language);
+    }, [language]);
 
     useEffect(() => {
         adminService.getProductSizes().then(sizes => {
@@ -95,25 +100,42 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
                 const loaded = await Promise.all(Array.from(files).map(loadImage));
                 loaded.sort((a, b) => a.file.name.localeCompare(b.file.name));
                 setSpreadImages(loaded);
-            } else if (id === 'text-upload' && files[0]) {
-                const content = await files[0].text();
-                const parts = content.split('\n---\n');
-                const metadataPart = parts[0];
-                const storyPart = parts.length > 1 ? parts[1] : '';
-                const metadata: { [key: string]: string } = {};
-                metadataPart.split('\n').forEach(line => {
-                    const [key, ...v] = line.split(':');
-                    if (key && v.length > 0) metadata[key.trim()] = v.join(':').trim();
-                });
-                if (metadata['Order Number']) setOrderNumber(metadata['Order Number']);
-                if (metadata['Book Title']) setBookTitle(metadata['Book Title']);
-                if (metadata['Child Name']) setChildName(metadata['Child Name']);
-                if (metadata['Child Age']) setChildAge(metadata['Child Age']);
-                if (metadata['Book Size']) {
-                    const sid = metadata['Book Size'];
-                    if (allSizes.some(s => s.id === sid)) setSelectedSizeId(sid);
+            } else if (id === 'manifest-upload' && files[0]) {
+                const file = files[0];
+                const content = await file.text();
+                try {
+                    const manifest = JSON.parse(content);
+                    if (manifest.orderNumber) setOrderNumber(manifest.orderNumber);
+                    if (manifest.storySummary) {
+                        if (manifest.storySummary.title) setBookTitle(manifest.storySummary.title);
+                        if (manifest.storySummary.childName) setChildName(manifest.storySummary.childName);
+                        if (manifest.storySummary.childAge) setChildAge(manifest.storySummary.childAge);
+                        if (manifest.storySummary.size) {
+                            const sid = manifest.storySummary.size;
+                            if (allSizes.some(s => s.id === sid)) setSelectedSizeId(sid);
+                        }
+                    }
+                    if (manifest.pages && Array.isArray(manifest.pages)) {
+                        setStoryTexts(manifest.pages.map((p: any) => p.text));
+                    }
+                } catch (e) { console.error("Invalid Manifest JSON", e); setError("Invalid JSON Manifest"); }
+
+            } else if (id === 'story-upload' && files[0]) {
+                const file = files[0];
+                const content = await file.text();
+                // Parse Standard Story Narrative TXT
+                // Format:
+                // Title: ...
+                // Author: ...
+                // [Page 1]
+                // text...
+                const cleanPages = content.split(/\[Page \d+\]/).slice(1).map(p => p.trim()).filter(Boolean);
+                if (cleanPages.length > 0) {
+                    setStoryTexts(cleanPages);
+                } else {
+                    // Fallback regular split if [Page X] not found
+                    setStoryTexts(content.split(/\n\s*\n/).filter(line => line.length > 20));
                 }
-                setStoryTexts(storyPart.split(/\n\s*\n/).map(t => t.trim().replace(/^Page \d+:\s*/i, '')).filter(Boolean));
             }
         } catch (err) { setError(`Error loading file.`); }
         e.target.value = '';
@@ -121,9 +143,21 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
 
     const handleGenerate = async () => {
         const sizeConfig = allSizes.find(s => s.id === selectedSizeId);
-        if (!coverImage || spreadImages.length === 0 || storyTexts.length === 0 || !orderNumber || !bookTitle || !sizeConfig || !childAge) {
-            setError("Missing files or details."); return;
+
+        const missing = [];
+        if (!coverImage) missing.push("Cover Image");
+        if (spreadImages.length === 0) missing.push("Spread Images");
+        if (storyTexts.length === 0) missing.push("Story Text");
+        if (!orderNumber) missing.push("Order Number");
+        if (!bookTitle) missing.push("Book Title");
+        if (!childAge) missing.push("Child Age");
+        if (!sizeConfig) missing.push("Size Configuration");
+
+        if (missing.length > 0) {
+            setError(`Missing: ${missing.join(', ')}`);
+            return;
         }
+
         setIsProcessing(true);
         const DPI = 300;
         const PX_PER_CM = DPI / 2.54;
@@ -224,8 +258,8 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
             const sw = Math.round(sizeConfig.page.widthCm * 2 * PX_PER_CM);
             const sh = Math.round(sizeConfig.page.heightCm * PX_PER_CM);
 
-            // 3mm Strip Logic
-            const stripWidthCm = 0.3; // 3mm
+            // 3mm Strip Logic -> UPDATED TO 25mm (2.5cm)
+            const stripWidthCm = 2.5; // INCREASED: 0.3cm -> 2.5cm
             const stripWidthPx = Math.round(stripWidthCm * PX_PER_CM);
             const totalSpreadWidthPx = sw + stripWidthPx;
 
@@ -265,13 +299,27 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
                 }
             };
 
-            const pdfBlob = await fileService.generateStitchedPdf(coverBlob, spreadBlobs, pdfSizeConfig);
+            const pages = storyTexts.map((text, i) => ({ text, pageNumber: i + 1 }));
+
+            const pdfBlob = await fileService.generateStitchedPdf(
+                coverBlob,
+                spreadBlobs,
+                pdfSizeConfig,
+                { title: bookTitle, childName, childAge },
+                pages,
+                selectedLanguage,
+                orderNumber
+            );
+
             setStitchedResults({
                 coverUrl: URL.createObjectURL(coverBlob),
                 spreadUrls: spreadBlobs.map(b => URL.createObjectURL(b)),
                 coverBlob, spreadBlobs, pdfBlob
             });
-        } catch (err) { console.error(err); setError("An error occurred during stitching."); } finally { setIsProcessing(false); setProcessingStatus(''); }
+        } catch (err: any) {
+            console.error(err);
+            setError(`Stitching Failed: ${err?.message || err}`);
+        } finally { setIsProcessing(false); setProcessingStatus(''); }
     };
 
     const handleDownloadPackage = async () => {
@@ -280,11 +328,10 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
         setProcessingStatus("Zipping...");
         try {
             const zip = new JSZip();
-            zip.file('00_cover_stitched.jpeg', stitchedResults.coverBlob);
-            stitchedResults.spreadBlobs.forEach((b, i) => zip.file(`spread_${String(i + 1).padStart(2, '0')}.jpeg`, b));
-            zip.file('full_book.pdf', stitchedResults.pdfBlob);
-            const content = await zip.generateAsync({ type: 'blob' });
-
+            zip.file(`${orderNumber}_cover.jpg`, stitchedResults.coverBlob);
+            stitchedResults.spreadBlobs.forEach((b, i) => zip.file(`${orderNumber}_spread_${i + 1}.jpg`, b));
+            zip.file(`${orderNumber}_production.pdf`, stitchedResults.pdfBlob);
+            const content = await zip.generateAsync({ type: "blob" });
             const link = document.createElement('a');
             const url = URL.createObjectURL(content);
             link.href = url;
@@ -298,14 +345,46 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
         } catch (err) { setError('Failed to create ZIP.'); } finally { setIsProcessing(false); setProcessingStatus(''); }
     };
 
+
+    const handleUploadToCloud = async () => {
+        if (!stitchedResults || !orderNumber) return;
+        setIsProcessing(true);
+        setProcessingStatus("Generating ZIP for Cloud...");
+        try {
+            const zip = new JSZip();
+            zip.file(`${orderNumber}_cover.jpg`, stitchedResults.coverBlob);
+            stitchedResults.spreadBlobs.forEach((b, i) => zip.file(`${orderNumber}_spread_${i + 1}.jpg`, b));
+            zip.file(`${orderNumber}_production.pdf`, stitchedResults.pdfBlob);
+            const content = await zip.generateAsync({ type: "blob" });
+
+            setProcessingStatus("Uploading to Supabase...");
+            const url = await fileService.uploadOrderFiles(orderNumber, content);
+            if (url) {
+                setProcessingStatus("Linking Order...");
+                await adminService.updateOrderPackageUrl(orderNumber, url);
+                alert(`Upload Success! Package Linked to Order #${orderNumber}`);
+            } else {
+                alert("Upload Failed. Check console.");
+            }
+        } catch (err: any) {
+            setError('Cloud Upload Failed: ' + err.message);
+        } finally {
+            setIsProcessing(false);
+            setProcessingStatus('');
+        }
+    };
+
     if (stitchedResults) return (
         <div className="max-w-4xl mx-auto space-y-8 animate-enter-forward">
             <h2 className="text-3xl font-bold text-brand-navy text-center">✅ Ready!</h2>
             <Section title="Final Preview"><img src={stitchedResults.coverUrl} className="w-full rounded-lg shadow-lg" /></Section>
             <div className="flex gap-4 justify-center">
                 <Button onClick={() => setStitchedResults(null)} variant="outline">Back</Button>
-                <Button onClick={handleDownloadPackage} className="px-12 py-4" disabled={isProcessing}>
-                    {isProcessing ? processingStatus : "Download ZIP Package"}
+                <Button onClick={handleDownloadPackage} className="px-8 py-4" disabled={isProcessing}>
+                    {isProcessing ? processingStatus : "Download ZIP"}
+                </Button>
+                <Button onClick={handleUploadToCloud} className="px-8 py-4 bg-purple-600 hover:bg-purple-700" disabled={isProcessing}>
+                    {isProcessing ? "Uploading..." : "Upload to Cloud ☁️"}
                 </Button>
             </div>
         </div>
@@ -314,14 +393,80 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-3xl font-bold text-brand-navy text-center">🧵 Stitching Module</h2>
-            <Section title="Upload Assets">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <input id="cover-upload" type="file" onChange={handleFileUpload} className="block w-full text-sm border p-2 rounded" />
-                    <input id="spreads-upload" type="file" multiple onChange={handleFileUpload} className="block w-full text-sm border p-2 rounded" />
-                    <input id="text-upload" type="file" onChange={handleFileUpload} className="block w-full text-sm border p-2 rounded" />
+            <Section title="Order Metadata (Manual Override)">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Order Number</label>
+                        <input type="text" value={orderNumber} onChange={e => setOrderNumber(e.target.value)} className="w-full p-2 border rounded" placeholder="e.g. RWY-12345" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Book Title</label>
+                        <input type="text" value={bookTitle} onChange={e => setBookTitle(e.target.value)} className="w-full p-2 border rounded" placeholder="The Magical Journey" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Child Name</label>
+                        <input type="text" value={childName} onChange={e => setChildName(e.target.value)} className="w-full p-2 border rounded" placeholder="Ahmed" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Child Age</label>
+                        <input type="text" value={childAge} onChange={e => setChildAge(e.target.value)} className="w-full p-2 border rounded" placeholder="6" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Size</label>
+                        <select value={selectedSizeId} onChange={e => setSelectedSizeId(e.target.value)} className="w-full p-2 border rounded">
+                            {allSizes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </div>
+
                 </div>
             </Section>
-            <Button onClick={handleGenerate} className="w-full py-4" disabled={isProcessing}>
+
+            <Section title="Upload Assets">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Cover Image</label>
+                        <input id="cover-upload" type="file" onChange={handleFileUpload} className="block w-full text-sm border p-2 rounded" />
+                        {coverImage && (
+                            <div className="mt-2 relative group w-full h-40 bg-gray-100 rounded overflow-hidden">
+                                <img src={coverImage.dataUrl} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold">COVER READY</div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Spread Images (1-10)</label>
+                        <input id="spreads-upload" type="file" multiple onChange={handleFileUpload} className="block w-full text-sm border p-2 rounded" />
+                        {spreadImages.length > 0 && (
+                            <div className="mt-2 grid grid-cols-5 gap-1">
+                                {spreadImages.map((img, i) => (
+                                    <div key={i} className="aspect-square bg-gray-100 rounded overflow-hidden relative">
+                                        <img src={img.dataUrl} className="w-full h-full object-cover" />
+                                        <div className="absolute bottom-0 right-0 bg-black/70 text-white text-[8px] px-1">{i + 1}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-bold text-gray-500 uppercase">1. Manifest File (JSON)</label>
+                            {orderNumber && <span className="text-xs font-bold text-green-600 animate-pulse">✅ Meta Loaded</span>}
+                        </div>
+                        <input id="manifest-upload" type="file" onChange={handleFileUpload} className="block w-full text-sm border p-2 rounded" accept=".json" />
+                        <p className="text-[10px] text-gray-400">Upload 'order_manifest.json' for Order #, Age, Size.</p>
+                    </div>
+
+                    <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-bold text-gray-500 uppercase">2. Story Text (TXT)</label>
+                            {storyTexts.length > 0 && <span className="text-xs font-bold text-green-600 animate-pulse">✅ Story Loaded</span>}
+                        </div>
+                        <input id="story-upload" type="file" onChange={handleFileUpload} className="block w-full text-sm border p-2 rounded" accept=".txt" />
+                        <p className="text-[10px] text-gray-400">Upload 'story_narrative.txt' (Overrides JSON story).</p>
+                    </div>
+                </div>
+            </Section>
+            <Button onClick={handleGenerate} className="w-full py-4 text-lg font-black tracking-widest uppercase shadow-xl hover:scale-[1.01] transition-transform" disabled={isProcessing}>
                 {isProcessing ? <><Spinner /> {processingStatus}</> : "Generate Production Package"}
             </Button>
             {error && <p className="text-red-500 text-center font-bold">{error}</p>}

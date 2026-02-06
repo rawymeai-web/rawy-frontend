@@ -120,6 +120,7 @@ export interface AdminOrder {
   shippingCost: number;
   storyData: StoryData;
   shippingDetails: ShippingDetails;
+  packageUrl?: string;
 }
 
 // Added interface for CoverDebugImages to support debugging views and step-by-step review
@@ -159,6 +160,7 @@ export interface StoryData {
   coverDebugImages?: CoverDebugImages;
   selectedDebugMethods?: string[];
   workflowLogs?: WorkflowLog[];
+  language?: Language;
 }
 
 export interface WorkflowLog {

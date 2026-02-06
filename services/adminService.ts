@@ -18,6 +18,7 @@ interface DBOrder {
   production_cost: number;
   ai_cost: number;
   shipping_cost: number;
+  package_url?: string;
 }
 interface DBTheme {
   id: string;
@@ -59,7 +60,16 @@ const mapDBOrder = (o: DBOrder): AdminOrder => ({
   shippingCost: o.shipping_cost || 0,
   storyData: o.story_data,
   shippingDetails: o.shipping_details,
+  packageUrl: o.package_url
 });
+
+export async function updateOrderPackageUrl(orderNumber: string, packageUrl: string): Promise<void> {
+  const { error } = await supabase
+    .from('orders')
+    .update({ package_url: packageUrl })
+    .eq('order_number', orderNumber);
+  if (error) throw error;
+}
 
 // --- Services ---
 
@@ -104,6 +114,23 @@ export async function saveSettings(s: AppSettings): Promise<void> {
     target_model: s.targetModel
   });
   if (error) throw error;
+}
+
+// --- Connection Check ---
+export async function checkConnection(): Promise<{ connected: boolean; reason?: string }> {
+  // Simple check: Try to fetch settings. If it returns the specific "Dummy Client" error, we know keys are missing.
+  const { error } = await supabase.from('settings').select('id').limit(1).single();
+
+  if (error?.message === "No Supabase Config (Dev Mode)") {
+    return { connected: false, reason: "Missing API Keys (.env)" };
+  }
+
+  if (error) {
+    // Other errors (network, auth, etc)
+    return { connected: false, reason: error.message };
+  }
+
+  return { connected: true };
 }
 
 // --- Local Storage Fallback Helpers ---
@@ -164,7 +191,23 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
   const basePrice = product ? product.price : 29.900;
   const totalPrice = basePrice + 1.500;
 
-  // Prepare Order Object for Potential Fallback
+  // OPTIMIZATION: Create a "Light" version of storyData for Fallback/Storage immediately
+  // We MUST remove the massive Base64 strings to prevent "Invalid String Length" crashes in JSON.stringify
+  const heavyStoryData = storyData;
+  const lightPages = heavyStoryData.pages.map(p => ({
+    ...p,
+    illustrationUrl: p.illustrationUrl?.substring(0, 50) + '...' // Truncate for safety in logs/fallback
+  }));
+
+  const lightStoryData = {
+    ...heavyStoryData,
+    coverImageUrl: heavyStoryData.coverImageUrl?.substring(0, 50) + '...',
+    pages: lightPages,
+    // Remove character base64s
+    mainCharacter: { ...heavyStoryData.mainCharacter, imageBases64: [], images: [] },
+    secondCharacter: heavyStoryData.secondCharacter ? { ...heavyStoryData.secondCharacter, imageBases64: [], images: [] } : undefined
+  };
+
   const fallbackOrder: AdminOrder = {
     orderNumber,
     customerName: shippingDetails.name,
@@ -174,31 +217,33 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
     productionCost: settings.unitProductionCost,
     aiCost: settings.unitAiCost,
     shippingCost: settings.unitShippingCost,
-    storyData: storyData, // Store full data locally
+    storyData: lightStoryData, // STORE SAFE VERSION
     shippingDetails: shippingDetails
   };
 
   try {
-    // 1. Upload Images
+    // 1. Upload Images to Bucket
+    // We recreate the blobs only when needed to save memory
     const imageFiles: imageStore.OrderImages = {
-      cover: new File([await (await fetch(`data:image/jpeg;base64,${storyData.coverImageUrl}`)).blob()], 'cover.jpeg', { type: 'image/jpeg' }),
-      spreads: await Promise.all(storyData.pages.filter((_, i) => i % 2 === 0).map(async (p, i) => {
+      cover: new File([await (await fetch(`data:image/jpeg;base64,${heavyStoryData.coverImageUrl}`)).blob()], 'cover.jpeg', { type: 'image/jpeg' }),
+      spreads: await Promise.all(heavyStoryData.pages.filter((_, i) => i % 2 === 0).map(async (p, i) => {
         return new File([await (await fetch(`data:image/jpeg;base64,${p.illustrationUrl}`)).blob()], `spread_${i + 1}.jpeg`, { type: 'image/jpeg' });
       }))
     };
 
     const imageUrls = await imageStore.saveImagesForOrder(orderNumber, imageFiles);
 
-    // 2. Sanitize Story Data (Remove Base64)
-    const sanitizedStoryData = {
-      ...storyData,
-      coverImageUrl: imageUrls.cover,
-      pages: storyData.pages.map((page, i) => {
+    // 2. Prepare Final Data with URLs (No Base64)
+    const finalStoryData = {
+      ...lightStoryData,
+      coverImageUrl: imageUrls.cover, // Replace truncated with URL
+      pages: heavyStoryData.pages.map((page, i) => {
         const spreadIndex = Math.floor((Math.max(1, page.pageNumber) - 1) / 2);
-        return { ...page, illustrationUrl: imageUrls.spreads[spreadIndex] || page.illustrationUrl };
+        return {
+          ...page,
+          illustrationUrl: imageUrls.spreads[spreadIndex] || ''
+        };
       }),
-      mainCharacter: { ...storyData.mainCharacter, imageBases64: [], images: [] },
-      secondCharacter: storyData.secondCharacter ? { ...storyData.secondCharacter, imageBases64: [], images: [] } : undefined,
     };
 
     // 3. Upsert Customer
@@ -218,7 +263,7 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
       customer_name: shippingDetails.name,
       total: totalPrice,
       status: 'New Order',
-      story_data: sanitizedStoryData,
+      story_data: finalStoryData,
       shipping_details: shippingDetails,
       production_cost: settings.unitProductionCost,
       ai_cost: settings.unitAiCost,
@@ -227,10 +272,12 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
 
     if (orderError) throw orderError;
 
-  } catch (error) {
+  } catch (error: any) {
     console.warn("Supabase Save Failed. Falling back to Local Storage.", error);
+    if (error?.message) console.error("Supabase Error Message:", error.message);
+
+    // Fallback is SAFE now because it uses lightStoryData
     saveLocalOrder(fallbackOrder);
-    // We do NOT re-throw, so the UI flow continues successfully
   }
 }
 
@@ -243,14 +290,32 @@ export async function updateOrderStatus(orderNumber: string, status: OrderStatus
 }
 
 // 3. Products
-const mapDBProduct = (p: DBProduct): ProductSize => ({
-  id: p.id,
-  name: p.name,
-  price: p.price,
-  previewImageUrl: p.preview_image_url,
-  isAvailable: true,
-  ...p.dimensions // spread cover, page, margins
-});
+const mapDBProduct = (p: DBProduct): ProductSize => {
+  const defaults = {
+    coverContent: {
+      barcode: { fromRightCm: 2, fromTopCm: 2, widthCm: 4, heightCm: 2.5 },
+      format: { fromTopCm: 2, widthCm: 10, heightCm: 2 },
+      title: { fromTopCm: 2, widthCm: 10, heightCm: 3 } // Default for safety
+    }
+  };
+  return {
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    previewImageUrl: p.preview_image_url,
+    isAvailable: true,
+    ...p.dimensions, // spread cover, page, margins
+    // Deep merge / Safety fill
+    coverContent: {
+      ...defaults.coverContent,
+      ...(p.dimensions?.coverContent || {}),
+      title: {
+        ...defaults.coverContent.title,
+        ...(p.dimensions?.coverContent?.title || {})
+      }
+    }
+  };
+};
 
 export async function getProductSizes(): Promise<ProductSize[]> {
   const { data, error } = await supabase.from('products').select('*');

@@ -13,8 +13,8 @@ export const GUIDEBOOK = {
             "Neighbor (Fictional)", "Shopkeeper (Fictional)"
         ],
         wordCount: {
-            "3-5": { min: 10, max: 20 },
-            "6-8": { min: 25, max: 40 },
+            "3-5": { min: 5, max: 10 },
+            "6-8": { min: 25, max: 30 },
             "9-12": { min: 40, max: 60 }
         },
         structure: {
