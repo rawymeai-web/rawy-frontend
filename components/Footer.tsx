@@ -1,7 +1,7 @@
 
 import React from 'react';
 import type { Language } from '../types';
-import { getPrompts } from '../services/promptService';
+import { getPrompts, fetchPrompts } from '../services/promptService';
 
 interface FooterProps {
     language: Language;

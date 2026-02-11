@@ -32,8 +32,20 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 
 
 const GuidelinesView: React.FC = () => {
-    const [bible, setBible] = useState(adminService.getSeriesBible());
-    const handleSave = () => { adminService.saveSeriesBible(bible); alert('System Guidelines Updated!'); };
+    const [bible, setBible] = useState<adminService.SeriesBible | null>(null);
+
+    useEffect(() => {
+        adminService.getSeriesBible().then(setBible);
+    }, []);
+
+    const handleSave = async () => {
+        if (bible) {
+            await adminService.saveSeriesBible(bible);
+            alert('System Guidelines Updated!');
+        }
+    };
+
+    if (!bible) return <Spinner />;
 
     return (
         <div className="space-y-6 animate-enter-forward">
@@ -210,7 +222,9 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
         setIsExporting(order.orderNumber);
         try {
             // Regenerate the package fresh from the stored story data
-            const zipBlob = await fileService.generatePrintPackage(order.storyData as any, order.shippingDetails, language, order.orderNumber);
+            // FIX: Use the Order's Language if available, otherwise fallback to Admin UI language
+            const targetLanguage = order.storyData.language || language;
+            const zipBlob = await fileService.generatePrintPackage(order.storyData as any, order.shippingDetails, targetLanguage, order.orderNumber);
 
             // Trigger Download
             const link = document.createElement('a');
@@ -252,7 +266,16 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
     return (
         <div className="space-y-4 animate-enter-forward">
             {previewingOrder && <OrderPreviewModal order={previewingOrder} onClose={() => setPreviewingOrder(null)} language={language} />}
-            <div className="flex justify-end px-2">
+            <div className="flex justify-end px-2 gap-2">
+                <Button onClick={async () => {
+                    if (confirm("Sync all local orders to DB?")) {
+                        const count = await adminService.syncLocalOrders();
+                        alert(`Synced ${count} orders to Cloud.`);
+                        refreshOrders();
+                    }
+                }} variant="outline" className="!px-4 !py-2 text-[10px] font-black uppercase border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white">
+                    Cloud Sync
+                </Button>
                 <Button onClick={handleCreateTestOrder} variant="secondary" className="!px-4 !py-2 text-[10px] font-black uppercase bg-gray-200 text-gray-600 hover:bg-gray-300">
                     + Generate Debug Order
                 </Button>
@@ -358,8 +381,21 @@ const ProductsView: React.FC = () => {
 };
 
 const PromptsView: React.FC = () => {
-    const [prompts, setPrompts] = useState<promptService.PromptTemplates>(promptService.getPrompts());
-    const handleSave = () => { promptService.savePrompts(prompts); alert('Super Prompts Deployed!'); };
+    const [prompts, setPrompts] = useState<promptService.PromptTemplates | null>(null);
+
+    useEffect(() => {
+        promptService.fetchPrompts().then(setPrompts);
+    }, []);
+
+    const handleSave = async () => {
+        if (prompts) {
+            await promptService.savePrompts(prompts);
+            alert('Super Prompts Deployed!');
+        }
+    };
+
+    if (!prompts) return <Spinner />;
+
     return (
         <div className="space-y-6 animate-enter-forward">
             <div className="flex justify-between items-center px-2"><div><h2 className="text-2xl font-black text-brand-navy uppercase tracking-tight">Super Prompt Terminal</h2></div><Button onClick={handleSave} className="shadow-lg shadow-brand-orange/20">Deploy Logic</Button></div>

@@ -140,23 +140,41 @@ ${masterGuardrails}`;
             contents[1].text += `\n**SECONDARY SUBJECT:** See IMAGE 2. Match their face as well.`;
         }
 
-        console.log("Generating Preview via Hybrid Vision Logic...");
+        try {
+            console.log("Generating Preview via Hybrid Vision Logic (Primary)...");
+            // Using the Vision-Capable Model
+            const response = await ai().models.generateContent({
+                model: 'gemini-3-pro-image-preview',
+                contents: contents,
+                config: { seed, imageConfig: { aspectRatio: "1:1" } }
+            });
 
-        // Using the Vision-Capable Model
-        const response = await ai().models.generateContent({
-            model: 'gemini-3-pro-image-preview',
-            contents: contents,
-            config: { seed, imageConfig: { aspectRatio: "1:1" } }
-        });
-
-        let b64 = "";
-        if (response.candidates && response.candidates[0].content.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData) b64 = part.inlineData.data;
+            let b64 = "";
+            if (response.candidates && response.candidates[0].content.parts) {
+                for (const part of response.candidates[0].content.parts) {
+                    if (part.inlineData) b64 = part.inlineData.data;
+                }
             }
-        }
 
-        if (!b64) throw new Error("Image generation failed (No data returned)");
-        return { imageBase64: b64, prompt };
+            if (!b64) throw new Error("Primary model returned no data");
+            return { imageBase64: b64, prompt };
+
+        } catch (error) {
+            console.warn("Primary Vision Model Failed. Attempting Graceful Degradation (Description + Imagen)...", error);
+
+            // FALLBACK STRATEGY: 
+            // 1. Describe the face (Vision -> Text)
+            // 2. Generate new image (Text -> Image)
+
+            const description = await describeSubject(mainCharacter.imageBases64[0]);
+            const fallbackPrompt = `Create a children's book illustration in the style of ${style}.
+            Subject: ${description} (Approx ${age} years old).
+            Context: ${theme} setting.
+            Framing: Medium Close-up portrait.
+            Aesthetic: High quality, consistent style, vibrant colors.`;
+
+            const fallbackResult = await generateImagenImage(fallbackPrompt, "1:1");
+            return { imageBase64: fallbackResult.imageBase64, prompt: fallbackPrompt };
+        }
     });
 }

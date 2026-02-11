@@ -1,3 +1,4 @@
+import { supabase } from '../utils/supabaseClient';
 
 export interface PromptTemplate {
   version: string;
@@ -155,28 +156,81 @@ Art style from Image 2 must only apply to the "painting technique", not the "per
 
 const PROMPT_STORAGE_KEY = 'albumii_master_prompts';
 
-export function getPrompts(): PromptTemplates {
-    try {
-        const storedPrompts = localStorage.getItem(PROMPT_STORAGE_KEY);
-        if (storedPrompts) {
-            const parsed = JSON.parse(storedPrompts);
-            if (parsed.coverSuperPrompt?.template && parsed.insideSuperPrompt?.template) {
-                 if (!parsed.method4CoverPrompt || parsed.method4CoverPrompt.version !== defaultPrompts.method4CoverPrompt.version) parsed.method4CoverPrompt = defaultPrompts.method4CoverPrompt;
-                 if (!parsed.method4SpreadPrompt || parsed.method4SpreadPrompt.version !== defaultPrompts.method4SpreadPrompt.version) parsed.method4SpreadPrompt = defaultPrompts.method4SpreadPrompt;
-                 if (!parsed.characterExtractionPrompt) parsed.characterExtractionPrompt = defaultPrompts.characterExtractionPrompt;
-                 return parsed;
-            }
-        }
-    } catch (error) {
-        console.error("Failed to read prompts from localStorage", error);
+// Deprecated: Sync access for legacy components (Footer etc) until migrated
+export function getPromptsSync(): PromptTemplates {
+  try {
+    const storedPrompts = localStorage.getItem(PROMPT_STORAGE_KEY);
+    if (storedPrompts) {
+      const parsed = JSON.parse(storedPrompts);
+      if (parsed.coverSuperPrompt?.template) return parsed;
     }
-    return defaultPrompts;
+  } catch (error) {
+    console.error("Failed to read prompts from localStorage", error);
+  }
+  return defaultPrompts;
 }
 
-export function savePrompts(prompts: PromptTemplates): void {
-    try {
-        localStorage.setItem(PROMPT_STORAGE_KEY, JSON.stringify(prompts));
-    } catch (error) {
-        console.error("Failed to save prompts to localStorage", error);
+// 1. Fetch Prompts from DB
+export async function fetchPrompts(): Promise<PromptTemplates> {
+  try {
+    const { data, error } = await supabase.from('prompts').select('*');
+
+    if (error) {
+      console.warn("Supabase fetch failed, falling back to local/default", error);
+      return getPromptsSync();
     }
+
+    if (!data || data.length === 0) {
+      console.warn("No prompts in DB, returning defaults");
+      return defaultPrompts;
+    }
+
+    // Map array to object
+    const loadedPrompts = { ...defaultPrompts };
+    data.forEach((row: any) => {
+      if (row.id in loadedPrompts) {
+        // @ts-ignore
+        loadedPrompts[row.id] = {
+          version: row.version,
+          template: row.template
+        };
+      }
+    });
+
+    // Sync to local storage for offline/fallback use
+    localStorage.setItem(PROMPT_STORAGE_KEY, JSON.stringify(loadedPrompts));
+
+    return loadedPrompts;
+  } catch (e) {
+    console.error("Prompt Fetch Error", e);
+    return getPromptsSync();
+  }
 }
+
+// 2. Save Prompts to DB
+export async function savePrompts(prompts: PromptTemplates): Promise<void> {
+  try {
+    // Update Local First (Optimistic)
+    localStorage.setItem(PROMPT_STORAGE_KEY, JSON.stringify(prompts));
+
+    // Transform object to array of rows
+    const rows = Object.entries(prompts).map(([key, value]) => ({
+      id: key,
+      template: value.template,
+      version: value.version,
+      updated_at: new Date().toISOString()
+    }));
+
+    const { error } = await supabase.from('prompts').upsert(rows);
+
+    if (error) throw error;
+    console.log("Prompts synced to Supabase successfully.");
+
+  } catch (error) {
+    console.error("Failed to save prompts to Supabase", error);
+    alert("Saved locally, but Cloud Sync failed. Check console.");
+  }
+}
+
+// Wrapper for existing calls to not break build immediately (will replace usage next)
+export { getPromptsSync as getPrompts };

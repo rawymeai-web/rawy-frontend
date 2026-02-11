@@ -41,6 +41,9 @@ export const useStoryGeneration = (
         setTimeLeft('~300s');
         setError(null);
 
+        // PERSIST LANGUAGE SELECTION
+        updateStory({ language });
+
         const logs: WorkflowLog[] = []; // Local accumulator
         // Helper to push logs to both local tracking and Global State (for UI)
         const addLog = (log: WorkflowLog) => {
@@ -83,8 +86,9 @@ export const useStoryGeneration = (
                 childAge: parseInt(storyData.childAge) || 5,
                 themeId: storyData.theme,
                 themeTitle: themeObj.title.en,
-                themeData: themeObj
-            });
+                themeData: themeObj,
+                childDescription: storyData.mainCharacter.description // PASSING THE FIX
+            }, language);
             console.log(`[TIMING] Blueprint: ${((performance.now() - tBlueprintStart) / 1000).toFixed(2)}s`);
             addLog(blueprintResult.log);
             updateStory({ blueprint: blueprintResult.result });
@@ -97,7 +101,8 @@ export const useStoryGeneration = (
             const scriptResult = await geminiService.generateScript(
                 blueprintResult.result,
                 language,
-                parseInt(storyData.childAge) || 5
+                parseInt(storyData.childAge) || 5,
+                storyData.childName
             );
             console.log(`[TIMING] Narrative Draft: ${((performance.now() - tDraftStart) / 1000).toFixed(2)}s`);
             addLog(scriptResult.log);
@@ -158,6 +163,12 @@ export const useStoryGeneration = (
             // NEW LOGIC (Feb 2):
             // finalPrompts[0] is now the COVER.
             // finalPrompts[1..8] are the PAGES.
+
+            // CRITICAL CHECK: ensure it's an array
+            if (!Array.isArray(finalPrompts)) {
+                console.error("Critical Error: finalPrompts is not an array", finalPrompts);
+                throw new Error("Logic Error: Prompts list missing or corrupted.");
+            }
 
             const dynamicCoverPrompt = finalPrompts[0];
             const pagePrompts = finalPrompts.slice(1);

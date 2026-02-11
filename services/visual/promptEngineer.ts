@@ -15,11 +15,13 @@ export async function generatePrompts(
 
 
     // COVER COMPOSITION LOGIC
-    // EN (L->R): Back(Left) | Spine | Front(Right). Hero on Front(Right). Open Space on Back(Left).
-    // AR (R->L): Front(Left) | Spine | Back(Right). Hero on Front(Left). Open Space on Back(Right).
-    const isAr = language === 'ar';
-    const focusSide = isAr ? 'LEFT SIDE (FRONT COVER)' : 'RIGHT SIDE (FRONT COVER)';
-    const openSide = isAr ? 'RIGHT SIDE (BACK COVER/OPEN CANVAS)' : 'LEFT SIDE (BACK COVER/OPEN CANVAS)';
+    // STANDARD (English): Back(Left) | Spine | Front(Right). Hero on Front(Right). Open Space on Back(Left).
+    // ARABIC HANDLING: We ALWAYS generate the English Standard (Hero Right).
+    // The PDF Generator will FLIP (Mirror) the image for Arabic orders.
+    // This solves the AI's inability to reliably follow "Left/Right" instructions.
+
+    const focusSide = 'RIGHT SIDE (FRONT COVER)';
+    const openSide = 'LEFT SIDE (BACK COVER/OPEN CANVAS)';
 
     try {
         const prompts = plan.spreads.map(spread => {
@@ -68,9 +70,13 @@ export async function generatePrompts(
             // Priority: Blueprint Profile (Context-Aware) -> childDescription (Base)
             // But we must ensure the Blueprint profile actually HAS the outfit details.
             // Since we updated the Blueprint Agent to Respect Base Appearance, the heroProfile should be the "Master" source.
-            const finalDescription = (plan.characters && plan.characters.heroProfile)
-                ? plan.characters.heroProfile
-                : childDescription;
+            // Priority: Combine Base Physical (childDescription) with Story Context (heroProfile)
+            // This ensures the "Brown Eyes" / "Black Hair" from the User Input is NEVER lost,
+            // while still allowing the Blueprint to define the "Space Suit" or "Wizard Robe".
+            // Priority: Combine Base Physical (childDescription) with Story Context (heroProfile)
+            // Fix: We separate them clearly so the AI doesn't think eye color is part of the "Outfit" field.
+            const basePhysical = childDescription;
+            const storyOutfit = (plan.characters && plan.characters.heroProfile) || "Standard seasonal wear";
 
             return `Prompt for spread ${spread.spreadNumber}:
 ** GOAL:** Generate a 16: 9 panoramic illustration with ** perfect likeness ** and ** cinematic charm **.
@@ -82,9 +88,10 @@ export async function generatePrompts(
 ** STRICT CHARACTER LOCK:**
                     - Render the child with exact facial topology and hair pattern from the reference photo.
 - The face must match reference DNA image — no stylization of facial proportions.
-- ** Outfit:** You MUST depict the child wearing strictly: "${finalDescription}".Do NOT change this outfit unless the scene explicitly requires special gear(e.g.swimming).Consistency is key.
+- ** PHYSICAL DESCRIPTION:** ${basePhysical}
+- ** OUTFIT:** You MUST depict the child wearing strictly: "${storyOutfit}".Do NOT change this outfit unless the scene explicitly requires special gear(e.g.swimming).Consistency is key.
 - Apply the art style to rendering technique only(color, materials, brushwork).
-- Description: ${finalDescription} (Age: ${childAge})
+- Summary Description: ${basePhysical}, Wearing: ${storyOutfit} (Age: ${childAge})
 
 ** COMPOSITION RULES:**
                     - 16: 9 Full Bleed panoramic.

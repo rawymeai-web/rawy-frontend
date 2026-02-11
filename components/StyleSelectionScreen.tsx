@@ -90,25 +90,61 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
     );
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-    const generationStarted = React.useRef(false);
+    const lastRequestKey = React.useRef<string>("");
+
+    const [debugStatus, setDebugStatus] = useState<string>("Initializing...");
 
     useEffect(() => {
         let isMounted = true;
-        const generateVariations = async () => {
-            if (storyData.mainCharacter.imageBases64.length === 0) return;
-            if (generationStarted.current) return;
-            generationStarted.current = true;
 
-            const settings = await adminService.getSettings();
+        const generateVariations = async () => {
+            // 1. Validation
+            if (!storyData.mainCharacter.imageBases64 || storyData.mainCharacter.imageBases64.length === 0) {
+                if (isMounted) setDebugStatus("Waiting for Reference Image...");
+                return;
+            }
+
+            // 2. Dedup Logic (Strict Mode Safe + Retry Safe)
+            const currentKey = `${storyData.mainCharacter.name}-${storyData.selectedStylePrompt}-${storyData.childAge}`;
+
+            if (lastRequestKey.current === currentKey) {
+                // SAFETY: Only skip if we are ACTUALLY working or done.
+                // If the key is locked but everything is 'pending', we are stuck. Break the lock.
+                const isWorking = previews.some(p => p.status === 'done' || p.status === 'loading');
+                if (isWorking) {
+                    if (isMounted) setDebugStatus("Ready (Cached)");
+                    return;
+                }
+                console.warn("Detected Stuck Cache Lock (No Progress). Forcing Reboot of Logic...");
+            }
+
+            // Lock it immediately
+            lastRequestKey.current = currentKey;
+
+            if (isMounted) setDebugStatus("Starting Generation Engine...");
+            console.log("Starting Style Verification for:", currentKey);
+
+            // Safe Settings Fetch
+            let delay = 0;
+            try {
+                const settings = await adminService.getSettings();
+                delay = settings.generationDelay;
+            } catch (e) {
+                console.warn("Settings fetch failed, using default delay", e);
+            }
 
             for (let i = 0; i < previews.length; i++) {
                 if (!isMounted) break;
                 if (previews[i].status === 'done') continue;
 
-                if (i > 0) await new Promise(resolve => setTimeout(resolve, settings.generationDelay));
+                if (i > 0 && delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
                 if (!isMounted) break;
 
-                setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'loading' } : p));
+                if (isMounted) {
+                    setDebugStatus(`Generating Variation ${i + 1} / 4...`);
+                    setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'loading' } : p));
+                }
+
                 try {
                     const { imageBase64 } = await geminiService.generateThemeStylePreview(
                         storyData.mainCharacter,
@@ -116,12 +152,12 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                         storyData.theme || "Likeness Portrait",
                         storyData.selectedStylePrompt,
                         storyData.childAge || "5",
-                        Math.floor(Math.random() * 1000000) // Random seed for variations
+                        Math.floor(Math.random() * 1000000)
                     );
 
                     if (isMounted) {
                         setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'done', imageBase64 } : p));
-                        if (selectedIndex === null) setSelectedIndex(i); // Auto-select first done
+                        if (selectedIndex === null) setSelectedIndex(i);
                     }
                 } catch (e: any) {
                     console.error(`Preview ${i} failed:`, e);
@@ -130,6 +166,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                     }
                 }
             }
+            if (isMounted) setDebugStatus("Generation Complete");
         };
         generateVariations();
         return () => { isMounted = false; };
@@ -167,6 +204,11 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
         }
     };
 
+    const handleRetry = () => {
+        lastRequestKey.current = ""; // Reset lock
+        setPreviews(prev => prev.map(p => ({ ...p, status: 'pending', imageBase64: undefined, errorMessage: undefined })));
+    };
+
     return (
         <div className="max-w-6xl mx-auto space-y-8 pb-10">
             <div className="text-center space-y-2">
@@ -176,16 +218,33 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 </p>
             </div>
 
+            {/* Debug Status Monitor */}
+            <div className="text-center">
+                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${debugStatus.includes('Error') ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                    System Status: {debugStatus}
+                </span>
+            </div>
+
             <div className="p-8 bg-white/40 backdrop-blur-xl rounded-3xl shadow-xl border border-white/40">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     {previews.map((p, i) => (
-                        <StyleCard key={i} preview={p} isSelected={selectedIndex === i} onClick={() => setSelectedIndex(i)} language={language} />
+                        <div key={i} className="relative">
+                            <StyleCard preview={p} isSelected={selectedIndex === i} onClick={() => setSelectedIndex(i)} language={language} />
+                            {p.status === 'error' && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-red-50/80 rounded-xl p-2 text-center">
+                                    <p className="text-xs text-red-600 font-bold">{t('فشل التوليد', 'Generation Failed')}</p>
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </div>
             </div>
 
             <div className="text-center flex flex-col sm:flex-row justify-center items-center gap-6">
                 <Button onClick={onBack} variant="outline" className="text-xl px-12 py-4 rounded-2xl">{t('رجوع', 'Back')}</Button>
+                <Button onClick={handleRetry} variant="secondary" className="text-xl px-12 py-4 rounded-2xl shadow-sm text-brand-navy bg-white hover:bg-gray-50">
+                    {t('إعادة المحاولة', 'Regenerate All')}
+                </Button>
                 <Button onClick={handleNext} className="text-xl px-12 py-4 rounded-2xl shadow-xl" disabled={selectedIndex === null || isLocking}>
                     {isLocking ? t('جاري القفل...', 'Locking DNA...') : t('اعتماد الأسلوب المختار', 'Lock Art Style')}
                 </Button>

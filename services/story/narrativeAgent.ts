@@ -6,7 +6,8 @@ import { StoryBlueprint, WorkflowLog } from '../../types';
 
 export async function generateStoryDraft(
     blueprint: StoryBlueprint,
-    language: 'en' | 'ar'
+    language: 'en' | 'ar',
+    childName: string
 ): Promise<{ result: { text: string }[], log: WorkflowLog }> {
 
     const startTime = Date.now();
@@ -21,6 +22,11 @@ export async function generateStoryDraft(
             TASK: Write the final manuscript for individual spreads.
             
             BLUEPRINT: ${JSON.stringify(blueprint)}
+            
+            **CRITICAL IDENTITY RULE:**
+            - The Hero's Name is: **${childName}**.
+            - You MUST use the name "${childName}" in the story.
+            - DO NOT use placeholders like "Rayan", "Ahmed", "Sarah", or "The Boy". Use "${childName}".
             
             MANDATES from Guidebook:
             - Age Group: ${age} Years Old.
@@ -54,15 +60,33 @@ export async function generateStoryDraft(
             5. **SHOW, DON'T TELL:** Do not explain the lesson. Show the character making a choice.
             6. **LOGIC:** Before writing the verse, ensure the logic holds: B must happen BECAUSE of A.
             
-            ${age <= 8 ? `
+            ${age <= 5 ? `
             **AGE ${age} SPECIAL CONSTRAINTS (STRICT):**
             A. **NO PRONOUNS:** NEVER use "He" or "She". Always use the character's Name (e.g. "Zayn runs").
                - *Reason:* Young kids get confused by pronouns.
-            B. **WORD COUNT CAP:** ABSOLUTE MAXIMUM ${wordCountRule.max} WORDS.
-               - If you can say it in 5 words, do not use 10.
-               - *Good:* "Zayn finds the bear." (4 words).
-               - *Bad:* "He looked around and suddenly he saw the bear." (9 words + Pronouns).
-            ` : ''}
+            ` : `
+            **AGE ${age} PRONOUN GUIDANCE:**
+            - You MAY use "He" or "She" to avoid robotic repetition, but ensure it's clear who is acting.
+            `}
+
+            **EMOTIONAL & CAUSALITY RULES (CRITICAL):**
+            1. **EMOTIONAL CLARITY (SHOW PHYSICALITY):**
+               - Do NOT just name the emotion (e.g. "He was sad").
+               - **DESCRIBE THE PHYSICAL SENSATION:** "His tummy flipped," "Her face felt hot," "His shoulders dropped."
+            2. **CAUSE & EFFECT:** No coincidences. 
+               - Success MUST come from the Hero's choice/action foundation.
+            3. **INSIGHT MOMENT (TWO BEATS):** 
+               - The "Insight" must be split into:
+                 1. **Observation:** The Hero notices a specific detail.
+                 2. **Realization:** The Hero understands what it means.
+               - *Do not rush this.*
+            4. **RESOLUTION PAYOFF (CALLBACK):** 
+               - The ending MUST explicitly mention or reference the **initial obstacle** to show how far they've come.
+            5. **LANGUAGE DENSITY (STRICT):** 
+               - **MAX 1 ADJECTIVE PER NOUN:** Never stack them.
+                 - *Bad:* "The big, red, shiny ball."
+                 - *Good:* "The shiny red ball" (Limit) or just "The red ball."
+               - Avoid abstract phrasing. Keep it concrete.
 
             **BAD EXAMPLES (AVOID):**
             - "Kind thoughts made the plant bloom." (Abstract).

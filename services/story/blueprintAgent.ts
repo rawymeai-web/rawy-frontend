@@ -22,11 +22,16 @@ export async function generateBlueprint(
             TASK: Create a structural BLUEPRINT for a story.
             
             INPUT DATA:
+            - Target Language: ${language === 'ar' ? 'Arabic (العربية)' : 'English'}
             - Child: ${storyData.childName} (${storyData.childAge} years old).
             - Base Appearance (MUST RESPECT): ${storyData.mainCharacter?.description || "Not provided"}.
             - Theme: ${storyData.theme}.
             - Moral/Goal: ${storyData.customGoal || "Standard theme goal"}.
             - Challenge: ${storyData.customChallenge || "Standard theme challenge"}.
+
+            **LANGUAGE RULE:**
+            - The "title", "storyCore", "moral", "heroDesire", and "mainChallenge" fields MUST be in **${language === 'ar' ? 'Arabic' : 'English'}**.
+            - The "narrative" summaries in the spreads can be in English (for the illustrator) or Arabic, but the **Title** is critical for the cover.
             
             **IMMEDIATE FAMILY RESTRICTION (CRITICAL):**
             - Do NOT include real-life immediate family members: mother, father, siblings, grandparents, aunts, uncles, cousins.

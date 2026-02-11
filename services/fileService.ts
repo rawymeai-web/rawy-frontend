@@ -27,6 +27,38 @@ const blobBorderRadii = [
     '58% 42% 43% 57% / 41% 54% 46% 59%',
 ];
 
+// Helper: Flip Image Horizontally (Mirror)
+const flipImageHorizontal = async (base64: string): Promise<string> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(base64);
+
+            // Flip Context
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(img, 0, 0);
+
+            try {
+                resolve(canvas.toDataURL('image/jpeg', 0.95));
+            } catch (e) {
+                console.error("Flip Export Failed", e);
+                resolve(base64);
+            }
+        };
+        img.onerror = () => {
+            console.warn("Flip Image Load Failed");
+            resolve(base64);
+        };
+        // Ensure data URI format
+        img.src = base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
+    });
+};
+
 /**
  * Calculates dimensions to fit an image into a target area using "cover" logic (crop excess).
  */
@@ -167,7 +199,19 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
     }
 
     if (coverData && coverData.length > 50) {
-        const cleanB64 = coverData.includes(',') ? coverData.split(',')[1] : coverData;
+        let cleanB64 = coverData.includes(',') ? coverData.split(',')[1] : coverData;
+
+        // ARABIC FIX: FLIP THE COVER
+        // We generate "Hero Right" (English Style) always.
+        // For Arabic, we flip it so Hero becomes "Left" (Front).
+        if (language === 'ar') {
+            try {
+                const flippedDataUrl = await flipImageHorizontal(cleanB64);
+                cleanB64 = flippedDataUrl.split(',')[1];
+            } catch (e) {
+                console.error("Failed to flip Arabic cover", e);
+            }
+        }
 
         // Use Cover Logic to prevent stretching
         // Assuming Source Image is 16:9 (approx 1.77)
@@ -273,7 +317,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             // B. RENDER LOGO
             const logoPxW = 400;
             const logoPxH = 200;
-            const logoEl = createRawyLogoElement(logoPxW, logoPxH);
+            const logoEl = await createRawyLogoElement(logoPxW, logoPxH);
             document.body.appendChild(logoEl);
             const logoCanvas = await html2canvas(logoEl, { backgroundColor: null, scale: 2 });
             document.body.removeChild(logoEl);
@@ -282,7 +326,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         }
     }
 
-    // 2. Handle Spreads
+    // 2. Spreads
     // 2. Handle Spreads (NOW 1:1 Mapping)
     const spreads = storyData.pages; // Use ALL pages, as we now generate 1 page = 1 spread
 
@@ -413,6 +457,16 @@ export const generateStitchedPdf = async (
     }
 
     if (cleanCover) {
+        // ARABIC FIX: FLIP THE COVER (Stitched Version)
+        if (language === 'ar') {
+            try {
+                const flippedDataUrl = await flipImageHorizontal(cleanCover);
+                cleanCover = flippedDataUrl.split(',')[1];
+            } catch (e) {
+                console.error("Failed to flip Arabic cover (Stitched)", e);
+            }
+        }
+
         const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
         try {
             pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
@@ -454,7 +508,7 @@ export const generateStitchedPdf = async (
             // BACK COVER ELEMENTS (Barcode + Logo)
             const backCoverW = pdfW / 2;
             const barcodeW = 50;
-            const barcodeH = 3;
+            const barcodeH = 15; // UPDATED to 15mm
             const logoW = 30;
             const logoH = 15;
             const bottomMargin = 15;
@@ -480,7 +534,7 @@ export const generateStitchedPdf = async (
 
             // Render Barcode
             const bcPxW = 600;
-            const bcPxH = 36;
+            const bcPxH = 180; // Proportional for 15mm
             const bcEl = createBarcodeStripElement(orderNumber, bcPxW, bcPxH);
             document.body.appendChild(bcEl);
             const bcCanvas = await html2canvas(bcEl, { backgroundColor: null, scale: 2 });
@@ -491,7 +545,7 @@ export const generateStitchedPdf = async (
             // Render Logo
             const logoPxW = 400;
             const logoPxH = 200;
-            const logoEl = createRawyLogoElement(logoPxW, logoPxH);
+            const logoEl = await createRawyLogoElement(logoPxW, logoPxH); // ADDED AWAIT
             document.body.appendChild(logoEl);
             const logoCanvas = await html2canvas(logoEl, { backgroundColor: null, scale: 2 });
             document.body.removeChild(logoEl);
@@ -539,9 +593,6 @@ export const generateStitchedPdf = async (
             const marginX = pdfW * 0.05;
             const marginY = pdfH * 0.08;
 
-            // Logic: Consistent side for text? Or per spread?
-            // User requested "Not centered", "Usually frames nicely".
-            // Defaulting to Left for English, Right for Arabic (via logic below)
             let isLeft = true; // Default
             if (language === 'ar') isLeft = false; // Swap
 
@@ -824,12 +875,13 @@ export async function createTextImage(titleData: { title: string }, lang: Langua
     const fontFamily = isEn ? "'Luckiest Guy', cursive" : "'Tajawal', sans-serif";
     const letterSpacing = isEn ? '2px' : 'normal'; // standard spacing for Arabic
 
-    // Arabic: Text-based (Simple, Black, No Shadow)
-    // English: Logo-style (White, Shadow, Rotated)
-    const color = isEn ? '#FFFFFF' : '#000000';
-    const textShadow = isEn
-        ? '4px 4px 0 #203A72, -2px -2px 0 #203A72, 2px -2px 0 #203A72, -2px 2px 0 #203A72, 2px 2px 0 #203A72, 0 8px 15px rgba(0,0,0,0.3)'
-        : 'none';
+    // Arabic: Now matching English "Pop" Style
+    const color = '#FFFFFF'; // White for both
+    // Consistent Shadow/Stroke
+    const textShadow = '4px 4px 0 #203A72, -2px -2px 0 #203A72, 2px -2px 0 #203A72, -2px 2px 0 #203A72, 2px 2px 0 #203A72, 0 8px 15px rgba(0,0,0,0.3)';
+
+    // Rotation: English gets tilt, Arabic gets straight (cleaner for script) or slight tilt?
+    // Let's keep Arabic straight for readability of connected letters
     const transform = isEn ? 'rotate(-2deg)' : 'none';
 
     container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:${color};background:transparent;font-weight:900;text-shadow:${textShadow};padding:20px;text-align:center;width:1000px;line-height:1.1;font-size:90px;text-transform:uppercase;letter-spacing:${letterSpacing};transform:${transform};`;
@@ -904,35 +956,62 @@ export function createPrintableTextBlockElement(text: string, language: Language
     return container;
 }
 
-export function createRawyLogoElement(width: number, height: number): HTMLElement {
+export async function createRawyLogoElement(width: number, height: number): Promise<HTMLElement> {
     const container = document.createElement('div');
-    container.style.cssText = `width:${width}px;height:${height}px;background:transparent;display:flex;align-items:center;justify-content:center;`;
+    container.style.cssText = `width:${width}px;height:${height}px;background:transparent;display:flex;align-items:center;justify-content:center;gap:10px;`;
 
-    // LOGO "RAWY"
-    const logo = document.createElement('div');
-    logo.style.cssText = "font-family:sans-serif;font-weight:900;font-size:62px;letter-spacing:6px;color:black;text-transform:uppercase;";
-    logo.innerText = "RAWY";
-    container.appendChild(logo);
+    // Use Image Logo instead of Text
+    const logoIcon = new Image();
+    logoIcon.src = '/logo-icon.png';
+    logoIcon.style.cssText = "height: 100%; width: auto; object-fit: contain;";
+
+    // Improve loading reliability for PDF generation
+    await new Promise((resolve) => {
+        logoIcon.onload = resolve;
+        logoIcon.onerror = resolve; // Continue even if missing to avoid hang
+    });
+
+    const logoText = new Image();
+    logoText.src = '/logo-text.png';
+    logoText.style.cssText = "height: 60%; width: auto; object-fit: contain;";
+
+    await new Promise((resolve) => {
+        logoText.onload = resolve;
+        logoText.onerror = resolve;
+    });
+
+    container.appendChild(logoIcon);
+    container.appendChild(logoText);
 
     return container;
 }
 
 export function createBarcodeStripElement(orderNumber: string, width: number, height: number): HTMLElement {
     const container = document.createElement('div');
-    // 3mm is very thin, so we need full height bars
-    container.style.cssText = `width:${width}px;height:${height}px;background:white;display:flex;align-items:stretch;justify-content:center;gap:2px;overflow:hidden;`;
+    // FIXED: 15mm height is much taller, so we want the bars to fill it.
+    container.style.cssText = `width:${width}px;height:${height}px;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;`;
 
-    // Barcode Lines (Dense)
+    // Barcode Row
+    const barcodeRow = document.createElement('div');
+    barcodeRow.style.cssText = "display:flex; align-items:stretch; justify-content:center; gap:2px; height: 80%; width: 100%;";
+
+    // Barcode Lines
     for (let k = 0; k < 60; k++) {
         const bar = document.createElement('div');
         const isThick = Math.random() > 0.6;
         bar.style.width = isThick ? '6px' : '2px';
         bar.style.height = '100%';
         bar.style.backgroundColor = 'black';
-        // Add some spacing
         bar.style.marginLeft = Math.random() > 0.5 ? '2px' : '0';
-        container.appendChild(bar);
+        barcodeRow.appendChild(bar);
     }
+    container.appendChild(barcodeRow);
+
+    // Order Number Text
+    const textRow = document.createElement('div');
+    textRow.style.cssText = "height: 20%; font-family: monospace; font-size: 10px; color: black; font-weight: bold; margin-top: 2px;";
+    textRow.innerText = `ORDER #: ${orderNumber}`;
+    container.appendChild(textRow);
 
     return container;
 }

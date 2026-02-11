@@ -36,7 +36,19 @@ export async function runQualityAssurance(
                 config: { responseMimeType: "application/json" }
             });
 
-            const safePrompts = JSON.parse(cleanJsonString(response.text));
+            const responseText = response.text;
+            if (!responseText) throw new Error("QA response empty");
+
+            let safePrompts = JSON.parse(cleanJsonString(responseText));
+
+            // Safety: If AI wraps it in an object like { "prompts": [...] }
+            if (!Array.isArray(safePrompts) && typeof safePrompts === 'object') {
+                const possibleArray = Object.values(safePrompts).find(v => Array.isArray(v));
+                if (possibleArray) safePrompts = possibleArray;
+            }
+
+            // Final fallback: if still not an array, throw to trigger catch-block logic
+            if (!Array.isArray(safePrompts)) throw new Error("QA failed to return array");
 
             return {
                 result: safePrompts,

@@ -26,8 +26,10 @@ export async function generateBlueprint(
         childAge: number,
         themeId: string,
         themeTitle: string,
-        themeData: StoryTheme
-    }
+        themeData: StoryTheme,
+        childDescription?: string // ADDED THIS
+    },
+    language: 'en' | 'ar' = 'en'
 ): Promise<{ result: StoryBlueprint, log: WorkflowLog }> {
     // Adapter: Convert contextPayload to StoryData-like object for the agent
     // The agent expects StoryData, but mainly needs name, age, theme.
@@ -50,16 +52,17 @@ export async function generateBlueprint(
     // Actually the old prompt: "Language: English" (hardcoded to English unless implicit?)
     // Wait, the old prompt had: "Ensure specific vocab... for Age X". 
     // The new agent requires language. Let's assume 'en' for now as blueprint is structural.
-    return agentBlueprint(mockStoryData, 'en');
+    return agentBlueprint(mockStoryData, language);
 }
 
 export async function generateScript(
     blueprint: StoryBlueprint,
     language: Language,
-    childAge: number
+    childAge: number,
+    childName: string
 ): Promise<{ result: { text: string }[], log: WorkflowLog }> {
     // Adapter: Ignore childAge as the agent extracts it from blueprint
-    return agentDraft(blueprint, language);
+    return agentDraft(blueprint, language, childName);
 }
 
 // --- LEGACY/HELPER FUNCTIONS (Kept for compatibility/utility) ---

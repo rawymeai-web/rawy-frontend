@@ -281,6 +281,45 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
   }
 }
 
+// NEW: Sync Local Orders to Supabase (for recovery)
+export async function syncLocalOrders(): Promise<number> {
+  const localOrders = getLocalOrders();
+  let syncedCount = 0;
+
+  for (const order of localOrders) {
+    // Check if exists in Supabase
+    const { data } = await supabase.from('orders').select('order_number').eq('order_number', order.orderNumber).single();
+
+    if (!data) {
+      // It's missing! Push it.
+      // We need to reconstruct the DB payload (reverse of mapDBOrder + basic assumptions)
+      // Note: We might be missing the full resolution images if they were reduced for local storage
+
+      const settings = await getSettings(); // get costs for historical accuracy or use current
+
+      const { error } = await supabase.from('orders').insert({
+        order_number: order.orderNumber,
+        customer_id: order.shippingDetails.email.toLowerCase(), // Assumption
+        customer_name: order.customerName,
+        total: order.total,
+        status: order.status,
+        created_at: order.orderDate, // Keep original date
+        story_data: order.storyData,
+        shipping_details: order.shippingDetails,
+        production_cost: order.productionCost || settings.unitProductionCost,
+        ai_cost: order.aiCost || settings.unitAiCost,
+        shipping_cost: order.shippingCost || settings.unitShippingCost,
+        package_url: order.packageUrl
+      });
+
+      if (!error) syncedCount++;
+      else console.error(`Failed to sync order ${order.orderNumber}`, error);
+    }
+  }
+
+  return syncedCount;
+}
+
 export async function updateOrderStatus(orderNumber: string, status: OrderStatus): Promise<void> {
   const { error } = await supabase.from('orders').update({ status }).eq('order_number', orderNumber);
   if (error) {
@@ -371,7 +410,8 @@ export async function saveTheme(t: StoryTheme): Promise<void> {
 }
 
 // 5. Bible (Keep Local for now as per plan, or basic store)
-const BIBLE_KEY = 'rawy_series_bible';
+// 5. Bible (Supabase Backed)
+const BIBLE_ID = 1;
 export interface SeriesBible {
   masterGuardrails: string;
   storyFlowLogic: string;
@@ -383,12 +423,25 @@ const defaultBible: SeriesBible = {
   compositionMandates: `VISUAL COMPOSITION MANDATES:...`
 };
 
-export function getSeriesBible(): SeriesBible {
-  const item = window.localStorage.getItem(BIBLE_KEY);
-  return item ? JSON.parse(item) : defaultBible;
+export async function getSeriesBible(): Promise<SeriesBible> {
+  const { data, error } = await supabase.from('guidebook').select('content').eq('id', BIBLE_ID).single();
+
+  if (error || !data) {
+    console.warn("Generating fresh guidebook row...");
+    // Attempt init if missing
+    await supabase.from('guidebook').insert({ id: BIBLE_ID, content: defaultBible });
+    return defaultBible;
+  }
+  return data.content;
 }
-export function saveSeriesBible(bible: SeriesBible): void {
-  window.localStorage.setItem(BIBLE_KEY, JSON.stringify(bible));
+
+export async function saveSeriesBible(bible: SeriesBible): Promise<void> {
+  const { error } = await supabase.from('guidebook').upsert({
+    id: BIBLE_ID,
+    content: bible,
+    updated_at: new Date().toISOString()
+  });
+  if (error) throw error;
 }
 
 // 6. Prompts (Keep Local or move to Settings?)

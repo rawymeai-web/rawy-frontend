@@ -59,8 +59,10 @@ export const GUIDEBOOK = {
     }
 };
 
-export const getWordCountForAge = (age: number) => {
+export function getWordCountForAge(age: number): { min: number, max: number } {
     if (age <= 5) return GUIDEBOOK.narrative.wordCount["3-5"];
     if (age <= 8) return GUIDEBOOK.narrative.wordCount["6-8"];
     return GUIDEBOOK.narrative.wordCount["9-12"];
-};
+}
+
+// End of file;
