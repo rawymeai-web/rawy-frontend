@@ -14,25 +14,54 @@ export interface ApiResponse<T> {
  */
 async function fetchBackend<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${BACKEND_URL}${endpoint}`;
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const fullMessage = [
-            errorData.error,
-            errorData.details,
-            errorData.hint
-        ].filter(Boolean).join(' | ');
-        throw new Error(fullMessage || `API error: ${response.status}`);
+    
+    // Diagnostic Payload Analyzer
+    let payloadStr = "";
+    if (options.body && typeof options.body === 'string') {
+        const payloadBytes = new TextEncoder().encode(options.body).length;
+        if (payloadBytes > 1024 * 1024) {
+            payloadStr = `[Payload: ${(payloadBytes / (1024 * 1024)).toFixed(2)} MB]`;
+        } else {
+            payloadStr = `[Payload: ${(payloadBytes / 1024).toFixed(1)} KB]`;
+        }
     }
+    
+    try {
+        console.log(`📡 [API] Request => ${options.method || 'GET'} ${url} ${payloadStr}`);
+        
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
+        });
 
-    return response.json();
+        if (!response.ok) {
+            // Server responded, but with an error status (e.g. 500 or 400)
+            const errorText = await response.text();
+            let parsedError: any = {};
+            try { parsedError = JSON.parse(errorText); } catch(e) {}
+            
+            const fullMessage = [
+                parsedError.error,
+                parsedError.details,
+                parsedError.hint
+            ].filter(Boolean).join(' | ');
+            
+            throw new Error(`[HTTP ${response.status}] ${fullMessage || errorText || 'Server Error'}`);
+        }
+
+        return await response.json();
+        
+    } catch (networkError: any) {
+        // Network-level drops (CORS, 413 abrupt closure, invalid URL)
+        if (networkError.name === 'TypeError' || networkError.message === 'Failed to fetch') {
+            const extraHint = payloadStr.includes('MB') ? " (POSSIBLE VERCEL 4.5MB PAYLOAD LIMIT REACHED)" : " (POSSIBLE CORS OR TIMEOUT)";
+            throw new Error(`Network Connection Dropped => ${endpoint} ${payloadStr}${extraHint}. Verify VITE_BACKEND_URL or Backend Health.`);
+        }
+        throw networkError;
+    }
 }
 
 export const backendApi = {
