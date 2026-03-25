@@ -51,3 +51,64 @@ export function cropImageToSize(dataUrl: string, targetWidth: number, targetHeig
         image.src = dataUrl;
     });
 }
+
+/**
+ * Compresses and downscales a base64 image to ensure it fits within API payload limits.
+ * Default max dimension is 1024px.
+ */
+export function compressBase64Image(base64Str: string, maxDimension: number = 1024, quality: number = 0.8): Promise<string> {
+    return new Promise((resolve, reject) => {
+        if (!base64Str) return resolve("");
+
+        // If it's a URL (http/https), skip compression
+        if (base64Str.startsWith('http')) {
+            return resolve(base64Str);
+        }
+
+        let imageSrc = base64Str;
+        
+        // If it's raw base64 (doesn't start with data:), we prepend a generic MIME type so Canvas can read it
+        if (!base64Str.startsWith('data:')) {
+            imageSrc = `data:image/jpeg;base64,${base64Str}`;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxDimension || height > maxDimension) {
+                if (width > height) {
+                    height = Math.round((height * maxDimension) / width);
+                    width = maxDimension;
+                } else {
+                    width = Math.round((width * maxDimension) / height);
+                    height = maxDimension;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error("No 2d context"));
+
+            // Fill white background for transparent PNGs before converting to JPEG
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Output as JPEG to drastically reduce base64 size
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            
+            // Gemini API expects raw base64 without the data URI prefix. Strip it before resolving!
+            const rawCompressed = compressedDataUrl.replace(/^data:image\/(png|jpeg|webp);base64,/, '');
+            
+            resolve(rawCompressed);
+        };
+        img.onerror = () => reject(new Error("Failed to load image for compression"));
+        img.src = imageSrc;
+    });
+}

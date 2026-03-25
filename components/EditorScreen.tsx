@@ -5,6 +5,7 @@ import { Spinner } from './Spinner';
 import { backendApi } from '../services/backendApi';
 import * as adminService from '../services/adminService';
 import { useLegacyPipeline } from '../hooks/useLegacyPipeline';
+import { compressBase64Image } from '../utils/imageUtils';
 
 interface EditorScreenProps {
     storyData: StoryData;
@@ -169,13 +170,20 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                 promptToUse = pageEdits[index]?.prompt || getPromptForIndex(index, spreads[index]);
             }
 
+            // COMPRESS payloads to prevent Vercel 4.5MB Serverless Payload limit errors!
+            const compressedMaster = await compressBase64Image(masterDNA, 1024, 0.85);
+            let compressedSecond = undefined;
+            if (storyData.useSecondCharacter && storyData.secondCharacterImageBase64) {
+                compressedSecond = await compressBase64Image(storyData.secondCharacterImageBase64, 1024, 0.85);
+            }
+
             const imgRes: any = await backendApi.generateImage({
                 prompt: promptToUse,
                 stylePrompt: visualDNA,
-                referenceBase64: masterDNA,
+                referenceBase64: compressedMaster,
                 characterDescription: storyData.mainCharacter?.description || "",
                 age: storyData.childAge,
-                secondReferenceBase64: storyData.useSecondCharacter ? storyData.secondCharacterImageBase64 : undefined
+                secondReferenceBase64: compressedSecond
             });
 
             if (index === 'cover') {
@@ -200,9 +208,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                 onUpdateStory({ pages: newPages });
                 await adminService.saveOrder(storyData.orderId || 'RWY-UNKNOWN', newStory, shippingDetails || {});
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to regenerate image", e);
-            alert("Image regeneration failed.");
+            alert(`Image regeneration failed.\n\nError: ${e.message || String(e)}`);
         } finally {
             setRegeneratingIndex(null);
         }
