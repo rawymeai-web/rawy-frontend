@@ -58,7 +58,7 @@ async function fetchBackend<T>(endpoint: string, options: RequestInit = {}): Pro
         // Network-level drops (CORS, 413 abrupt closure, invalid URL)
         if (networkError.name === 'TypeError' || networkError.message === 'Failed to fetch') {
             const extraHint = payloadStr.includes('MB') ? " (POSSIBLE VERCEL 4.5MB PAYLOAD LIMIT REACHED)" : " (POSSIBLE CORS OR TIMEOUT)";
-            throw new Error(`Network Connection Dropped => ${endpoint} ${payloadStr}${extraHint}. Verify VITE_BACKEND_URL or Backend Health.`);
+            throw new Error(`Network Connection Dropped => ${url} ${payloadStr}${extraHint}. Verify VITE_BACKEND_URL or Backend Health.`);
         }
         throw networkError;
     }

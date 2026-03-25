@@ -1,6 +1,8 @@
+```typescript
 import { useState, useRef, useCallback } from 'react';
 import { backendApi } from '../services/backendApi';
 import * as adminService from '../services/adminService';
+import { compressBase64Image } from '../utils/imageUtils';
 import type { StoryData, Language, Page } from '../types';
 
 export const useLegacyPipeline = (
@@ -106,18 +108,29 @@ export const useLegacyPipeline = (
             const mainChar = storyData.mainCharacter || {};
             if (!mainChar.imageDNA || mainChar.imageDNA.length === 0) {
                 logMsg(`Character DNA not found. Calling Vision AI API... (This may take 15-30 seconds)`);
+                
+                // COMPRESSION: Force all incoming user-uploaded DNA to < 100KB per image to bypass Vercel/Next.js body limits
+                const originalMainBases = (mainChar.imageBases64 && mainChar.imageBases64.length > 0) 
+                    ? mainChar.imageBases64 
+                    : [storyData.mainCharacterImageBase64].filter(Boolean);
+                const compressedMainBases = await Promise.all(originalMainBases.map((b: any) => compressBase64Image(b, 1024, 0.8)));
+
+                let compressedSecondBases: string[] = [];
+                if (storyData.secondCharacter) {
+                     const originalSecondBases = (storyData.secondCharacter.imageBases64 && storyData.secondCharacter.imageBases64.length > 0)
+                        ? storyData.secondCharacter.imageBases64
+                        : [storyData.secondCharacterImageBase64].filter(Boolean);
+                     compressedSecondBases = await Promise.all(originalSecondBases.map((b: any) => compressBase64Image(b, 1024, 0.8)));
+                }
+
                 const dnaPayload = {
                     mainCharacter: {
                         ...mainChar,
-                        imageBases64: (mainChar.imageBases64 && mainChar.imageBases64.length > 0) 
-                            ? mainChar.imageBases64 
-                            : [storyData.mainCharacterImageBase64].filter(Boolean)
+                        imageBases64: compressedMainBases
                     },
                     secondCharacter: storyData.secondCharacter ? {
                         ...storyData.secondCharacter,
-                        imageBases64: (storyData.secondCharacter.imageBases64 && storyData.secondCharacter.imageBases64.length > 0)
-                            ? storyData.secondCharacter.imageBases64
-                            : [storyData.secondCharacterImageBase64].filter(Boolean)
+                        imageBases64: compressedSecondBases
                     } : undefined,
                     theme: ensureSafeString(storyData.theme, "Neutral Setting"),
                     style: ensureSafeString(storyData.selectedStylePrompt, "Painterly illustration"),
