@@ -489,7 +489,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
             {/* Right Pane: Main Processor */}
             <div className="flex-1 flex flex-col bg-white overflow-hidden relative">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-20">
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center p-4 lg:p-6 border-b border-gray-100 bg-white sticky top-0 z-20 gap-4">
                     <div className="flex flex-col md:flex-row md:items-center gap-6">
                         {onBack && (
                             <button onClick={onBack} className="text-gray-400 hover:text-brand-orange transition-all hover:scale-110 active:scale-95 shrink-0">
@@ -506,24 +506,24 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             </div>
                         )}
                     </div>
-                    <div className="flex gap-3 flex-wrap">
-                        <Button onClick={() => setShowTerminal(!showTerminal)} variant="outline" className={`!py-2.5 !px-6 border-2 transition-all ${showTerminal ? 'bg-brand-navy text-white border-brand-navy' : 'border-gray-200 text-gray-500 hover:border-brand-navy hover:text-brand-navy'}`}>
+                    <div className="flex gap-2 lg:gap-3 flex-nowrap lg:flex-wrap overflow-x-auto pb-2 px-1 w-full lg:w-auto scroller-thin shrink-0 snap-x">
+                        <Button onClick={() => setShowTerminal(!showTerminal)} variant="outline" className={`shrink-0 snap-start !py-2 !px-4 lg:!py-2.5 lg:!px-6 border-2 transition-all ${showTerminal ? 'bg-brand-navy text-white border-brand-navy' : 'border-gray-200 text-gray-500 hover:border-brand-navy hover:text-brand-navy'}`}>
                             {showTerminal ? t('إخفاء السجل', 'Hide Logs') : t('عرض السجل', 'Show Logs')}
                         </Button>
-                        <Button onClick={handleMassUploadText} variant="outline" className="!py-2.5 !px-4 border-2 border-gray-200 text-gray-500 hover:border-brand-teal hover:text-brand-teal text-xs">
+                        <Button onClick={handleMassUploadText} variant="outline" className="shrink-0 snap-start !py-2 !px-3 lg:!py-2.5 lg:!px-4 border-2 border-gray-200 text-gray-500 hover:border-brand-teal hover:text-brand-teal text-[10px] lg:text-xs">
                             Upload Script
                         </Button>
-                        <Button onClick={handleDownloadText} variant="outline" className="!py-2.5 !px-4 border-2 border-gray-200 text-gray-500 hover:border-brand-navy hover:text-brand-navy text-xs">
+                        <Button onClick={handleDownloadText} variant="outline" className="shrink-0 snap-start !py-2 !px-3 lg:!py-2.5 lg:!px-4 border-2 border-gray-200 text-gray-500 hover:border-brand-navy hover:text-brand-navy text-[10px] lg:text-xs">
                             Export Script
                         </Button>
-                        <div className="flex gap-4">
-                            <Button onClick={() => runPipeline(false)} disabled={isAnyGenerating} variant="secondary" className="!py-2.5 !px-4 border-2 border-pink-500 text-pink-500 hover:bg-pink-500 hover:text-white transition-all font-black uppercase text-[10px]">
-                                {t('إعادة المعالجة من الصفر', 'Restart Pipeline')}
+                        <div className="flex gap-2 lg:gap-4 shrink-0 snap-start">
+                            <Button onClick={() => runPipeline(false)} disabled={isAnyGenerating} variant="secondary" className="!py-2 !px-3 lg:!py-2.5 lg:!px-4 border-2 border-pink-500 text-pink-500 hover:bg-pink-500 hover:text-white transition-all font-black uppercase text-[9px] lg:text-[10px]">
+                                {t('إعادة المعالجة', 'Restart Pipeline')}
                             </Button>
-                            <Button onClick={() => runPipeline(true)} disabled={isAnyGenerating} variant="secondary" className="!py-2.5 !px-4 border-2 border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white transition-all shadow-lg font-black uppercase text-[10px]">
+                            <Button onClick={() => runPipeline(true)} disabled={isAnyGenerating} variant="secondary" className="!py-2 !px-3 lg:!py-2.5 lg:!px-4 border-2 border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white transition-all shadow-lg font-black uppercase text-[9px] lg:text-[10px]">
                                 {t('إستكمال المعالجة', 'Continue Pipeline')}
                             </Button>
-                            <Button onClick={applyAllEditsAndFinalize} disabled={isAnyGenerating || isFinalizing} className="!py-2.5 !px-6 shadow-xl shadow-brand-orange/30 font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                            <Button onClick={applyAllEditsAndFinalize} disabled={isAnyGenerating || isFinalizing} className="!py-2 !px-4 lg:!py-2.5 lg:!px-6 shadow-xl shadow-brand-orange/30 font-black uppercase text-[9px] lg:text-[10px] flex items-center justify-center gap-2">
                                 {isFinalizing ? <><Spinner size="sm" color="text-white" /> {t('جاري الإنهاء...', 'Finalizing...')}</> : t('إنهاء وحفظ', 'Finalize')}
                             </Button>
                         </div>
@@ -613,7 +613,10 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
             {/* Dedicated Sidebar Terminal (TOP LEVEL) */}
             {showTerminal && (
-                <div className="w-[450px] bg-gray-950 border-l border-white/5 flex flex-col shrink-0 animate-in slide-in-from-right duration-500 ease-out shadow-[-20px_0_50px_rgba(0,0,0,0.5)] z-50">
+                <>
+                    {/* Dark Overlay for Mobile */}
+                    <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setShowTerminal(false)}></div>
+                    <div className="fixed lg:relative top-0 right-0 h-full w-[90vw] lg:w-[450px] bg-gray-950 border-l border-white/5 flex flex-col shrink-0 animate-in slide-in-from-right duration-500 ease-out shadow-[-20px_0_50px_rgba(0,0,0,0.5)] z-50">
                      <div className="flex justify-between items-center p-6 border-b border-white/5 bg-gray-900/50 backdrop-blur-md sticky top-0">
                         <div className="flex items-center gap-4">
                             <div className={`w-3 h-3 rounded-full ${isProcessing ? 'bg-brand-orange animate-ping' : (currentError ? 'bg-red-500' : 'bg-brand-teal')}`}></div>
