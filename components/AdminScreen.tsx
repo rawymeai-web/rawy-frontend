@@ -236,7 +236,8 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
     const [allOrders, setAllOrders] = useState<AdminOrder[]>(orders);
     const [previewingOrder, setPreviewingOrder] = useState<AdminOrder | null>(null);
     const [activeTab, setActiveTab] = useState<'confirmed' | 'drafts'>('confirmed');
-    const [isLoading, setIsLoading] = useState(false);
+    const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
+    const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState<string | null>(null);
 
     useEffect(() => {
@@ -277,15 +278,23 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
     };
 
     const handleInspect = async (order: AdminOrder) => {
-        const full = await adminService.getOrderById(order.orderNumber);
-        if (full) setPreviewingOrder(full);
-        else alert("Could not fetch full order details.");
+        try {
+            setLoadingOrderId(order.orderNumber);
+            setLoadingAction('inspect');
+            const full = await adminService.getOrderById(order.orderNumber);
+            if (full) setPreviewingOrder(full);
+            else alert("Could not fetch full order details.");
+        } finally {
+            setLoadingOrderId(null);
+            setLoadingAction(null);
+        }
     }
 
     const handleEdit = async (order: AdminOrder, isLegacy: boolean = false, isRestart: boolean = false) => {
         console.log("AdminScreen: handleEdit called", { orderNumber: order.orderNumber, isLegacy, isRestart });
         try {
-            setIsLoading(true);
+            setLoadingOrderId(order.orderNumber);
+            setLoadingAction('edit');
             const fullOrder = await adminService.getOrderById(order.orderNumber);
             if (fullOrder && fullOrder.storyData) {
                 console.log("AdminScreen: Order fetched, calling onEditOrder", { isLegacy, isRestart });
@@ -298,7 +307,8 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
             console.error("Error fetching order:", error);
             alert("Failed to load order details.");
         } finally {
-            setIsLoading(false);
+            setLoadingOrderId(null);
+            setLoadingAction(null);
         }
     };
 
@@ -382,15 +392,25 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
                                 </td>
                                 <td className="px-6 py-5 align-top">
                                     <div className="flex flex-wrap justify-center gap-2 max-w-[350px] mx-auto">
-                                        <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleInspect(order)}>Inspect</Button>
-                                        <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase border-brand-navy text-brand-navy hover:bg-brand-navy hover:text-white flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleEdit(order)}>Open Editor</Button>
-                                        <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase text-brand-teal hover:bg-brand-teal hover:text-white border-brand-teal flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleEdit(order, true, false)}>Resume Pipeline</Button>
+                                        <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleInspect(order)} disabled={loadingOrderId === order.orderNumber}>
+                                            {loadingOrderId === order.orderNumber && loadingAction === 'inspect' ? 'Loading...' : 'Inspect'}
+                                        </Button>
+                                        <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase border-brand-navy text-brand-navy hover:bg-brand-navy hover:text-white flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleEdit(order)} disabled={loadingOrderId === order.orderNumber}>
+                                            {loadingOrderId === order.orderNumber && loadingAction === 'edit' ? 'Loading...' : 'Open Editor'}
+                                        </Button>
+                                        <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase text-brand-teal hover:bg-brand-teal hover:text-white border-brand-teal flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleEdit(order, true, false)} disabled={loadingOrderId === order.orderNumber}>
+                                            Resume Pipeline
+                                        </Button>
                                         <Button variant="outline" className="text-pink-500 border-pink-500 hover:bg-pink-50 !px-2 !py-1 text-[9px] font-black uppercase flex-1 whitespace-nowrap min-w-[100px]" onClick={() => {
                                             if (window.confirm(`DANGER: Restart ALL Pipeline phases for ${order.orderNumber}? DNA, Story, and Artwork will be permanently overwritten.`)) {
                                                 handleEdit(order, true, true);
                                             }
-                                        }}>Restart Pipeline</Button>
-                                        <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleDownloadZip(order)} disabled={isExporting === order.orderNumber}>{isExporting === order.orderNumber ? 'Extracting...' : 'Export ZIP'}</Button>
+                                        }} disabled={loadingOrderId === order.orderNumber}>
+                                            Restart Pipeline
+                                        </Button>
+                                        <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleDownloadZip(order)} disabled={isExporting === order.orderNumber || loadingOrderId === order.orderNumber}>
+                                            {isExporting === order.orderNumber ? 'Extracting...' : 'Export ZIP'}
+                                        </Button>
                                     </div>
                                 </td>
                             </tr>

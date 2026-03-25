@@ -151,7 +151,7 @@ export const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ order, onC
                   <DetailItem label={t('اسم الطفل', "Child's Name")} value={order.storyData.childName} />
                   <DetailItem label={t('عمر الطفل', "Child's Age")} value={order.storyData.childAge} />
                   <DetailItem label={t('حجم الكتاب', 'Book Size')} value={order.storyData.size} />
-                  <DetailItem label={t('الشخصية الرئيسية', 'Main Character')} value={order.storyData.mainCharacter.name} />
+                  <DetailItem label={t('الشخصية الرئيسية', 'Main Character')} value={order.storyData.mainCharacter?.name || 'N/A'} />
                   {order.storyData.useSecondCharacter && (
                     <DetailItem label={t('الشخصية الثانوية', 'Second Character')} value={order.storyData.secondCharacter?.name} />
                   )}
