@@ -1,4 +1,4 @@
-export const BACKEND_URL = '/api';
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 /**
  * Interface for backend API responses to maintain consistency

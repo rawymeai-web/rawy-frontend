@@ -25,18 +25,18 @@ const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus }) => {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
 
                     {/* Brand Section */}
-                    <div className="text-center md:text-left rtl:md:text-right space-y-2">
+                    <div className="text-center md:text-left rtl:md:text-right space-y-2 flex flex-col items-center md:items-start rtl:md:items-end w-full md:w-auto">
                         <div className="flex items-center justify-center md:justify-start rtl:md:justify-end gap-3 mb-2">
                             {/* Text Logo Replacement to fix white boxes */}
                             <h1 className="text-3xl font-black tracking-tight text-white">Rawy</h1>
                         </div>
-                        <p className="text-sm text-white/80 font-medium max-w-xs">
+                        <p className="text-sm text-white/80 font-medium max-w-xs text-center md:text-left rtl:md:text-right">
                             {t('حيث يصبح كل طفل بطلاً في قصته الخاصة.', 'Where every child becomes the hero of their own story.')}
                         </p>
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex flex-wrap justify-center md:justify-end gap-x-8 gap-y-4 font-medium">
+                    <nav className="flex flex-wrap justify-center gap-x-8 gap-y-4 font-medium w-full md:w-auto">
                         {links.map(link => {
                             if (link.onClick) {
                                 return (

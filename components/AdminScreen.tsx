@@ -333,12 +333,12 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
             {previewingOrder && <OrderPreviewModal order={previewingOrder} onClose={() => setPreviewingOrder(null)} language={language} />}
             {/* Removed LegacyProcessModal overlay to allow Editor live streaming */}
             
-            <div className="flex justify-between items-center px-2">
-                <div className="flex bg-gray-100 p-1 rounded-xl">
-                    <button onClick={() => setActiveTab('confirmed')} className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'confirmed' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500 hover:text-gray-700'}`}>Confirmed Orders</button>
-                    <button onClick={() => setActiveTab('drafts')} className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'drafts' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500 hover:text-gray-700'}`}>Incomplete Drafts</button>
+            <div className="flex flex-col sm:flex-row justify-between items-center px-2 gap-4">
+                <div className="flex overflow-x-auto w-full sm:w-auto bg-gray-100 p-1 rounded-xl no-scrollbar">
+                    <button onClick={() => setActiveTab('confirmed')} className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'confirmed' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500 hover:text-gray-700'}`}>Confirmed Orders</button>
+                    <button onClick={() => setActiveTab('drafts')} className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'drafts' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500 hover:text-gray-700'}`}>Incomplete Drafts</button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap justify-center sm:justify-end w-full sm:w-auto gap-2">
                     <Button onClick={async () => {
                         if (confirm("Sync all local orders to DB?")) {
                             const count = await adminService.syncLocalOrders();
@@ -354,8 +354,8 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-xs text-left text-gray-500">
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-x-auto">
+                <table className="w-full text-xs text-left text-gray-500 min-w-[800px]">
                     <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 border-b">
                         <tr><th className="px-6 py-4">Order Identity</th><th className="px-6 py-4">Customer</th><th className="px-6 py-4">Revenue</th><th className="px-6 py-4">Pipeline Status</th><th className="px-6 py-4 text-center">Protocol</th></tr>
                     </thead>
