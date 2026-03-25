@@ -354,8 +354,12 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-x-auto">
-                <table className="w-full text-xs text-left text-gray-500 min-w-[800px]">
+            <div className="sm:hidden text-[10px] text-brand-orange font-black mb-2 flex items-center justify-end px-2 uppercase tracking-widest animate-pulse">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                Swipe Table Left for Editor & Actions
+            </div>
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-x-auto pb-4">
+                <table className="w-full text-xs text-left text-gray-500 min-w-[900px]">
                     <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 border-b">
                         <tr><th className="px-6 py-4">Order Identity</th><th className="px-6 py-4">Customer</th><th className="px-6 py-4">Revenue</th><th className="px-6 py-4">Pipeline Status</th><th className="px-6 py-4 text-center">Protocol</th></tr>
                     </thead>
@@ -365,27 +369,29 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
                         )}
                         {displayOrders.map(order => (
                             <tr key={order.orderNumber} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                                <td className="px-6 py-5">
+                                <td className="px-6 py-5 align-top">
                                     <div className="font-black text-brand-navy">{order.orderNumber}</div>
                                     <div className="text-[9px] text-gray-400 mt-0.5">{new Date(order.orderDate).toLocaleString()}</div>
                                 </td>
-                                <td className="px-6 py-5 font-medium">{order.customerName}</td>
-                                <td className="px-6 py-5 font-mono font-bold text-brand-teal">{order.total.toFixed(3)}</td>
-                                <td className="px-6 py-5">
-                                    <select value={order.status} onChange={(e) => handleStatusChange(order.orderNumber, e.target.value as OrderStatus)} className="p-2 rounded-xl bg-white border border-gray-200 text-[10px] font-bold outline-none focus:ring-2 focus:ring-brand-orange/20">
+                                <td className="px-6 py-5 font-medium align-top">{order.customerName}</td>
+                                <td className="px-6 py-5 font-mono font-bold text-brand-teal align-top">{order.total.toFixed(3)}</td>
+                                <td className="px-6 py-5 align-top">
+                                    <select value={order.status} onChange={(e) => handleStatusChange(order.orderNumber, e.target.value as OrderStatus)} className="p-2 w-full rounded-xl bg-white border border-gray-200 text-[10px] font-bold outline-none focus:ring-2 focus:ring-brand-orange/20">
                                         <option>Draft Intent</option><option>New Order</option><option>Processing</option><option>Shipping</option><option>Completed</option>
                                     </select>
                                 </td>
-                                <td className="px-6 py-5 flex justify-center gap-2">
-                                    <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase" onClick={() => handleInspect(order)}>Inspect</Button>
-                                    <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase border-brand-navy text-brand-navy hover:bg-brand-navy hover:text-white" onClick={() => handleEdit(order)}>Open Editor</Button>
-                                    <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase text-brand-teal hover:bg-brand-teal hover:text-white border-brand-teal" onClick={() => handleEdit(order, true, false)}>Resume Pipeline</Button>
-                                    <Button variant="outline" className="text-pink-500 border-pink-500 hover:bg-pink-50 !px-2 !py-1 text-[9px] font-black uppercase" onClick={() => {
-                                        if (window.confirm(`DANGER: Restart ALL Pipeline phases for ${order.orderNumber}? DNA, Story, and Artwork will be permanently overwritten.`)) {
-                                            handleEdit(order, true, true);
-                                        }
-                                    }}>Restart Pipeline</Button>
-                                    <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase" onClick={() => handleDownloadZip(order)} disabled={isExporting === order.orderNumber}>{isExporting === order.orderNumber ? 'Extracting...' : 'Export ZIP'}</Button>
+                                <td className="px-6 py-5 align-top">
+                                    <div className="flex flex-wrap justify-center gap-2 max-w-[350px] mx-auto">
+                                        <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleInspect(order)}>Inspect</Button>
+                                        <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase border-brand-navy text-brand-navy hover:bg-brand-navy hover:text-white flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleEdit(order)}>Open Editor</Button>
+                                        <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase text-brand-teal hover:bg-brand-teal hover:text-white border-brand-teal flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleEdit(order, true, false)}>Resume Pipeline</Button>
+                                        <Button variant="outline" className="text-pink-500 border-pink-500 hover:bg-pink-50 !px-2 !py-1 text-[9px] font-black uppercase flex-1 whitespace-nowrap min-w-[100px]" onClick={() => {
+                                            if (window.confirm(`DANGER: Restart ALL Pipeline phases for ${order.orderNumber}? DNA, Story, and Artwork will be permanently overwritten.`)) {
+                                                handleEdit(order, true, true);
+                                            }
+                                        }}>Restart Pipeline</Button>
+                                        <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase flex-1 whitespace-nowrap min-w-[100px]" onClick={() => handleDownloadZip(order)} disabled={isExporting === order.orderNumber}>{isExporting === order.orderNumber ? 'Extracting...' : 'Export ZIP'}</Button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
