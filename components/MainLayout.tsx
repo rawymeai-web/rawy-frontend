@@ -148,9 +148,7 @@ const MainLayout: React.FC = () => {
     
         if (compressedRefImg && compressedRefImg.length > 500) {
             try {
-                // Aggressive compression for the backend storage drop: 512px max
                 compressedRefImg = await compressBase64Image(compressedRefImg, 512, 0.7);
-                // The compressBase64Image might return a data URI, so we strip the prefix if it's there
                 if (compressedRefImg.startsWith('data:image')) {
                     compressedRefImg = compressedRefImg.split(',')[1];
                 }
@@ -170,12 +168,46 @@ const MainLayout: React.FC = () => {
             }
         }
 
+        let compressedMainImages: string[] = [];
+        if (data.mainCharacter && data.mainCharacter.imageBases64) {
+            for (const img of data.mainCharacter.imageBases64) {
+                if (img && img.length > 500) {
+                    try {
+                        let comp = await compressBase64Image(img, 512, 0.7);
+                        if (comp.startsWith('data:image')) comp = comp.split(',')[1];
+                        compressedMainImages.push(comp);
+                    } catch (e) {
+                        compressedMainImages.push(img);
+                    }
+                } else if (img) {
+                    compressedMainImages.push(img);
+                }
+            }
+        }
+
+        let compressedSecondImages: string[] = [];
+        if (data.secondCharacter && data.secondCharacter.imageBases64) {
+             for (const img of data.secondCharacter.imageBases64) {
+                if (img && img.length > 500) {
+                    try {
+                        let comp = await compressBase64Image(img, 512, 0.7);
+                        if (comp.startsWith('data:image')) comp = comp.split(',')[1];
+                        compressedSecondImages.push(comp);
+                    } catch (e) {
+                        compressedSecondImages.push(img);
+                    }
+                } else if (img) {
+                    compressedSecondImages.push(img);
+                }
+             }
+        }
+
         return {
             ...data,
             styleReferenceImageBase64: compressedRefImg,
             secondCharacterImageBase64: compressedSecondImg,
-            mainCharacter: { ...data.mainCharacter, imageBases64: [], images: [], imageDNA: [] },
-            secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: [], images: [], imageDNA: [] } : undefined,
+            mainCharacter: { ...data.mainCharacter, imageBases64: compressedMainImages, images: [], imageDNA: [] },
+            secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: compressedSecondImages, images: [], imageDNA: [] } : undefined,
             coverImageUrl: data.coverImageUrl ? data.coverImageUrl.substring(0, 100) + '...[TRUNCATED]' : undefined,
             pages: (data.pages || []).map(p => ({ ...p, illustrationUrl: p.illustrationUrl ? p.illustrationUrl.substring(0, 100) + '...[TRUNCATED]' : undefined }))
         };
