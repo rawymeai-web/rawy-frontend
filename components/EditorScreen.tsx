@@ -661,6 +661,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                         </div>
                     )}
                 </div>
+                </>
             )}
         </div>
     );

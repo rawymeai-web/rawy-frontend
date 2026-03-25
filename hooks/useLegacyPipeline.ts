@@ -1,4 +1,3 @@
-```typescript
 import { useState, useRef, useCallback } from 'react';
 import { backendApi } from '../services/backendApi';
 import * as adminService from '../services/adminService';
