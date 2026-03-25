@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as adminService from '../services/adminService';
 import * as fileService from '../services/fileService';
+import { compressBase64Image } from '../utils/imageUtils';
 import { convertPrice, type Currency, currencies } from '../services/currencyService';
 import { backendApi } from '../services/backendApi';
 import LanguageScreen from './LanguageScreen'; // Keep import but unused for now
@@ -141,9 +142,38 @@ const MainLayout: React.FC = () => {
         }
     }, [shippingDetails, storyData, language, setPaymentModalOpen, setScreen, startWorkflow]);
 
-    const lightenStoryData = (data: StoryData) => {
+    const lightenStoryData = async (data: StoryData) => {
+        let compressedRefImg = data.styleReferenceImageBase64;
+        let compressedSecondImg = data.secondCharacterImageBase64;
+    
+        if (compressedRefImg && compressedRefImg.length > 500) {
+            try {
+                // Aggressive compression for the backend storage drop: 512px max
+                compressedRefImg = await compressBase64Image(compressedRefImg, 512, 0.7);
+                // The compressBase64Image might return a data URI, so we strip the prefix if it's there
+                if (compressedRefImg.startsWith('data:image')) {
+                    compressedRefImg = compressedRefImg.split(',')[1];
+                }
+            } catch (e) {
+                console.error("Failed to compress style reference image:", e);
+            }
+        }
+        
+        if (compressedSecondImg && compressedSecondImg.length > 500) {
+            try {
+                compressedSecondImg = await compressBase64Image(compressedSecondImg, 512, 0.7);
+                if (compressedSecondImg.startsWith('data:image')) {
+                    compressedSecondImg = compressedSecondImg.split(',')[1];
+                }
+            } catch (e) {
+                console.error("Failed to compress second character image:", e);
+            }
+        }
+
         return {
             ...data,
+            styleReferenceImageBase64: compressedRefImg,
+            secondCharacterImageBase64: compressedSecondImg,
             mainCharacter: { ...data.mainCharacter, imageBases64: [], images: [], imageDNA: [] },
             secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: [], images: [], imageDNA: [] } : undefined,
             coverImageUrl: data.coverImageUrl ? data.coverImageUrl.substring(0, 100) + '...[TRUNCATED]' : undefined,
@@ -233,7 +263,7 @@ const MainLayout: React.FC = () => {
                         try {
                             // Prevent "413 Payload Too Large" by stripping raw photo arrays (base64) 
                             // before sending to the database, since we already saved the generated DNA!
-                            const apiStory = lightenStoryData(updatedStory);
+                            const apiStory = await lightenStoryData(updatedStory);
                             
                             console.log("Creating Draft Order with intent...");
                             const res = await backendApi.createDraftOrder({
@@ -248,6 +278,7 @@ const MainLayout: React.FC = () => {
                                 updateStory({ orderId: res.orderId });
                                 setPaymentAmount(totalAmount);
                                 setPaymentModalOpen(true);
+
                             } else {
                                 alert(`Could not create order: ${res.message || 'Unknown error'}`);
                             }
