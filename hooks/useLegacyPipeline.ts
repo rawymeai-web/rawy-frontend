@@ -62,6 +62,22 @@ export const useLegacyPipeline = (
             const t = (ar: string, en: string) => lang === 'ar' ? ar : en;
 
             if (!resume) {
+                // [PRE-FLIGHT] Auto-Wipe generated artifacts to start fresh...
+                
+            }
+            
+            // Helper to prevent Vercel 4.5MB payload limit errors by stripping heavy base64 images from JSON text requests
+            const getCleanStoryDataForTextApi = (sd: any) => {
+                const clean = { ...sd };
+                if (clean.mainCharacter) clean.mainCharacter = { ...clean.mainCharacter, imageBases64: [], imageDNA: [] };
+                if (clean.secondCharacter) clean.secondCharacter = { ...clean.secondCharacter, imageBases64: [], imageDNA: [] };
+                clean.styleReferenceImageBase64 = undefined;
+                clean.mainCharacterImageBase64 = undefined;
+                clean.secondCharacterImageBase64 = undefined;
+                return clean;
+            };
+
+            if (!resume) {
                 // [PRE-FLIGHT] Auto-Wipe generated artifacts to start fresh, preserving only customer/DNA data
                 logMsg(`Pre-flight: Wiping old intermediate data for clean run...`);
                 storyData.blueprint = undefined;
@@ -141,7 +157,9 @@ export const useLegacyPipeline = (
             setStatus(t('تصميم المخطط...', 'Architecting the Story...'));
             if (!storyData.blueprint) {
                 logMsg(`Calling Architect AI API with Theme: ${ensureSafeString(storyData.theme, 'Birthday')}...`);
-                const blueprintRes = await retryStep('Architect AI Blueprint', () => backendApi.generateBlueprint({ storyData, language: lang })) as any;
+                // Use stripped storyData to avoid Vercel 4.5MB payload limit crashing the text API
+                const blueprintPayload = getCleanStoryDataForTextApi(storyData);
+                const blueprintRes = await retryStep('Architect AI Blueprint', () => backendApi.generateBlueprint({ storyData: blueprintPayload, language: lang })) as any;
                 if (blueprintRes.error) throw new Error(blueprintRes.error);
 
                 storyData = { ...storyData, blueprint: blueprintRes.blueprint };
@@ -160,7 +178,8 @@ export const useLegacyPipeline = (
             if (isScriptEmpty) {
                 logMsg(`Phase 2B: Drafting initial native-language narrative...`);
                 logMsg(`Phase 3: Senior Writer Agent reviewing for grammatical perfection & logic...`);
-                const storyRes = await retryStep('Writer AI Script', () => backendApi.generateStory({ storyData, language: lang, blueprint: storyData.blueprint })) as any;
+                const storyPayload = getCleanStoryDataForTextApi(storyData);
+                const storyRes = await retryStep('Writer AI Script', () => backendApi.generateStory({ storyData: storyPayload, language: lang, blueprint: storyData.blueprint })) as any;
                 if (storyRes.error) throw new Error(storyRes.error);
 
                 storyData = { ...storyData, script: storyRes.script || storyRes.rawScript };
@@ -216,7 +235,7 @@ export const useLegacyPipeline = (
                     childAge: storyData.childAge, 
                     childDescription: storyData.mainCharacter?.description || "A child", 
                     childName: storyData.childName, 
-                    secondCharacter: storyData.secondCharacter, 
+                    secondCharacter: storyData.secondCharacter ? { ...storyData.secondCharacter, imageBases64: [], imageDNA: [] } : undefined, 
                     language: lang,
                     occasion: storyData.occasion,
                     extraItems: storyData.customIllustrationNotes,
