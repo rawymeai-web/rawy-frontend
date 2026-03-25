@@ -9,7 +9,8 @@ export const useLegacyPipeline = (
     initialStoryData: StoryData,
     initialShippingDetails: any,
     language: Language,
-    onUpdateStory: (updates: Partial<StoryData>) => void
+    onUpdateStory: (updates: Partial<StoryData>) => void,
+    total?: number
 ) => {
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState('Idle');
@@ -96,7 +97,7 @@ export const useLegacyPipeline = (
                     blueprint: undefined, script: [], spreadPlan: undefined, 
                     pages: [], finalPrompts: [], prompts: [], actualCoverPrompt: undefined 
                 } as any);
-                await adminService.saveOrder(storyData.orderId || orderNumber || 'RWY-UNKNOWN', storyData, initialShippingDetails || {});
+                await adminService.saveOrder(storyData.orderId || orderNumber || 'RWY-UNKNOWN', storyData, initialShippingDetails || {}, total);
             } else {
                 logMsg(`Resuming pipeline. Skipping pre-flight wipe and jumping to first missing artifact...`);
             }
@@ -378,7 +379,7 @@ export const useLegacyPipeline = (
                         storyData = { ...storyData, pages };
                         storyDataRef.current = storyData;
                         onUpdateStory(storyData);
-                        await adminService.saveOrder(orderNumber, storyData, initialShippingDetails);
+                        await adminService.saveOrder(orderNumber, storyData, initialShippingDetails, total);
                     }
                 } else {
                     logMsg(`Scene ${i+1} image already exists. Skipping.`);
@@ -418,7 +419,7 @@ export const useLegacyPipeline = (
                         };
                         storyDataRef.current = storyData;
                         onUpdateStory(storyData);
-                        await adminService.saveOrder(orderNumber, storyData, initialShippingDetails);
+                        await adminService.saveOrder(orderNumber, storyData, initialShippingDetails, total);
                     }
                 }
             } else if (prompts.length > 8) {

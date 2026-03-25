@@ -257,11 +257,25 @@ export async function getOrderStatus(orderNumber: string): Promise<{ status: Ord
   return data as any;
 }
 
-export async function saveOrder(orderNumber: string, storyData: StoryData, shippingDetails: ShippingDetails): Promise<void> {
+export async function saveOrder(orderNumber: string, storyData: StoryData, shippingDetails: ShippingDetails, total?: number): Promise<void> {
   const settings = await getSettings();
   const product = await getProductSizeById(storyData.size);
-  const basePrice = product ? product.price : 29.900;
-  const totalPrice = basePrice + 1.500;
+  
+  const standardBase = product ? product.price : 17.000;
+  const premiumAddon = storyData.useSecondCharacter ? 5.000 : 0;
+
+  let calculatedTotal = total;
+  if (calculatedTotal === undefined) {
+    if (storyData.planType === 'monthly') {
+      calculatedTotal = (standardBase + premiumAddon) * (14 / 17);
+    } else if (storyData.planType === 'yearly') {
+      calculatedTotal = (standardBase + premiumAddon) * (10.8 / 17);
+    } else {
+      calculatedTotal = standardBase + premiumAddon + 1.500;
+    }
+  }
+
+  const totalPrice = calculatedTotal;
 
   // OPTIMIZATION: Create a "Light" version of storyData for Fallback/Storage immediately
   // We MUST remove the massive Base64 strings to prevent "Invalid String Length" crashes in JSON.stringify

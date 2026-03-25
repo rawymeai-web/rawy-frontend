@@ -325,7 +325,7 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
         };
 
         try {
-            await adminService.saveOrder(dummyId, dummyStory, dummyShipping);
+            await adminService.saveOrder(dummyId, dummyStory, dummyShipping, 18.500);
             alert(`Test Order ${dummyId} created! Refreshing list...`);
             refreshOrders();
         } catch (e) {

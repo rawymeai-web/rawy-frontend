@@ -24,11 +24,11 @@ const CrossIcon = () => (
   </svg>
 );
 
-type PlanType = 'one_time' | 'monthly';
+type PlanType = 'one_time' | 'monthly' | 'yearly';
 
 interface Plan {
   id: PlanType;
-  badge?: string;
+  badge?: string | { ar: string; en: string };
   emoji: string;
   name: { ar: string; en: string };
   tagline: { ar: string; en: string };
@@ -77,6 +77,23 @@ const PLANS: Plan[] = [
       { label: { ar: 'أولوية تنفيذ عالية', en: 'Priority processing vs one-time users' }, available: true },
       { label: { ar: 'تثبيت التفضيلات', en: 'Locked preferences (consistent style)' }, available: true },
     ]
+  },
+  {
+    id: 'yearly',
+    emoji: '🌟',
+    badge: { ar: 'أفضل قيمة', en: 'BEST VALUE' },
+    name: { ar: 'اشتراك سنوي', en: 'Yearly Subscription' },
+    tagline: { ar: 'أفضل قيمة لنمو طفلك المعرفي', en: 'The best value for growing milestones' },
+    priceMultiplier: 10.8 / 17,
+    shipping: { ar: 'شحن مجاني دائم', en: 'Always Free Shipping' },
+    perks: [
+      { label: { ar: 'كتاب مخصص كل شهر (12 كتاب)', en: '1 book per month (12 books/yr)' }, available: true },
+      { label: { ar: 'أقل سعر للحصة', en: 'Lowest price per book' }, available: true },
+      { label: { ar: 'شحن مجاني عالمي', en: 'Free Priority Shipping' }, available: true },
+      { label: { ar: 'تثبيت الشخصية والأسلوب', en: 'Character & Style consistency' }, available: true },
+      { label: { ar: 'هدايا حصرية للمشتركين', en: 'Exclusive yearly subscriber gifts' }, available: true },
+      { label: { ar: 'دعم فني مخصص', en: 'Priority VIP Support' }, available: true },
+    ]
   }
 ];
 
@@ -106,12 +123,14 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   let currentCyclePrice: number;
   if (planType === 'monthly') {
     currentCyclePrice = (basePrice + premiumFeaturePrice) * (14 / 17);   // Fixed 14 KD if base is 17
+  } else if (planType === 'yearly') {
+    currentCyclePrice = (basePrice + premiumFeaturePrice) * (10.8 / 17); // ~10.8 KD equivalent
   } else {
     currentCyclePrice = (basePrice + premiumFeaturePrice);              // Fixed 17 KD if base is 17
   }
 
 
-  const shippingPrice = planType === 'one_time' ? 1.500 : 0;
+  const shippingPrice = (planType === 'one_time') ? 1.500 : 0;
   const totalPrice = currentCyclePrice + shippingPrice;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -133,13 +152,15 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       </div>
 
       {/* ── Plan Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto gap-8">
         {PLANS.map((plan) => {
           const isSelected = planType === plan.id;
           
           let displayPriceValue: number;
           if (plan.id === 'monthly') {
             displayPriceValue = (basePrice + premiumFeaturePrice) * (14 / 17); // ~14 KD
+          } else if (plan.id === 'yearly') {
+            displayPriceValue = (basePrice + premiumFeaturePrice) * (10.8 / 17); // ~10.8 KD
           } else {
             displayPriceValue = (basePrice + premiumFeaturePrice); // 17 KD
           }
@@ -157,9 +178,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
               {/* Best value badge */}
               {plan.badge && (
-                <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold shadow-md
-                  ${isSelected ? 'bg-brand-coral text-white' : 'bg-brand-navy text-white'}`}>
-                  {plan.badge}
+                <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md
+                  ${isSelected ? 'bg-white text-brand-coral border-2 border-brand-coral' : 'bg-brand-navy text-white'}`}>
+                  {typeof plan.badge === 'string' ? plan.badge : tObj(plan.badge)}
                 </span>
               )}
 
@@ -181,7 +202,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     {convertPrice(displayPriceValue, currency)}
                   </span>
                   <span className={`text-sm ml-1 ${isSelected ? 'text-white/70' : 'text-gray-400'}`}>
-                    {plan.id === 'monthly' ? '/mo' : t('مرة واحدة', 'one-time')}
+                    {plan.id === 'one_time' ? t('مرة واحدة', 'one-time') : '/mo'}
                   </span>
                 </>
                 <div className={`text-xs mt-2 font-medium ${isSelected ? 'text-white/80' : 'text-brand-coral'}`}>

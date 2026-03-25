@@ -42,7 +42,8 @@ const MainLayout: React.FC = () => {
         isOrderStatusModalOpen, setOrderStatusModalOpen
     } = useStory();
 
-    const [currentPrice, setCurrentPrice] = useState(29.9);
+    const [currentPrice, setCurrentPrice] = useState(17.0);
+    const [paymentAmount, setPaymentAmount] = useState(18.5); // Default for Standard One-Time
     useEffect(() => {
         adminService.getProductSizeById(storyData.size).then(p => { if (p) setCurrentPrice(p.price); });
     }, [storyData.size]);
@@ -143,8 +144,8 @@ const MainLayout: React.FC = () => {
     const lightenStoryData = (data: StoryData) => {
         return {
             ...data,
-            mainCharacter: { ...data.mainCharacter, imageBases64: [], images: [] },
-            secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: [], images: [] } : undefined,
+            mainCharacter: { ...data.mainCharacter, imageBases64: [], images: [], imageDNA: [] },
+            secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: [], images: [], imageDNA: [] } : undefined,
             coverImageUrl: data.coverImageUrl ? data.coverImageUrl.substring(0, 100) + '...[TRUNCATED]' : undefined,
             pages: (data.pages || []).map(p => ({ ...p, illustrationUrl: p.illustrationUrl ? p.illustrationUrl.substring(0, 100) + '...[TRUNCATED]' : undefined }))
         };
@@ -209,6 +210,7 @@ const MainLayout: React.FC = () => {
                     shippingDetails={shippingDetails}
                     isGenerating={isGenerating}
                     onBack={() => setScreen('admin')}
+                    total={paymentAmount}
                 />;
                 break;
             case 'unified-generation':
@@ -244,6 +246,7 @@ const MainLayout: React.FC = () => {
                             if (res.success && res.orderId) {
                                 console.log("Draft Created:", res.orderId);
                                 updateStory({ orderId: res.orderId });
+                                setPaymentAmount(totalAmount);
                                 setPaymentModalOpen(true);
                             } else {
                                 alert(`Could not create order: ${res.message || 'Unknown error'}`);
@@ -284,6 +287,7 @@ const MainLayout: React.FC = () => {
                         }
 
                         if (order.shippingDetails) setShippingDetails(order.shippingDetails);
+                        setPaymentAmount(order.total);
                         setIsLegacyMode(!!isLegacy);
                         
                         // If it's a hard restart, we wipe the data
@@ -332,7 +336,7 @@ const MainLayout: React.FC = () => {
                 <div className={`relative w-full h-full p-4 sm:p-8 flex flex-col justify-center ${(screen === 'unified-generation' || screen === 'editor') ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
             </main>
             <Footer language={language} onCheckOrderStatus={() => setOrderStatusModalOpen(true)} />
-            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(currentPrice + 1.500 + (storyData.useSecondCharacter ? 5.000 : 0), currency)} language={language} />
+            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(paymentAmount, currency)} language={language} />
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
         </div>
     );

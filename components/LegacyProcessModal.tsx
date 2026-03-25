@@ -80,7 +80,7 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
                         description: dnaRes.physicalDescription,
                         imageDNA: [dnaRes.artifiedHeroBase64]
                     };
-                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails);
+                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails, activeOrder.total);
                 } catch(e:any) {
                     throw new Error("DNA Phase Error: " + (e.message || JSON.stringify(e)));
                 }
@@ -101,7 +101,7 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
                         blueprint: storyRes.blueprint, 
                         script: storyRes.script || storyRes.rawScript 
                     };
-                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails);
+                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails, activeOrder.total);
                 } catch(e:any) {
                     throw new Error("Story Phase Error: " + (e.message || JSON.stringify(e)));
                 }
@@ -124,7 +124,7 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
 
                     logMsg(`Cinematographer AI mapped 8 scenes successfully.`);
                     storyData = { ...storyData, spreadPlan: planRes.plan };
-                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails);
+                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails, activeOrder.total);
                     logMsg(`Visual Plan saved to database.`);
                 } catch(e:any) {
                     logMsg(`ERROR in Visual Plan Phase: ${e.message}`);
@@ -161,7 +161,7 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
 
                     logMsg(`Prompt Engineer generated prompt templates accurately.`);
                     storyData = { ...storyData, finalPrompts: promptsRes.prompts };
-                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails);
+                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails, activeOrder.total);
                     logMsg(`Prompts saved to database.`);
                 } catch(e:any) {
                     logMsg(`ERROR in Prompt Phase: ${e.message}`);
@@ -240,7 +240,7 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
                                     pages[pageIndex].actualPrompt = fallbackPrompt;
                                     pages[pageIndex+1].actualPrompt = fallbackPrompt;
                                     storyData = { ...storyData, pages };
-                                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails);
+                                    await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails, activeOrder.total);
                                     continue;
                                 }
                             }
@@ -265,7 +265,7 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
                             pages[pageIndex].actualPrompt = imagePrompt;
                             pages[pageIndex + 1].actualPrompt = imagePrompt;
                             storyData = { ...storyData, pages };
-                            await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails);
+                            await adminService.saveOrder(order.orderNumber, storyData, order.shippingDetails, activeOrder.total);
                             logMsg(`Saved Image ${i+1} to Cloud Database.`);
                         } else {
                             throw new Error(`Failed to extract imageBase64 from response: ${JSON.stringify(imgRes).substring(0,100)}`);

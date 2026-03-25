@@ -17,8 +17,8 @@ interface EditorScreenProps {
     isLegacy?: boolean;
     shippingDetails?: any;
     generationStatus?: string;
-    generationError?: string | null;
     onBack?: () => void;
+    total?: number;
 }
 
 const EditorScreen: React.FC<EditorScreenProps> = ({
@@ -32,7 +32,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     shippingDetails,
     generationStatus: legacyGenerationStatus,
     generationError: legacyGenerationError,
-    onBack
+    onBack,
+    total
 }) => {
     // Pipeline Hook
     const {
@@ -47,7 +48,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         storyData,
         shippingDetails || {},
         language,
-        onUpdateStory
+        onUpdateStory,
+        total
     );
 
     // Auto-run if isLegacy is true
