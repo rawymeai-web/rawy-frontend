@@ -22,7 +22,8 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, on
     const productConfig = await getProductSizeById(storyData.size);
     const basePrice = productConfig ? productConfig.price : 29.900;
     const shippingPrice = 1.500; // Updated shipping price
-    const totalPrice = basePrice + shippingPrice;
+    const premiumFeaturePrice = storyData.useSecondCharacter ? 5.000 : 0;
+    const totalPrice = basePrice + shippingPrice + premiumFeaturePrice;
     const bookTitle = t('كتاب أطفال مخصص', 'Custom Children\'s Book') + ` (${storyData.size})`;
 
     const subject = t(`فاتورة وتأكيد طلب Rawy رقم ${orderNumber}`, `Invoice & Confirmation for Rawy Order #${orderNumber}`);
@@ -50,7 +51,7 @@ ${t('الفاتورة', 'INVOICE')}
 ----------------------------------------
 - ${bookTitle}: ${convertPrice(basePrice, currency)}
 - ${t('الشحن:', 'Shipping:')} ${convertPrice(shippingPrice, currency)}
-
+${storyData.useSecondCharacter ? `- ${t('شخصية إضافية:', 'Secondary Character Add-on:')} ${convertPrice(premiumFeaturePrice, currency)}\n` : ''}
 ${t('الإجمالي:', 'Total:')} ${convertPrice(totalPrice, currency)}
 ----------------------------------------
 

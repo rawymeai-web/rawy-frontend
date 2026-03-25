@@ -136,7 +136,7 @@ const themeLibrary: Record<string, ThemeContent> = {
       "Deciding what to keep and what to give away."
     ]
   },
-  'val-sharing': {
+  'val-sharing-toys': {
     heritageContext: "The Tradition of the Shared Plate (Karam).",
     visualStyle: "Warm candlelight, rich textile patterns (Sadu), generous portions.",
     goals: [
@@ -210,7 +210,7 @@ const themeLibrary: Record<string, ThemeContent> = {
       "Looking in the dark without a lantern."
     ]
   },
-  'adv-nature': {
+  'adv-mini-nature': {
     heritageContext: "The Hidden Aflaj in a Palm Grove.",
     visualStyle: "Dappled sunlight through palm leaves, sparkling water, vibrant dragonflies.",
     goals: [

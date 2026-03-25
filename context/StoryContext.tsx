@@ -66,7 +66,7 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const [currency, setCurrency] = useState<Currency>(currencies[0]);
 
     // UI State
-    // Default to 'welcome' as language is now handled in the header
+    // Default to 'welcome' as language is now handled on the welcome screen
     const [screen, setScreen] = useState<Screen>('welcome');
 
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);

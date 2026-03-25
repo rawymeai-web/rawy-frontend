@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { StoryData, Language } from '../types';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
-import * as geminiService from '../services/geminiService';
+import { backendApi } from '../services/backendApi';
 import * as adminService from '../services/adminService';
 import { ART_STYLE_OPTIONS } from '../constants';
 
@@ -20,6 +20,7 @@ interface StylePreview {
     prompt: string;
     status: GenerationStatus;
     imageBase64?: string;
+    secondImageBase64?: string;
     errorMessage?: string;
 }
 
@@ -28,7 +29,8 @@ const StyleCard: React.FC<{
     isSelected: boolean;
     onClick: () => void;
     language: Language;
-}> = ({ preview, isSelected, onClick, language }) => {
+    displayType?: 'primary' | 'secondary';
+}> = ({ preview, isSelected, onClick, language, displayType = 'primary' }) => {
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     return (
         <button
@@ -47,8 +49,23 @@ const StyleCard: React.FC<{
                         <span className="text-xs text-gray-500 mt-2 font-medium animate-pulse">Rendering...</span>
                     </div>
                 )}
-                {preview.status === 'done' && preview.imageBase64 && (
-                    <img src={`data:image/jpeg;base64,${preview.imageBase64}`} alt={preview.name} className="w-full h-full object-cover" />
+                {preview.status === 'done' && (
+                    <div className="w-full h-full p-2">
+                        {displayType === 'primary' && preview.imageBase64 && (
+                            <img
+                                src={`data:image/jpeg;base64,${preview.imageBase64}`}
+                                alt={preview.name}
+                                className="w-full h-full object-cover rounded-lg shadow-sm"
+                            />
+                        )}
+                        {displayType === 'secondary' && preview.secondImageBase64 && (
+                            <img
+                                src={`data:image/jpeg;base64,${preview.secondImageBase64}`}
+                                alt="Second Hero"
+                                className="w-full h-full object-cover rounded-lg shadow-sm"
+                            />
+                        )}
+                    </div>
                 )}
                 {preview.status === 'error' && (
                     <div className="flex flex-col items-center justify-center text-red-500 p-2 text-center h-full w-full absolute inset-0 bg-white/90 z-20">
@@ -88,7 +105,8 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
             status: 'pending'
         }))
     );
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+    const [selectedPrimaryIndex, setSelectedPrimaryIndex] = useState<number | null>(null);
+    const [selectedSecondaryIndex, setSelectedSecondaryIndex] = useState<number | null>(null);
 
     const lastRequestKey = React.useRef<string>("");
 
@@ -146,18 +164,35 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 }
 
                 try {
-                    const { imageBase64 } = await geminiService.generateThemeStylePreview(
-                        storyData.mainCharacter,
-                        undefined,
-                        storyData.theme || "Likeness Portrait",
-                        storyData.selectedStylePrompt,
-                        storyData.childAge || "5",
-                        Math.floor(Math.random() * 1000000)
-                    );
+                    // DEBUG: Log what we're about to send
+                    console.log("=== FRONTEND DEBUG: Before API Call ===");
+                    console.log("storyData.mainCharacter:", {
+                        name: storyData.mainCharacter?.name,
+                        hasImages: !!storyData.mainCharacter?.imageBases64,
+                        imageCount: storyData.mainCharacter?.imageBases64?.length || 0,
+                        firstImageLength: storyData.mainCharacter?.imageBases64?.[0]?.length || 0
+                    });
+                    console.log("storyData.theme:", storyData.theme);
+                    console.log("storyData.themeId:", storyData.themeId);
+                    console.log("storyData.selectedStylePrompt:", storyData.selectedStylePrompt);
+                    console.log("storyData.childAge:", storyData.childAge);
+                    console.log("=== END FRONTEND DEBUG ===");
+
+                    const { imageBase64, secondImageBase64 } = await backendApi.generatePreview({
+                        character: storyData.mainCharacter,
+                        secondCharacter: storyData.useSecondCharacter ? storyData.secondCharacter : undefined,
+                        themeDescription: storyData.theme || "Likeness Portrait",
+                        themeId: storyData.themeId,
+                        stylePrompt: storyData.selectedStylePrompt,
+                        age: storyData.childAge || "5"
+                    }) as any;
 
                     if (isMounted) {
-                        setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'done', imageBase64 } : p));
-                        if (selectedIndex === null) setSelectedIndex(i);
+                        setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'done', imageBase64, secondImageBase64 } : p));
+                        setSelectedPrimaryIndex(prev => prev === null ? i : prev);
+                        if (storyData.useSecondCharacter) {
+                            setSelectedSecondaryIndex(prev => prev === null ? i : prev);
+                        }
                     }
                 } catch (e: any) {
                     console.error(`Preview ${i} failed:`, e);
@@ -173,32 +208,54 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
     }, [storyData.mainCharacter, storyData.selectedStylePrompt]);
 
     const handleNext = async () => {
-        if (selectedIndex === null) return;
-        const selected = previews[selectedIndex];
-        if (!selected.imageBase64) return;
+        if (selectedPrimaryIndex === null) return;
+        if (storyData.useSecondCharacter && selectedSecondaryIndex === null) return;
+
+        const primaryChoice = previews[selectedPrimaryIndex];
+        const secondaryChoice = storyData.useSecondCharacter ? previews[selectedSecondaryIndex!] : null;
+
+        if (!primaryChoice.imageBase64) return;
+        if (storyData.useSecondCharacter && (!secondaryChoice || !secondaryChoice.secondImageBase64)) return;
 
         setIsLocking(true);
         try {
             // Parallel: Get Style Guide AND Detailed Character Description (for consistency)
-            const [guide, charDesc] = await Promise.all([
-                geminiService.generateTechnicalStyleGuide(selected.imageBase64, selected.prompt),
-                geminiService.describeSubject(selected.imageBase64)
+            const [{ guide }, { description: charDesc }] = await Promise.all([
+                backendApi.generateStyleGuide({ imageBase64: primaryChoice.imageBase64, stylePrompt: primaryChoice.prompt }),
+                backendApi.describeSubject({ imageBase64: primaryChoice.imageBase64 })
             ]);
 
             onNext({
-                styleReferenceImageBase64: selected.imageBase64,
+                styleReferenceImageBase64: primaryChoice.imageBase64,
+                secondCharacterImageBase64: secondaryChoice ? secondaryChoice.secondImageBase64 : undefined,
                 technicalStyleGuide: guide,
                 styleSeed: Math.floor(Math.random() * 1000000),
-                // CRITICAL: Save the generated description to the character so prompts use it!
+                // CRITICAL: Save the generated description and the ACTUAL chosen image to imageDNA
                 mainCharacter: {
                     ...storyData.mainCharacter,
-                    description: charDesc
-                }
+                    description: charDesc,
+                    imageDNA: [primaryChoice.imageBase64]
+                },
+                secondCharacter: storyData.secondCharacter ? {
+                    ...storyData.secondCharacter,
+                    imageDNA: [secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64]
+                } : undefined
             });
         } catch (e) {
             console.error("Locking failed:", e);
             // Fallback: Proceed without description if it fails (better than blocking)
-            onNext({ styleReferenceImageBase64: selected.imageBase64 });
+            onNext({
+                styleReferenceImageBase64: primaryChoice.imageBase64,
+                secondCharacterImageBase64: secondaryChoice?.secondImageBase64,
+                mainCharacter: {
+                    ...storyData.mainCharacter,
+                    imageDNA: [primaryChoice.imageBase64]
+                },
+                secondCharacter: storyData.secondCharacter ? {
+                    ...storyData.secondCharacter,
+                    imageDNA: [secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64]
+                } : undefined
+            });
         } finally {
             setIsLocking(false);
         }
@@ -225,19 +282,46 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 </span>
             </div>
 
-            <div className="p-8 bg-white/40 backdrop-blur-xl rounded-3xl shadow-xl border border-white/40">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {previews.map((p, i) => (
-                        <div key={i} className="relative">
-                            <StyleCard preview={p} isSelected={selectedIndex === i} onClick={() => setSelectedIndex(i)} language={language} />
-                            {p.status === 'error' && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-red-50/80 rounded-xl p-2 text-center">
-                                    <p className="text-xs text-red-600 font-bold">{t('فشل التوليد', 'Generation Failed')}</p>
-                                </div>
-                            )}
-                        </div>
-                    ))}
+            <div className="p-8 bg-white/40 backdrop-blur-xl rounded-3xl shadow-xl border border-white/40 space-y-8">
+                <div>
+                    <h3 className="text-xl font-bold text-brand-navy mb-4">
+                        {storyData.useSecondCharacter
+                            ? t(`البطل الأول: ${storyData.mainCharacter.name}`, `Hero 1: ${storyData.mainCharacter.name}`)
+                            : t('اختر نمط الرسم', 'Choose Art Style')}
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {previews.map((p, i) => (
+                            <div key={`primary-${i}`} className="relative">
+                                <StyleCard preview={p} isSelected={selectedPrimaryIndex === i} onClick={() => setSelectedPrimaryIndex(i)} language={language} displayType="primary" />
+                                {p.status === 'error' && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-red-50/80 rounded-xl p-2 text-center">
+                                        <p className="text-xs text-red-600 font-bold">{t('فشل التوليد', 'Generation Failed')}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
+
+                {storyData.useSecondCharacter && (
+                    <div className="pt-8 border-t border-brand-orange/20">
+                        <h3 className="text-xl font-bold text-brand-navy mb-4">
+                            {t(`البطل الثاني: ${storyData.secondCharacter?.name || ''}`, `Hero 2: ${storyData.secondCharacter?.name || ''}`)}
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            {previews.map((p, i) => (
+                                <div key={`secondary-${i}`} className="relative">
+                                    <StyleCard preview={p} isSelected={selectedSecondaryIndex === i} onClick={() => setSelectedSecondaryIndex(i)} language={language} displayType="secondary" />
+                                    {p.status === 'error' && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-red-50/80 rounded-xl p-2 text-center">
+                                            <p className="text-xs text-red-600 font-bold">{t('فشل التوليد', 'Generation Failed')}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="text-center flex flex-col sm:flex-row justify-center items-center gap-6">
@@ -245,7 +329,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 <Button onClick={handleRetry} variant="secondary" className="text-xl px-12 py-4 rounded-2xl shadow-sm text-brand-navy bg-white hover:bg-gray-50">
                     {t('إعادة المحاولة', 'Regenerate All')}
                 </Button>
-                <Button onClick={handleNext} className="text-xl px-12 py-4 rounded-2xl shadow-xl" disabled={selectedIndex === null || isLocking}>
+                <Button onClick={handleNext} className="text-xl px-12 py-4 rounded-2xl shadow-xl" disabled={selectedPrimaryIndex === null || (storyData.useSecondCharacter && selectedSecondaryIndex === null) || isLocking}>
                     {isLocking ? t('جاري القفل...', 'Locking DNA...') : t('اعتماد الأسلوب المختار', 'Lock Art Style')}
                 </Button>
             </div>

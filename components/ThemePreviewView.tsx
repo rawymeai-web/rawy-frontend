@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Language, StoryTheme, Character } from '../types';
 import * as adminService from '../services/adminService';
-import * as geminiService from '../services/geminiService';
+import { backendApi } from '../services/backendApi';
 import { getGuidelineComponentsForTheme } from '../services/storyGuidelines';
 import { ART_STYLE_OPTIONS } from '../constants';
 import { Button } from './Button';
@@ -133,13 +133,12 @@ export const ThemePreviewView: React.FC<{ language: Language }> = ({ language })
         heritageContext?: string
     ) => {
         try {
-            const { imageBase64, prompt } = await geminiService.generateThemeStylePreview(
+            const { imageBase64, prompt } = await backendApi.generatePreview({
                 character,
-                undefined,
                 themeDescription,
                 stylePrompt,
-                "5" // Default age for preview
-            );
+                age: "5" // Default age for preview
+            }) as any;
             setGeneratedPreviews(prev => [...prev, {
                 styleName: styleName,
                 themeName: themeName.replace(/\s/g, '_'),
@@ -318,3 +317,5 @@ export const ThemePreviewView: React.FC<{ language: Language }> = ({ language })
         </div>
     );
 };
+
+export default ThemePreviewView;

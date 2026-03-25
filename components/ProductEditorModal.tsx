@@ -76,8 +76,8 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
             }
         }));
     };
-    
-     const handleDeeplyNestedChange = (section: 'coverContent', subSection: 'barcode' | 'title' | 'format', field: any, value: any) => {
+
+    const handleDeeplyNestedChange = (section: 'coverContent', subSection: 'barcode' | 'title' | 'format', field: any, value: any) => {
         setFormData(prev => ({
             ...prev,
             [section]: {
@@ -96,27 +96,27 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-fade-in-up" onClick={e => e.stopPropagation()}>
                 <form onSubmit={handleSave} className="space-y-6">
                     <h3 className="text-xl font-bold text-brand-navy">{isNew ? 'Add New Product' : 'Edit Product'}</h3>
-                    
+
                     <Section title="General Information">
                         <div>
                             <label className="block text-xs font-medium text-gray-700">Size Name</label>
-                            <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md text-gray-900" required />
+                            <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md text-gray-900" required />
                         </div>
-                         <div>
-                            <label className="block text-xs font-medium text-gray-700">Unique ID (e.g., 20x20)</label>
-                            <input value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} className="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md text-gray-900" required disabled={!isNew} />
-                        </div>
-                        <NumberInput label="Price" value={formData.price} onChange={val => setFormData({...formData, price: val})} step={0.001} />
                         <div>
-                           <label className="block text-xs font-medium text-gray-700">Preview Image URL</label>
-                           <input value={formData.previewImageUrl} onChange={e => setFormData({...formData, previewImageUrl: e.target.value})} className="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md text-gray-900" />
+                            <label className="block text-xs font-medium text-gray-700">Unique ID (e.g., 20x20)</label>
+                            <input value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md text-gray-900" required disabled={!isNew} />
+                        </div>
+                        <NumberInput label="Price" value={formData.price} onChange={val => setFormData({ ...formData, price: val })} step={0.001} />
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700">Preview Image URL</label>
+                            <input value={formData.previewImageUrl} onChange={e => setFormData({ ...formData, previewImageUrl: e.target.value })} className="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md text-gray-900" />
                         </div>
                         <div className="flex items-center pt-2 col-span-full">
                             <input
                                 type="checkbox"
                                 id="isAvailable"
                                 checked={formData.isAvailable}
-                                onChange={e => setFormData({...formData, isAvailable: e.target.checked})}
+                                onChange={e => setFormData({ ...formData, isAvailable: e.target.checked })}
                                 className="h-4 w-4 text-brand-coral border-gray-300 rounded focus:ring-brand-coral"
                             />
                             <label htmlFor="isAvailable" className="mx-2 block text-sm text-gray-900">Is Available for customers</label>
@@ -128,13 +128,13 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
                         <NumberInput label="Total Height" value={formData.cover.totalHeightCm} onChange={v => handleNestedChange('cover', 'totalHeightCm', v)} />
                         <NumberInput label="Spine Width" value={formData.cover.spineWidthCm} onChange={v => handleNestedChange('cover', 'spineWidthCm', v)} />
                     </Section>
-                    
-                     <Section title="Page Dimensions (cm)">
+
+                    <Section title="Page Dimensions (cm)">
                         <NumberInput label="Page Width" value={formData.page.widthCm} onChange={v => handleNestedChange('page', 'widthCm', v)} />
                         <NumberInput label="Page Height" value={formData.page.heightCm} onChange={v => handleNestedChange('page', 'heightCm', v)} />
                     </Section>
 
-                     <Section title="Page Margins (cm)">
+                    <Section title="Page Margins (cm)">
                         <NumberInput label="Top" value={formData.margins.topCm} onChange={v => handleNestedChange('margins', 'topCm', v)} />
                         <NumberInput label="Bottom" value={formData.margins.bottomCm} onChange={v => handleNestedChange('margins', 'bottomCm', v)} />
                         <NumberInput label="Outer" value={formData.margins.outerCm} onChange={v => handleNestedChange('margins', 'outerCm', v)} />
@@ -142,14 +142,14 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
                     </Section>
 
                     <Section title="Cover Content Placement (cm)">
-                       <NumberInput label="Title: From Top" value={formData.coverContent.title.fromTopCm} onChange={v => handleDeeplyNestedChange('coverContent', 'title', 'fromTopCm', v)} />
-                       <NumberInput label="Title: Width" value={formData.coverContent.title.widthCm} onChange={v => handleDeeplyNestedChange('coverContent', 'title', 'widthCm', v)} />
-                       <NumberInput label="Format/Sub: From Top" value={formData.coverContent.format.fromTopCm} onChange={v => handleDeeplyNestedChange('coverContent', 'format', 'fromTopCm', v)} />
-                       <NumberInput label="Format/Sub: Width" value={formData.coverContent.format.widthCm} onChange={v => handleDeeplyNestedChange('coverContent', 'format', 'widthCm', v)} />
-                       <NumberInput label="Barcode: From Right" value={formData.coverContent.barcode.fromRightCm} onChange={v => handleDeeplyNestedChange('coverContent', 'barcode', 'fromRightCm', v)} />
-                       <NumberInput label="Barcode: From Top" value={formData.coverContent.barcode.fromTopCm} onChange={v => handleDeeplyNestedChange('coverContent', 'barcode', 'fromTopCm', v)} />
-                       <NumberInput label="Barcode: Width" value={formData.coverContent.barcode.widthCm} onChange={v => handleDeeplyNestedChange('coverContent', 'barcode', 'widthCm', v)} />
-                       <NumberInput label="Barcode: Height" value={formData.coverContent.barcode.heightCm} onChange={v => handleDeeplyNestedChange('coverContent', 'barcode', 'heightCm', v)} />
+                        <NumberInput label="Title: From Top" value={formData.coverContent.title.fromTopCm} onChange={v => handleDeeplyNestedChange('coverContent', 'title', 'fromTopCm', v)} />
+                        <NumberInput label="Title: Width" value={formData.coverContent.title.widthCm} onChange={v => handleDeeplyNestedChange('coverContent', 'title', 'widthCm', v)} />
+                        <NumberInput label="Format/Sub: From Top" value={formData.coverContent.format.fromTopCm} onChange={v => handleDeeplyNestedChange('coverContent', 'format', 'fromTopCm', v)} />
+                        <NumberInput label="Format/Sub: Width" value={formData.coverContent.format.widthCm} onChange={v => handleDeeplyNestedChange('coverContent', 'format', 'widthCm', v)} />
+                        <NumberInput label="Barcode: From Right" value={formData.coverContent.barcode.fromRightCm} onChange={v => handleDeeplyNestedChange('coverContent', 'barcode', 'fromRightCm', v)} />
+                        <NumberInput label="Barcode: From Top" value={formData.coverContent.barcode.fromTopCm} onChange={v => handleDeeplyNestedChange('coverContent', 'barcode', 'fromTopCm', v)} />
+                        <NumberInput label="Barcode: Width" value={formData.coverContent.barcode.widthCm} onChange={v => handleDeeplyNestedChange('coverContent', 'barcode', 'widthCm', v)} />
+                        <NumberInput label="Barcode: Height" value={formData.coverContent.barcode.heightCm} onChange={v => handleDeeplyNestedChange('coverContent', 'barcode', 'heightCm', v)} />
                     </Section>
 
                     <div className="flex justify-end gap-4 pt-4">
@@ -161,3 +161,5 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
         </div>
     );
 };
+
+export default ProductEditorModal;

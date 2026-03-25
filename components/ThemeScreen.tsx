@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
-import * as adminService from '../services/adminService';
 import { getGuidelineComponentsForTheme } from '../services/storyGuidelines';
-import { getStyleForWriteYourOwn, ART_STYLE_OPTIONS } from '../constants';
+import { getStyleForWriteYourOwn } from '../constants';
 import type { StoryData, Language, StoryTheme } from '../types';
+import { backendApi } from '../services/backendApi';
 
 interface ThemeScreenProps {
   onNext: (data: Partial<StoryData>) => void;
@@ -43,26 +43,28 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ emoji, title, description, isSele
   <button
     onClick={onClick}
     className={`relative p-5 text-center rounded-2xl transition-all duration-300 h-full flex flex-col items-center justify-start group ${isSelected
-      ? 'bg-white shadow-xl ring-4 ring-brand-coral/30 translate-y-[-4px]'
+      ? 'bg-brand-coral text-white shadow-xl ring-4 ring-brand-coral ring-offset-2 scale-[1.04]'
       : 'bg-white/80 hover:bg-white hover:shadow-lg hover:translate-y-[-2px] border border-gray-100 hover:border-brand-baby-blue/30'
       }`}
     aria-pressed={isSelected}
   >
     <div className={`text-5xl mb-4 transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} role="img">{emoji}</div>
-    <h4 className={`font-bold text-lg leading-tight mb-2 transition-colors ${isSelected ? 'text-brand-coral' : 'text-brand-navy group-hover:text-brand-coral'}`}>{title}</h4>
-    <p className="text-sm text-gray-500 leading-snug opacity-90 hidden sm:block">{description}</p>
+    <h4 className={`font-bold text-lg leading-tight mb-2 transition-colors ${isSelected ? 'text-white' : 'text-brand-navy group-hover:text-brand-coral'}`}>{title}</h4>
+    <p className={`text-sm leading-snug opacity-90 hidden sm:block ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>{description}</p>
 
     {isSelected && (
-      <div className="absolute top-3 right-3 w-6 h-6 bg-brand-coral rounded-full flex items-center justify-center">
-        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"></path></svg>
+      <div className="absolute top-3 right-3 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow">
+        <svg className="w-4 h-4 text-brand-coral" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"></path></svg>
       </div>
     )}
   </button>
 );
 
 
+
 const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, language }) => {
   const [themes, setThemes] = useState<StoryTheme[]>([]);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(storyData.themeId || null);
   const [isAdvancedMode, setIsAdvancedMode] = useState(!!storyData.customGoal);
   const [customTitle, setCustomTitle] = useState(storyData.title);
@@ -75,7 +77,13 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const [secondHeroName, setSecondHeroName] = useState((storyData.secondCharacter as any)?.name || '');
 
   useEffect(() => {
-    adminService.getThemes().then(setThemes);
+    backendApi.getCatalog().then((res: any) => {
+      setThemes(res.themes);
+      setIsLoadingCatalog(false);
+    }).catch(err => {
+      console.error("Failed to fetch catalog", err);
+      setIsLoadingCatalog(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -84,18 +92,35 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
     }
   }, [isAdvancedMode, storyData.childAge, customStylePrompt]);
 
-  const handleThemeClick = (themeOption: StoryTheme) => {
-    // Always trigger selection to allow re-rolling logic if we wanted, 
-    // but mainly to set the ID and fetch components.
-    setSelectedThemeId(themeOption.id);
-    setCustomTitle(themeOption.title[language]);
+  const getTranslation = (obj: any, lang: string): string => {
+    if (!obj) return '';
+    if (typeof obj === 'string') return obj;
+    return obj[lang] || obj['en'] || Object.values(obj)[0] || '';
+  };
 
-    // Fetch random goal/challenge for this theme
+  const handleThemeClick = (themeOption: StoryTheme) => {
+    setSelectedThemeId(themeOption.id);
+    setCustomTitle(getTranslation(themeOption.title, language));
+
+    // ALWAYS overwrite details from the library — never let stale order data linger
     const components = getGuidelineComponentsForTheme(themeOption.id);
     if (components) {
       setCustomGoal(components.goal);
       setCustomChallenge(components.challenge);
       setCustomIllustrationNotes(components.illustrationNotes);
+    } else if (themeOption.skeleton) {
+      // Use backend skeleton if available
+      const cores = themeOption.skeleton.storyCores || [];
+      const challenges = themeOption.skeleton.limiters || themeOption.skeleton.catalysts || [];
+      
+      setCustomGoal(cores.length ? cores[Math.floor(Math.random() * cores.length)] : '');
+      setCustomChallenge(challenges.length ? challenges[Math.floor(Math.random() * challenges.length)] : '');
+      setCustomIllustrationNotes(themeOption.visualDNA || '');
+    } else {
+      // Fallback: clear the fields so old order data doesn't show
+      setCustomGoal('');
+      setCustomChallenge('');
+      setCustomIllustrationNotes('');
     }
   };
 
@@ -104,24 +129,26 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const handleNextClick = () => {
     const selectedPredefinedTheme = themes.find(t => t.id === selectedThemeId);
     const finalThemeDescription = selectedPredefinedTheme
-      ? selectedPredefinedTheme.description[language]
-      : `A story where the hero wants to '${customGoal}', but faces the challenge of '${customChallenge}'.`;
+      ? getTranslation(selectedPredefinedTheme.description, language)
+      : `A story where the hero wants to '\${customGoal}', but faces the challenge of '\${customChallenge}'.`;
 
-    // Keep the style from the previous step unless a custom one is specified in advanced mode
     let finalStylePrompt = storyData.selectedStylePrompt;
     if (isAdvancedMode && !selectedThemeId && customStylePrompt) {
       finalStylePrompt = customStylePrompt;
     }
 
+    // Extract Visual DNA string from skeleton
+    const thematicVisualDNA = selectedPredefinedTheme?.visualDNA || "";
+
     onNext({
       title: customTitle,
       theme: finalThemeDescription,
       themeId: selectedPredefinedTheme?.id,
+      themeVisualDNA: thematicVisualDNA, // NEW: Pass the actual visual instructions
       customGoal,
       customChallenge,
       customIllustrationNotes,
       selectedStylePrompt: finalStylePrompt,
-      // Pass the second hero if applicable
       ...(selectedThemeId === 'val-teamwork' && secondHeroName ? {
         secondCharacter: {
           name: secondHeroName,
@@ -134,7 +161,10 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
     });
   };
 
-  const t = (arText: string, enText: string) => language === 'ar' ? arText : enText;
+  const t = (arText: string, enText: string) => {
+    if (language === 'ar') return arText;
+    return enText; // Default to English for UI labels not in the theme object
+  };
 
   const ThemeGrid = ({ themes, categoryTitle, icon }: { themes: StoryTheme[], categoryTitle: string, icon: React.ReactNode }) => (
     <div className="mb-10">
@@ -147,8 +177,8 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
           <ThemeCard
             key={themeOption.id}
             emoji={themeOption.emoji}
-            title={themeOption.title[language]}
-            description={themeOption.description[language]}
+            title={getTranslation(themeOption.title, language)}
+            description={getTranslation(themeOption.description, language)}
             isSelected={selectedThemeId === themeOption.id}
             onClick={() => handleThemeClick(themeOption)}
           />
@@ -159,6 +189,7 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
 
   const adventureThemes = themes.filter(t => t.category === 'adventures');
   const valueThemes = themes.filter(t => t.category === 'values');
+  const otherThemes = themes.filter(t => t.category !== 'adventures' && t.category !== 'values');
   const isCustomMode = selectedThemeId === null;
   const isTeamworkSelected = selectedThemeId === 'val-teamwork';
 
@@ -167,14 +198,23 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
     (!isAdvancedMode && !selectedThemeId) ||
     (isTeamworkSelected && !secondHeroName);
 
+  if (isLoadingCatalog) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-coral"></div>
+        <p className="text-brand-navy font-medium">{t('جاري تحميل المواضيع...', 'Loading Themes...')}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-10">
       <h2 className="text-4xl font-bold text-brand-navy text-center mb-8 drop-shadow-sm">{t('الخطوة الخامسة: موضوع القصة', 'Step 5: Story Theme')}</h2>
       <div className="p-8 bg-white/70 backdrop-blur-md rounded-3xl shadow-xl border border-white/50">
         {valueThemes.length > 0 && <ThemeGrid themes={valueThemes} categoryTitle={t('قيم أخلاقية', 'Values')} icon={<ValuesCategoryIcon />} />}
         {adventureThemes.length > 0 && <ThemeGrid themes={adventureThemes} categoryTitle={t('مغامرات شيقة', 'Exciting Adventures')} icon={<AdventuresCategoryIcon />} />}
+        {otherThemes.length > 0 && <ThemeGrid themes={otherThemes} categoryTitle={t('مواضيع أخرى', 'Other Themes')} icon={<LightbulbIcon />} />}
 
-        {/* Special Input for Teamwork/Siblings Theme */}
         {isTeamworkSelected && (
           <div className="mt-8 mb-8 p-6 bg-brand-baby-blue/10 rounded-2xl border-2 border-brand-baby-blue/30 animate-fade-in">
             <h3 className="text-xl font-bold text-brand-navy mb-4">{t('من هو البطل الثاني؟', 'Who is the Second Hero?')}</h3>
@@ -196,7 +236,6 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
           </Button>
         </div>
 
-        {/* Only show/edit the randomized fields if Advanced Mode is on OR a theme is selected (to show the user what they got) */}
         {isAdvancedMode && (
           <div className="animate-fade-in mt-8">
             <h3 className="text-xl font-bold text-brand-navy mb-4 flex items-center"><LightbulbIcon />{t('تفاصيل القصة', 'Story Details')}</h3>

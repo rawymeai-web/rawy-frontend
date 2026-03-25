@@ -95,7 +95,7 @@ const StyleChoiceScreen: React.FC<StyleChoiceScreenProps> = ({ onNext, onBack, s
                             : 'bg-white text-gray-500 hover:bg-orange-50 hover:text-brand-orange'
                             }`}
                     >
-                        {cat.label[language]}
+                        {(cat.label as any)[language] || cat.label['en']}
                     </button>
                 ))}
             </div>

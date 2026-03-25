@@ -33,11 +33,12 @@ const Section: React.FC<{ title: string; children: React.ReactNode; }> = ({ titl
     </div>
 );
 
-const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = ({ onExit, language }) => {
+export const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = ({ onExit, language }) => {
     const [orderNumber, setOrderNumber] = useState('');
     const [bookTitle, setBookTitle] = useState('');
     const [childAge, setChildAge] = useState('');
     const [childName, setChildName] = useState('');
+    const [secondCharacterName, setSecondCharacterName] = useState<string | undefined>(undefined);
     const [selectedSizeId, setSelectedSizeId] = useState<string>('');
     const [allSizes, setAllSizes] = useState<ProductSize[]>([]);
 
@@ -110,6 +111,7 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
                         if (manifest.storySummary.title) setBookTitle(manifest.storySummary.title);
                         if (manifest.storySummary.childName) setChildName(manifest.storySummary.childName);
                         if (manifest.storySummary.childAge) setChildAge(manifest.storySummary.childAge);
+                        if (manifest.storySummary.secondCharacterName) setSecondCharacterName(manifest.storySummary.secondCharacterName);
                         if (manifest.storySummary.size) {
                             const sid = manifest.storySummary.size;
                             if (allSizes.some(s => s.id === sid)) setSelectedSizeId(sid);
@@ -255,32 +257,40 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
             const coverBlob = await stitchingService.stitchImageWithOverlays(coverBase, overlays);
 
             const spreadBlobs: Blob[] = [];
-            const sw = Math.round(sizeConfig.page.widthCm * 2 * PX_PER_CM);
-            const sh = Math.round(sizeConfig.page.heightCm * PX_PER_CM);
+            const pw = Math.round(sizeConfig.page.widthCm * 2 * PX_PER_CM); // Spread width
+            const ph = Math.round(sizeConfig.page.heightCm * PX_PER_CM);
 
-            // 3mm Strip Logic -> UPDATED TO 25mm (2.5cm)
-            const stripWidthCm = 2.5; // INCREASED: 0.3cm -> 2.5cm
+            // Metadata strip width (3mm or 25mm as requested by user)
+            const stripWidthCm = 2.5; 
             const stripWidthPx = Math.round(stripWidthCm * PX_PER_CM);
-            const totalSpreadWidthPx = sw + stripWidthPx;
+            const totalSpreadWidthPx = pw + stripWidthPx;
 
             for (let i = 0; i < spreadImages.length; i++) {
                 setProcessingStatus(`Stitching spread ${i + 1}...`);
-                const cropped = await cropImageToSize(spreadImages[i].dataUrl, sw, sh);
+                const cropped = await cropImageToSize(spreadImages[i].dataUrl, pw, ph);
                 const sbase = await new Promise<HTMLImageElement>((res) => { const img = new Image(); img.onload = () => res(img); img.src = cropped; });
-                const txt = [storyTexts[i * 2], storyTexts[i * 2 + 1]].filter(Boolean).join('\n\n');
+                
+                // 2:1 Mapping: two story texts per spread
+                const txt1 = storyTexts[i * 2] || '';
+                const txt2 = storyTexts[i * 2 + 1] || '';
                 const overlays: any[] = [];
-                if (txt) {
-                    const el = fileService.createPrintableTextBlockElement(txt, language, i, childAge, childName, true);
-                    overlays.push({ element: el, styles: { position: 'absolute', top: '50%', left: '25%', transform: 'translate(-50%, -50%)', maxWidth: '40%' } });
+
+                if (txt1) {
+                    const el1 = fileService.createPrintableTextBlockElement(txt1, language, i * 2, childAge, childName, true);
+                    overlays.push({ element: el1, styles: { position: 'absolute', top: '50%', left: '25%', transform: 'translate(-50%, -50%)', maxWidth: '35%' } });
+                }
+                if (txt2) {
+                    const el2 = fileService.createPrintableTextBlockElement(txt2, language, i * 2 + 1, childAge, childName, true);
+                    overlays.push({ element: el2, styles: { position: 'absolute', top: '50%', left: '75%', transform: 'translate(-50%, -50%)', maxWidth: '35%' } });
                 }
 
                 // Add Metadata Strip
-                const stripEl = fileService.createMetadataStripElement(orderNumber, i, stripWidthPx, sh);
+                const stripEl = fileService.createMetadataStripElement(orderNumber, i, stripWidthPx, ph);
                 // Position on the far right
                 overlays.push({ element: stripEl, styles: { position: 'absolute', top: '0', right: '0' } });
 
                 // Pass targetWidth to include the strip
-                spreadBlobs.push(await stitchingService.stitchImageWithOverlays(sbase, overlays, totalSpreadWidthPx, sh));
+                spreadBlobs.push(await stitchingService.stitchImageWithOverlays(sbase, overlays, totalSpreadWidthPx, ph));
             }
 
             setProcessingStatus("Generating PDF...");
@@ -295,7 +305,7 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
                 ...sizeConfig,
                 page: {
                     ...sizeConfig.page,
-                    widthCm: sizeConfig.page.widthCm + (stripWidthCm / 2)
+                    widthCm: (sizeConfig.page.widthCm * 2) + stripWidthCm
                 }
             };
 
@@ -305,7 +315,7 @@ const StitchingScreen: React.FC<{ onExit: () => void; language: Language; }> = (
                 coverBlob,
                 spreadBlobs,
                 pdfSizeConfig,
-                { title: bookTitle, childName, childAge },
+                { title: bookTitle, childName, childAge, secondCharacterName },
                 pages,
                 selectedLanguage,
                 orderNumber

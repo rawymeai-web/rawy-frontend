@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import type { StoryData, Language } from '../types';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
-import * as geminiService from '../services/geminiService';
+import { backendApi } from '../services/backendApi';
 import { ART_STYLE_OPTIONS } from '../constants';
 
 interface StyleCharacterScreenProps {
@@ -73,13 +73,12 @@ const StyleCharacterScreen: React.FC<StyleCharacterScreenProps> = ({ onNext, onB
                 setPreviews(prev => prev.map(p => p.name === option.name ? { ...p, status: 'loading' } : p));
 
                 try {
-                    const { imageBase64 } = await geminiService.generateThemeStylePreview(
-                        storyData.mainCharacter,
-                        undefined, // No specific style name arg needed as prompt has it
+                    const { imageBase64 } = await backendApi.generatePreview({
+                        character: storyData.mainCharacter,
                         themeDescription,
-                        option.prompt,
-                        String(storyData.childAge || "5")
-                    );
+                        stylePrompt: option.prompt,
+                        age: String(storyData.childAge || "5")
+                    }) as any;
 
                     if (isMounted) {
                         setPreviews(prev => prev.map(p => p.name === option.name ? { ...p, status: 'done', imageBase64 } : p));

@@ -23,6 +23,9 @@ export const ART_STYLE_OPTIONS = [
   { name: 'Gouache Art', category: 'painterly', prompt: 'A charming mixed-media style combining flat, opaque gouache blocks of color with colored pencil details for texture and shading. Handcrafted and organic.', sampleUrl: '/style-previews/mixed_media_gouache.png' },
   { name: 'Paper Cutout', category: 'textured', prompt: 'A creative style that mimics overlapping colored paper shapes with visible shadows to create a sense of layered depth.', sampleUrl: '/style-previews/paper_cutout.png' },
 
+  // --- PORTALS OF WONDER (PREMIUM DYNAMIC STYLE) ---
+  { name: '✨ Portals of Wonder ✨', category: 'premium', prompt: 'PORTALS_OF_WONDER_DYNAMIC', sampleUrl: '/style-previews/portals_of_wonder.png' },
+
   // --- NEW & STYLIZED ---
   { name: 'Ultra Realistic', category: 'realistic', prompt: 'High-fidelity photography style. 8k resolution, highly detailed textures, realistic lighting and depth of field. Looks like a real photo.', sampleUrl: '/style-previews/ultra_realistic.png' },
   { name: 'Kawaii Cute', category: 'graphic', prompt: 'Super cute Kawaii style. Big sparkly eyes, soft pastel colors, rounded shapes, and a very happy, bubbly atmosphere.', sampleUrl: '/style-previews/kawaii_cute.png' },

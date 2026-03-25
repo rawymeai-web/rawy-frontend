@@ -12,10 +12,12 @@ import { OrderPreviewModal } from './OrderPreviewModal';
 import { ProductEditorModal } from './ProductEditorModal';
 import { ThemeEditorModal } from './ThemeEditorModal';
 import { ThemePreviewView } from './ThemePreviewView';
-import StitchingScreen from './StitchingScreen';
+import { StitchingScreen } from './StitchingScreen';
+import { LegacyProcessModal } from './LegacyProcessModal';
 
 interface AdminScreenProps {
     onExit: () => void;
+    onEditOrder: (order: AdminOrder, isLegacy?: boolean) => void;
     language: Language;
 }
 
@@ -102,7 +104,7 @@ const NavItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => v
     </button>
 );
 
-const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
+const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, language }) => {
     const [view, setView] = useState<AdminView>('orders');
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
     const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -123,7 +125,8 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
 
     const renderView = () => {
         switch (view) {
-            case 'orders': return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} />;
+            case 'orders': return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} onEditOrder={onEditOrder} />;
+            case 'customers': return <CustomersView />;
             case 'bible': return <GuidelinesView />;
             case 'themes': return <ThemesView language={language} />;
             case 'products': return <ProductsView />;
@@ -132,7 +135,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
             case 'themePreview': return <ThemePreviewView language={language} />;
             case 'stitching': return <StitchingScreen onExit={() => setView('orders')} language={language} />;
             case 'metadata': return <MetadataView />;
-            default: return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} />;
+            default: return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} onEditOrder={onEditOrder} />;
         }
     }
 
@@ -143,6 +146,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
                 <Logo />
                 <nav className="space-y-1.5 flex-grow overflow-y-auto no-scrollbar">
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} label="Performance" onClick={() => setView('orders')} isActive={view === 'orders'} />
+                    <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>} label="Customers" onClick={() => setView('customers')} isActive={view === 'customers'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 6.253v11.494m-9-5.747h18" /></svg>} label="Guidelines" onClick={() => setView('bible')} isActive={view === 'bible'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} label="Themes" onClick={() => setView('themes')} isActive={view === 'themes'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M4 6h16M4 12h16m-7 6h7" /></svg>} label="Products" onClick={() => setView('products')} isActive={view === 'products'} />
@@ -165,10 +169,32 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
                         <p className="text-sm text-gray-400 font-medium">System Overview & Controls</p>
                     </div>
 
-                    {/* DB Status Badge */}
-                    <div className={`px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 ${connection?.connected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                        <div className={`w-2 h-2 rounded-full ${connection?.connected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
-                        {connection?.connected ? 'DB Connected' : `DB Error: ${connection?.reason || 'Unknown'}`}
+                    <div className="flex items-center gap-4">
+                        {/* Manual Trigger */}
+                        <Button
+                            onClick={async () => {
+                                try {
+                                    // Pinging baryonic-solstice chron
+                                    await fetch('http://localhost:3000/api/cron');
+                                    alert('Master Scheduler Awakened. Check backend terminal for processing logs.');
+                                } catch (e) {
+                                    alert('Failed to wake scheduler. Make sure backend is running on :3000');
+                                }
+                            }}
+                            variant="primary"
+                            className="!py-2 !px-4 text-[11px] font-black uppercase tracking-widest shadow-md shadow-brand-orange/20"
+                        >
+                            <span className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Wake Master Scheduler
+                            </span>
+                        </Button>
+
+                        {/* DB Status Badge */}
+                        <div className={`px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 ${connection?.connected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            <div className={`w-2 h-2 rounded-full ${connection?.connected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                            {connection?.connected ? 'DB Connected' : `DB Error: ${connection?.reason || 'Unknown'}`}
+                        </div>
                     </div>
                 </header>
 
@@ -183,7 +209,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, language }) => {
     );
 };
 
-const AdminScreen: React.FC<AdminScreenProps> = ({ onExit, language }) => {
+const AdminScreen: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, language }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState('');
     const handleLogin = (e: React.FormEvent) => { e.preventDefault(); if (password === 'admin') setIsAuthenticated(true); else alert('Incorrect password'); };
@@ -203,15 +229,21 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onExit, language }) => {
             </div>
         </div>
     );
-    return <AdminDashboard onExit={onExit} language={language} />;
+    return <AdminDashboard onExit={onExit} onEditOrder={onEditOrder} language={language} />;
 };
 
-const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOrders: () => void }> = ({ orders, language, refreshOrders }) => {
+const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOrders: () => void, onEditOrder: (order: AdminOrder, isLegacy?: boolean) => void }> = ({ orders, language, refreshOrders, onEditOrder }) => {
     const [allOrders, setAllOrders] = useState<AdminOrder[]>(orders);
     const [previewingOrder, setPreviewingOrder] = useState<AdminOrder | null>(null);
+    const [activeTab, setActiveTab] = useState<'confirmed' | 'drafts'>('confirmed');
+    const [isLoading, setIsLoading] = useState(false);
     const [isExporting, setIsExporting] = useState<string | null>(null);
 
-    useEffect(() => { setAllOrders(orders); }, [orders]);
+    useEffect(() => {
+        // Ensure sorted by date descending globally
+        const sorted = [...orders].sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+        setAllOrders(sorted);
+    }, [orders]);
 
     const handleStatusChange = async (orderNumber: string, status: OrderStatus) => {
         await adminService.updateOrderStatus(orderNumber, status);
@@ -221,15 +253,18 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
     const handleDownloadZip = async (order: AdminOrder) => {
         setIsExporting(order.orderNumber);
         try {
-            // Regenerate the package fresh from the stored story data
+            // Fetch full order data because list view omits story_data to save bandwidth
+            const fullOrder = await adminService.getOrderById(order.orderNumber);
+            if (!fullOrder) throw new Error("Could not fetch full order data.");
+
             // FIX: Use the Order's Language if available, otherwise fallback to Admin UI language
-            const targetLanguage = order.storyData.language || language;
-            const zipBlob = await fileService.generatePrintPackage(order.storyData as any, order.shippingDetails, targetLanguage, order.orderNumber);
+            const targetLanguage = fullOrder.storyData.language || language;
+            const zipBlob = await fileService.generatePrintPackage(fullOrder.storyData as any, fullOrder.shippingDetails, targetLanguage, fullOrder.orderNumber);
 
             // Trigger Download
             const link = document.createElement('a');
             link.href = URL.createObjectURL(zipBlob);
-            link.download = `Order_${order.orderNumber}_RECOVERED.zip`;
+            link.download = `Order_${fullOrder.orderNumber}_RECOVERED.zip`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -238,6 +273,32 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
             console.error(e);
         } finally {
             setIsExporting(null);
+        }
+    };
+
+    const handleInspect = async (order: AdminOrder) => {
+        const full = await adminService.getOrderById(order.orderNumber);
+        if (full) setPreviewingOrder(full);
+        else alert("Could not fetch full order details.");
+    }
+
+    const handleEdit = async (order: AdminOrder, isLegacy: boolean = false, isRestart: boolean = false) => {
+        console.log("AdminScreen: handleEdit called", { orderNumber: order.orderNumber, isLegacy, isRestart });
+        try {
+            setIsLoading(true);
+            const fullOrder = await adminService.getOrderById(order.orderNumber);
+            if (fullOrder && fullOrder.storyData) {
+                console.log("AdminScreen: Order fetched, calling onEditOrder", { isLegacy, isRestart });
+                onEditOrder(fullOrder, isLegacy, isRestart);
+            } else {
+                console.warn("AdminScreen: Order or storyData missing", { fullOrder });
+                alert("Could not load order data.");
+            }
+        } catch (error) {
+            console.error("Error fetching order:", error);
+            alert("Failed to load order details.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -263,42 +324,68 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
         }
     };
 
+    const displayOrders = allOrders.filter(o =>
+        activeTab === 'confirmed' ? o.status !== 'Draft Intent' : o.status === 'Draft Intent'
+    );
+
     return (
         <div className="space-y-4 animate-enter-forward">
             {previewingOrder && <OrderPreviewModal order={previewingOrder} onClose={() => setPreviewingOrder(null)} language={language} />}
-            <div className="flex justify-end px-2 gap-2">
-                <Button onClick={async () => {
-                    if (confirm("Sync all local orders to DB?")) {
-                        const count = await adminService.syncLocalOrders();
-                        alert(`Synced ${count} orders to Cloud.`);
-                        refreshOrders();
-                    }
-                }} variant="outline" className="!px-4 !py-2 text-[10px] font-black uppercase border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white">
-                    Cloud Sync
-                </Button>
-                <Button onClick={handleCreateTestOrder} variant="secondary" className="!px-4 !py-2 text-[10px] font-black uppercase bg-gray-200 text-gray-600 hover:bg-gray-300">
-                    + Generate Debug Order
-                </Button>
+            {/* Removed LegacyProcessModal overlay to allow Editor live streaming */}
+            
+            <div className="flex justify-between items-center px-2">
+                <div className="flex bg-gray-100 p-1 rounded-xl">
+                    <button onClick={() => setActiveTab('confirmed')} className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'confirmed' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500 hover:text-gray-700'}`}>Confirmed Orders</button>
+                    <button onClick={() => setActiveTab('drafts')} className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeTab === 'drafts' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500 hover:text-gray-700'}`}>Incomplete Drafts</button>
+                </div>
+                <div className="flex gap-2">
+                    <Button onClick={async () => {
+                        if (confirm("Sync all local orders to DB?")) {
+                            const count = await adminService.syncLocalOrders();
+                            alert(`Synced ${count} orders to Cloud.`);
+                            refreshOrders();
+                        }
+                    }} variant="outline" className="!px-4 !py-2 text-[10px] font-black uppercase border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white">
+                        Cloud Sync
+                    </Button>
+                    <Button onClick={handleCreateTestOrder} variant="secondary" className="!px-4 !py-2 text-[10px] font-black uppercase bg-gray-200 text-gray-600 hover:bg-gray-300">
+                        + Generate Debug Order
+                    </Button>
+                </div>
             </div>
+
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                 <table className="w-full text-xs text-left text-gray-500">
                     <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 border-b">
                         <tr><th className="px-6 py-4">Order Identity</th><th className="px-6 py-4">Customer</th><th className="px-6 py-4">Revenue</th><th className="px-6 py-4">Pipeline Status</th><th className="px-6 py-4 text-center">Protocol</th></tr>
                     </thead>
                     <tbody>
-                        {allOrders.map(order => (
+                        {displayOrders.length === 0 && (
+                            <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-medium">No orders found in this view.</td></tr>
+                        )}
+                        {displayOrders.map(order => (
                             <tr key={order.orderNumber} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                                <td className="px-6 py-5 font-black text-brand-navy">{order.orderNumber}</td>
+                                <td className="px-6 py-5">
+                                    <div className="font-black text-brand-navy">{order.orderNumber}</div>
+                                    <div className="text-[9px] text-gray-400 mt-0.5">{new Date(order.orderDate).toLocaleString()}</div>
+                                </td>
                                 <td className="px-6 py-5 font-medium">{order.customerName}</td>
                                 <td className="px-6 py-5 font-mono font-bold text-brand-teal">{order.total.toFixed(3)}</td>
                                 <td className="px-6 py-5">
                                     <select value={order.status} onChange={(e) => handleStatusChange(order.orderNumber, e.target.value as OrderStatus)} className="p-2 rounded-xl bg-white border border-gray-200 text-[10px] font-bold outline-none focus:ring-2 focus:ring-brand-orange/20">
-                                        <option>New Order</option><option>Processing</option><option>Shipping</option><option>Completed</option>
+                                        <option>Draft Intent</option><option>New Order</option><option>Processing</option><option>Shipping</option><option>Completed</option>
                                     </select>
                                 </td>
                                 <td className="px-6 py-5 flex justify-center gap-2">
-                                    <Button variant="outline" className="!px-4 !py-1.5 text-[9px] font-black uppercase" onClick={() => setPreviewingOrder(order)}>Inspect</Button>
-                                    <Button variant="secondary" className="!px-4 !py-1.5 text-[9px] font-black uppercase" onClick={() => handleDownloadZip(order)} disabled={isExporting === order.orderNumber}>{isExporting === order.orderNumber ? 'Extracting...' : 'Export ZIP'}</Button>
+                                    <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase" onClick={() => handleInspect(order)}>Inspect</Button>
+                                    <Button variant="outline" className="!px-2 !py-1 text-[9px] font-black uppercase border-brand-navy text-brand-navy hover:bg-brand-navy hover:text-white" onClick={() => handleEdit(order)}>Open Editor</Button>
+                                    <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase text-brand-teal hover:bg-brand-teal hover:text-white border-brand-teal" onClick={() => handleEdit(order, true, false)}>Resume Pipeline</Button>
+                                    <Button variant="outline" className="text-pink-500 border-pink-500 hover:bg-pink-50 !px-2 !py-1 text-[9px] font-black uppercase" onClick={() => {
+                                        if (window.confirm(`DANGER: Restart ALL Pipeline phases for ${order.orderNumber}? DNA, Story, and Artwork will be permanently overwritten.`)) {
+                                            handleEdit(order, true, true);
+                                        }
+                                    }}>Restart Pipeline</Button>
+                                    <Button variant="secondary" className="!px-2 !py-1 text-[9px] font-black uppercase" onClick={() => handleDownloadZip(order)} disabled={isExporting === order.orderNumber}>{isExporting === order.orderNumber ? 'Extracting...' : 'Export ZIP'}</Button>
                                 </td>
                             </tr>
                         ))}
@@ -573,5 +660,59 @@ const MetadataView: React.FC = () => {
 // Add to AdminView Type
 // Check line 22 for AdminView type definition update, or casting
 
+
+// -----------------------------------------------------------------
+// Customers View
+// -----------------------------------------------------------------
+const CustomersView: React.FC = () => {
+    const [customers, setCustomers] = useState<AdminCustomer[]>([]);
+
+    useEffect(() => {
+        adminService.getCustomers().then(c => {
+            // Sort by most recent order
+            const sorted = c.sort((a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime());
+            setCustomers(sorted);
+        });
+    }, []);
+
+    return (
+        <div className="space-y-4 animate-enter-forward">
+            <div className="flex justify-between items-center px-2">
+                <h2 className="text-2xl font-black text-brand-navy uppercase tracking-tight">Customer Intelligence</h2>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full text-xs text-left text-gray-500">
+                    <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 border-b">
+                        <tr>
+                            <th className="px-6 py-4">Customer identity</th>
+                            <th className="px-6 py-4">Contact Vector</th>
+                            <th className="px-6 py-4">First Interaction</th>
+                            <th className="px-6 py-4">Last Interaction</th>
+                            <th className="px-6 py-4 text-center">Protocol Executions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {customers.length === 0 && (
+                            <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-medium">No records found.</td></tr>
+                        )}
+                        {customers.map(c => (
+                            <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                                <td className="px-6 py-5 font-black text-brand-navy">{c.name}</td>
+                                <td className="px-6 py-5">
+                                    <div className="font-medium text-gray-700">{c.email}</div>
+                                    <div className="text-[10px] text-gray-400 mt-1">{c.phone}</div>
+                                </td>
+                                <td className="px-6 py-5 font-mono text-[10px]">{c.firstOrderDate ? new Date(c.firstOrderDate).toLocaleDateString() : 'Unknown'}</td>
+                                <td className="px-6 py-5 font-mono text-[10px]">{c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleDateString() : 'Unknown'}</td>
+                                <td className="px-6 py-5 text-center font-black text-brand-teal text-lg">{c.orderCount}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
 
 export default AdminScreen;

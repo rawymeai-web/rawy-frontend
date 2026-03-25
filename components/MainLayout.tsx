@@ -3,15 +3,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import * as adminService from '../services/adminService';
 import * as fileService from '../services/fileService';
 import { convertPrice, type Currency, currencies } from '../services/currencyService';
-import LanguageScreen from './LanguageScreen';
+import { backendApi } from '../services/backendApi';
+import LanguageScreen from './LanguageScreen'; // Keep import but unused for now
 import WelcomeScreen from './WelcomeScreen';
 import PersonalizationScreen from './PersonalizationScreen';
-import ModeSelectionScreen from './ModeSelectionScreen';
 import StyleChoiceScreen from './StyleChoiceScreen';
 import ThemeScreen from './ThemeScreen';
-import WorkflowScreen from './WorkflowScreen';
 import GeneratingScreen from './GeneratingScreen';
 import { UnifiedGenerationScreen } from './UnifiedGenerationScreen';
+import EditorScreen from './EditorScreen'; // NEW
 import PreviewScreen from './PreviewScreen';
 import CheckoutScreen from './CheckoutScreen';
 import ConfirmationScreen from './ConfirmationScreen';
@@ -22,8 +22,10 @@ import PageDecorations from './PageDecorations';
 import PaymentModal from './PaymentModal';
 import OrderStatusModal from './OrderStatusModal';
 import StyleSelectionScreen from './StyleSelectionScreen';
+import SizeScreen from './SizeScreen';
 import { useStory } from '../context/StoryContext';
 import { useWorkflow } from '../context/WorkflowContext';
+import { type StoryData } from '../types';
 
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from './PageTransition';
@@ -66,6 +68,7 @@ const MainLayout: React.FC = () => {
     } = useStoryGeneration(storyData, updateStory);
 
     const [orderNumber, setOrderNumber] = useState('');
+    const [isLegacyMode, setIsLegacyMode] = useState(false);
 
     useEffect(() => {
         document.documentElement.lang = language;
@@ -84,16 +87,11 @@ const MainLayout: React.FC = () => {
                     nextStage();
                 }, delay);
                 return () => clearTimeout(timer);
-            } else if (!isGenerating && !generationProgress) {
-                // Workflow Done, Start Generation
-                startGeneration(
-                    language,
-                    () => setScreen('preview'),
-                    () => { }
-                );
             }
+            // Logic for auto-starting generation is now DEPRECATED.
+            // The backend handles this automatically when order moves to paid_confirmed.
         }
-    }, [screen, workflowStage, isWorkflowLoading, isGenerating, generationProgress, nextStage, startGeneration, language]);
+    }, [screen, workflowStage, isWorkflowLoading, nextStage]);
 
     // Calculate Unified Progress
     // Workflow: 6 stages -> 40% of total
@@ -122,91 +120,192 @@ const MainLayout: React.FC = () => {
 
     const handlePaymentSuccess = useCallback(async (isBypass: boolean = false) => {
         try {
-            const newOrderNumber = 'RWY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-            setOrderNumber(newOrderNumber);
-            if (shippingDetails) {
-                // 1. Save Order to Database
-                await adminService.saveOrder(newOrderNumber, storyData, shippingDetails);
-
-                // 2. Generate Full Zip Package
-                console.log("Generating Print Package...");
-                const zipBlob = await fileService.generatePrintPackage(storyData, shippingDetails, language, newOrderNumber);
-
-                // 3. Upload to Cloud (Supabase) - Try/Catch to not block download
-                try {
-                    console.log("Uploading to Cloud...");
-                    const publicUrl = await fileService.uploadOrderFiles(newOrderNumber, zipBlob);
-                    if (publicUrl) console.log("File Uploaded:", publicUrl);
-                } catch (uploadError) {
-                    console.warn("Cloud Upload Failed (Continuing to Local Download):", uploadError);
-                }
-
-                // 4. Trigger Local Download (For User/Testing)
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(zipBlob);
-                link.download = `Order_${newOrderNumber}_Package.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-            setPaymentModalOpen(false);
-            setScreen('confirmation');
-        } catch (error) {
-            console.error("Payment/Order Error:", error);
-            if (isBypass) {
-                // If bypassing, ignore backend errors (likely demo mode / no supabase connection)
-                console.warn("Bypassing backend error in demo mode.");
-                setPaymentModalOpen(false);
-                setScreen('confirmation');
+            if (storyData.orderId) {
+                console.log("Marking Order as Paid Confirmed:", storyData.orderId);
+                await backendApi.updateDraftOrder({
+                    orderId: storyData.orderId,
+                    status: 'paid_confirmed',
+                    shippingDetails
+                });
             } else {
-                alert("Order creation failed. Please try 'Bypass Payment' if this is a demo.");
+                console.warn("No Order ID found in context! Falling back to legacy flow (or displaying error).");
+                // TODO: Handle no-order scenario gracefully
             }
+
+            setPaymentModalOpen(false);
+            setScreen('confirmation'); // NEW: Skip generation entirely
+
+        } catch (error) {
+            console.error("Payment Confirmation Error:", error);
         }
-    }, [shippingDetails, storyData, language, setPaymentModalOpen, setScreen, setOrderNumber]);
+    }, [shippingDetails, storyData, language, setPaymentModalOpen, setScreen, startWorkflow]);
+
+    const lightenStoryData = (data: StoryData) => {
+        return {
+            ...data,
+            mainCharacter: { ...data.mainCharacter, imageBases64: [], images: [] },
+            secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: [], images: [] } : undefined,
+            coverImageUrl: data.coverImageUrl ? data.coverImageUrl.substring(0, 100) + '...[TRUNCATED]' : undefined,
+            pages: (data.pages || []).map(p => ({ ...p, illustrationUrl: p.illustrationUrl ? p.illustrationUrl.substring(0, 100) + '...[TRUNCATED]' : undefined }))
+        };
+    };
 
     const renderScreen = () => {
         let content;
         switch (screen) {
             case 'welcome':
-                content = <WelcomeScreen onStart={() => setScreen('personalization')} onBack={() => { }} language={language} />;
+            case 'language': // Fallback mapping language to welcome
+                content = <WelcomeScreen onStart={() => setScreen('personalization')} onBack={() => { }} language={language} setLanguage={setLanguage} />;
                 break;
             case 'personalization':
-                content = <PersonalizationScreen onNext={(data) => { updateStory(data); setScreen('modeSelection'); }} onBack={() => setScreen('welcome')} storyData={storyData} language={language} />;
-                break;
-            case 'modeSelection':
-                content = <ModeSelectionScreen onNext={(data) => { updateStory(data); setScreen('styleChoice'); }} onBack={() => setScreen('personalization')} language={language} />;
+                content = <PersonalizationScreen onNext={(data) => { updateStory(data); setScreen('styleChoice'); }} onBack={() => setScreen('welcome')} storyData={storyData} language={language} />;
                 break;
             case 'styleChoice':
-                content = <StyleChoiceScreen onNext={(data) => { updateStory(data); setScreen('theme'); }} onBack={() => setScreen('modeSelection')} storyData={storyData} language={language} />;
+                content = <StyleChoiceScreen onNext={(data) => { updateStory(data); setScreen('theme'); }} onBack={() => setScreen('personalization')} storyData={storyData} language={language} />;
                 break;
             case 'theme':
                 content = <ThemeScreen onNext={(data) => { updateStory(data); setScreen('styleSelection'); }} onBack={() => setScreen('styleChoice')} storyData={storyData} language={language} />;
                 break;
             case 'styleSelection':
-                content = <StyleSelectionScreen onNext={(data) => { updateStory(data); setScreen('unified-generation'); startWorkflow(); }} onBack={() => setScreen('theme')} storyData={storyData} language={language} />;
+                content = <StyleSelectionScreen onNext={async (data) => {
+                    const defaultSize = 'square-20x20';
+                    const defaultSpreadCount = 8;
+                    const updatedStory = {
+                        ...storyData,
+                        ...data,
+                        size: defaultSize,
+                        pages: Array(defaultSpreadCount).fill({})
+                    };
+                    updateStory(updatedStory);
+
+                    // Route to checkout to select subscription & shipping
+                    setScreen('checkout');
+
+                }} onBack={() => setScreen('theme')} storyData={storyData} language={language} />;
+                break;
+            case 'editor':
+                content = <EditorScreen
+                    storyData={storyData}
+                    language={language}
+                    onUpdateStory={updateStory}
+                    onFinalize={async () => {
+                        console.log("Editor Finalized! Triggering Auto-Download...");
+                        let blob;
+                        try {
+                            blob = await fileService.generatePrintPackage(storyData, shippingDetails || {} as any, language, storyData.orderId || 'RWY-UNKNOWN');
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = `Order_${storyData.orderId || 'RWY'}_Package.zip`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            setScreen('preview');
+                        } catch (e: any) {
+                            console.error("Auto-download failed:", e);
+                            throw new Error(e.message || 'Unknown packaging error');
+                        }
+                    }}
+                    isLegacy={isLegacyMode}
+                    shippingDetails={shippingDetails}
+                    isGenerating={isGenerating}
+                    onBack={() => setScreen('admin')}
+                />;
                 break;
             case 'unified-generation':
-                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} quote={currentQuote} onComplete={() => setScreen('preview')} language={language} />;
-                break;
             case 'workflow': // Navigation fallback to unified
-                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} quote={currentQuote} onComplete={() => setScreen('preview')} language={language} />;
-                break;
             case 'generating': // Navigation fallback to unified
-                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} quote={currentQuote} onComplete={() => setScreen('preview')} language={language} />;
+                // Fallback rendering during the workflow stages before editor shows its UI
+                content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} quote={currentQuote} onComplete={() => setScreen('editor')} language={language} onStartWorkflow={startWorkflow} />;
                 break;
             case 'preview':
-                content = <PreviewScreen storyData={storyData} onOrder={() => setScreen('checkout')} onDownloadPreview={() => { }} onRestart={() => { resetStory(); }} onTitleChange={(t) => updateStory({ title: t })} onRegenerate={() => { setScreen('unified-generation'); startWorkflow(); }} language={language} onBack={() => setScreen('unified-generation')} />;
+                content = <PreviewScreen storyData={storyData} onOrder={() => setScreen('confirmation')} onDownloadPreview={() => { }} onRestart={() => { resetStory(); }} onTitleChange={(t) => updateStory({ title: t })} onRegenerate={() => { setScreen('unified-generation'); startWorkflow(); }} language={language} onBack={() => setScreen('unified-generation')} />;
                 break;
             case 'checkout':
-                content = <CheckoutScreen onProceedToPayment={(details) => { setShippingDetails(details); setPaymentModalOpen(true); }} onBack={() => setScreen('preview')} language={language} storyData={storyData} currency={currency} />;
+                content = <CheckoutScreen
+                    onProceedToPayment={async (details, planType, totalAmount) => {
+                        setShippingDetails(details);
+                        // CRITICAL: Explicitly inject the selected language into storyData
+                        const updatedStory = { ...storyData, planType, language };
+                        updateStory(updatedStory);
+
+                        try {
+                            // Prevent "413 Payload Too Large" by stripping raw photo arrays (base64) 
+                            // before sending to the database, since we already saved the generated DNA!
+                            const apiStory = lightenStoryData(updatedStory);
+                            
+                            console.log("Creating Draft Order with intent...");
+                            const res = await backendApi.createDraftOrder({
+                                storyData: apiStory, // Sends lightweight version
+                                customerName: details.name,
+                                customerEmail: details.email,
+                                total: totalAmount
+                            });
+
+                            if (res.success && res.orderId) {
+                                console.log("Draft Created:", res.orderId);
+                                updateStory({ orderId: res.orderId });
+                                setPaymentModalOpen(true);
+                            } else {
+                                alert(`Could not create order: ${res.message || 'Unknown error'}`);
+                            }
+                        } catch (e: any) {
+                            console.error("Draft API Error:", e);
+                            alert(`Error creating order: ${e.message || 'Unknown network error'}. Please check backend logs or connection.`);
+                        }
+                    }}
+                    onBack={() => setScreen('styleSelection')}
+                    language={language}
+                    storyData={storyData}
+                    currency={currency}
+                />;
                 break;
             case 'confirmation':
-                content = <ConfirmationScreen orderNumber={orderNumber} onRestart={() => { resetStory(); }} language={language} shippingDetails={shippingDetails} storyData={storyData} currency={currency} />;
+                content = <ConfirmationScreen orderNumber={storyData.orderId || 'RWY-UNKNOWN'} onRestart={() => { resetStory(); }} language={language} shippingDetails={shippingDetails} storyData={storyData} currency={currency} />;
                 break;
             case 'admin':
-                return <AdminScreen onExit={() => setScreen('welcome')} language={language} />;
+                content = <AdminScreen
+                    onExit={() => setScreen('welcome')}
+                    onEditOrder={(order, isLegacy, isRestart) => {
+                        console.log("MainLayout onEditOrder triggered with:", order.orderNumber, "isLegacy:", isLegacy, "isRestart:", isRestart);
+                        // Explicitly wipe intermediate states to prevent context bleed from previous orders
+                        updateStory({ 
+                            coverImageUrl: '', 
+                            pages: [], 
+                            script: [], 
+                            blueprint: undefined, 
+                            finalPrompts: [], 
+                            ...order.storyData, 
+                            orderId: order.orderNumber 
+                        });
+                        
+                        // CRITICAL: Sync UI Language to match the Customer's chosen Book Language!
+                        if (order.storyData.language) {
+                            setLanguage(order.storyData.language);
+                        }
+
+                        if (order.shippingDetails) setShippingDetails(order.shippingDetails);
+                        setIsLegacyMode(!!isLegacy);
+                        
+                        // If it's a hard restart, we wipe the data
+                        if (isRestart) {
+                           updateStory({ 
+                               coverImageUrl: '', 
+                               pages: [], 
+                               script: [], 
+                               blueprint: undefined, 
+                               finalPrompts: [], 
+                               mainCharacter: { ...order.storyData.mainCharacter, imageDNA: [], description: '' } as any,
+                               orderId: order.orderNumber 
+                           });
+                        }
+
+                        setScreen('editor');
+                    }}
+                    language={language}
+                />;
+                break;
             default:
-                content = <WelcomeScreen onStart={() => setScreen('personalization')} onBack={() => { }} language={language} />;
+                content = <WelcomeScreen onStart={() => setScreen('personalization')} onBack={() => { }} language={language} setLanguage={setLanguage} />;
         }
 
         return (
@@ -230,10 +329,10 @@ const MainLayout: React.FC = () => {
             />
             <main className="flex-grow relative">
                 <PageDecorations />
-                <div className={`relative w-full h-full p-4 sm:p-8 flex flex-col justify-center ${screen === 'unified-generation' ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
+                <div className={`relative w-full h-full p-4 sm:p-8 flex flex-col justify-center ${(screen === 'unified-generation' || screen === 'editor') ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
             </main>
             <Footer language={language} onCheckOrderStatus={() => setOrderStatusModalOpen(true)} />
-            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(currentPrice, currency)} language={language} />
+            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(currentPrice + 1.500 + (storyData.useSecondCharacter ? 5.000 : 0), currency)} language={language} />
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
         </div>
     );

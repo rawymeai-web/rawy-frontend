@@ -187,3 +187,5 @@ export const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ order, onC
     </div>
   );
 };
+
+export default OrderPreviewModal;

@@ -15,10 +15,8 @@ const getJsPDF = () => {
     return null;
 };
 
-// @ts-ignore
-const getHtml2Canvas = () => window.html2canvas;
-// @ts-ignore
-const getJSZip = () => window.JSZip;
+import { toPng } from 'html-to-image';
+import JSZip from 'jszip';
 
 const blobBorderRadii = [
     '47% 53% 70% 30% / 30% 43% 57% 70%',
@@ -86,6 +84,18 @@ function getCoverDimensions(imgW: number, imgH: number, targetW: number, targetH
 }
 
 /**
+ * Gets the natural dimensions of a base64 image.
+ */
+const getImageDimensions = async (base64: string): Promise<{ w: number, h: number }> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.width, h: img.height });
+        img.onerror = () => resolve({ w: 1600, h: 900 }); // fallback
+        img.src = base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
+    });
+};
+
+/**
  * Creates a high-res image of a text blob to be inserted into the PDF.
  * This ensures the PDF blobs look exactly like the UI blobs.
  */
@@ -99,7 +109,7 @@ async function renderTextBlobToImage(
     childName: string = '',
     style: 'clean' | 'box' = 'clean'
 ): Promise<{ dataUrl: string; width: number; height: number }> {
-    const html2canvas = getHtml2Canvas();
+
     const container = document.createElement('div');
     const isAr = language === 'ar';
     container.dir = isAr ? 'rtl' : 'ltr';
@@ -152,10 +162,12 @@ async function renderTextBlobToImage(
     container.innerHTML = finalHtml;
 
     document.body.appendChild(container);
-    // Use scale 3 for crisp text
-    const canvas = await html2canvas(container, { backgroundColor: null, scale: 3 });
+    // Use html-to-image for native text shaping (fixes Arabic)
+    const dataUrl = await toPng(container, { pixelRatio: 3, backgroundColor: null });
+    const canvasObj = new Image();
+    await new Promise(r => { canvasObj.onload = r; canvasObj.src = dataUrl; });
     document.body.removeChild(container);
-    return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height };
+    return { dataUrl, width: canvasObj.naturalWidth, height: canvasObj.naturalHeight };
 }
 
 export const generatePreviewPdf = async (storyData: StoryData, language: Language, highResImages?: imageStore.OrderImages, orderNumber?: string): Promise<Blob> => {
@@ -213,9 +225,9 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             }
         }
 
-        // Use Cover Logic to prevent stretching
-        // Assuming Source Image is 16:9 (approx 1.77)
-        const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
+        // Use dynamic dimensions to prevent stretching
+        const imgDim = await getImageDimensions(cleanB64);
+        const dim = getCoverDimensions(imgDim.w, imgDim.h, pdfW, pdfH);
         try {
             pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
         } catch (e) { console.warn("PDF Cover Add Failed", e); }
@@ -225,7 +237,10 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         // EN: Front is RIGHT half (50% to 100%)
         // AR: Front is LEFT half (0% to 50%)
         const isAr = language === 'ar';
-        const titleB64 = await createTextImage({ title: storyData.title }, language);
+        const subtitle = storyData.useSecondCharacter && storyData.secondCharacter?.name
+            ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter.name}`
+            : storyData.childName;
+        const titleB64 = await createTextImage({ title: storyData.title, subtitle }, language);
 
         // Title Width: 40% of full PDF (80% of front cover)
         const tw = pdfW * 0.4;
@@ -258,13 +273,10 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const stripPxW = 50;
             const stripPxH = 5000; // High enough for vertical text
 
-            const html2canvas = getHtml2Canvas();
-            // Spread Index 0 for Cover
             const metaContainer = createMetadataStripElement(orderNumber, 0, stripPxW, stripPxH);
             document.body.appendChild(metaContainer);
-            const metaCanvas = await html2canvas(metaContainer, { backgroundColor: null, scale: 2 });
+            const metaImg = await toPng(metaContainer, { pixelRatio: 2, backgroundColor: null });
             document.body.removeChild(metaContainer);
-            const metaImg = metaCanvas.toDataURL('image/png');
 
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
 
@@ -309,9 +321,8 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const bcPxH = 36;  // Proportionalish (actually just needs to be distinct)
             const bcEl = createBarcodeStripElement(orderNumber, bcPxW, bcPxH);
             document.body.appendChild(bcEl);
-            const bcCanvas = await html2canvas(bcEl, { backgroundColor: null, scale: 2 });
+            const bcImg = await toPng(bcEl, { pixelRatio: 2, backgroundColor: null });
             document.body.removeChild(bcEl);
-            const bcImg = bcCanvas.toDataURL('image/png');
             pdf.addImage(bcImg, 'PNG', barcodeX, barcodeY, barcodeW, barcodeH);
 
             // B. RENDER LOGO
@@ -319,20 +330,19 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const logoPxH = 200;
             const logoEl = await createRawyLogoElement(logoPxW, logoPxH);
             document.body.appendChild(logoEl);
-            const logoCanvas = await html2canvas(logoEl, { backgroundColor: null, scale: 2 });
+            const logoImg = await toPng(logoEl, { pixelRatio: 2, backgroundColor: null });
             document.body.removeChild(logoEl);
-            const logoImg = logoCanvas.toDataURL('image/png');
             pdf.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH);
         }
     }
 
     // 2. Spreads
-    // 2. Handle Spreads (NOW 1:1 Mapping)
-    const spreads = storyData.pages; // Use ALL pages, as we now generate 1 page = 1 spread
+    // 2. Handle Spreads (Back to 2:1 Mapping)
+    const pageCount = storyData.pages.length;
 
-    for (let i = 0; i < spreads.length; i++) {
+    for (let i = 0; i < pageCount / 2; i++) {
         pdf.addPage();
-        const spread = spreads[i];
+        const spread = storyData.pages[i * 2];
 
         // Get image source
         let illustration = spread.illustrationUrl;
@@ -344,19 +354,21 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
 
         if (illustration && illustration.length > 50) {
             const cleanB64 = illustration.includes(',') ? illustration.split(',')[1] : illustration;
-            // Use Cover Logic
-            const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
+            // Use Cover Logic with dynamic dimensions
+            const imgDim = await getImageDimensions(cleanB64);
+            const dim = getCoverDimensions(imgDim.w, imgDim.h, pdfW, pdfH);
             try {
                 pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
             } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
-        // Draw Text Blobs (Fix Stretching & Positioning)
-        const blocks = spread.textBlocks || [];
-        for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
+        // Draw Text Blobs (Paired Model: i*2 and i*2+1)
+        const p1 = storyData.pages[i * 2];
+        const p2 = storyData.pages[i * 2 + 1];
+        for (const p of [p1, p2].filter(Boolean)) {
+            const blocks = p.textBlocks || [];
+            for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
             const block = blocks[bIdx];
-            const isLeft = spread.textSide === 'left';
-
             // Calculate dynamic font size based on age (UPDATED: Larger Fonts)
             const ageNum = parseInt(storyData.childAge, 10) || 6;
             let fontSize = 48; // Default Base
@@ -373,7 +385,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
                 language,
                 fontSize,
                 storyData.childName,
-                'clean'
+                'box'
             );
 
             // Layout Logic:
@@ -386,24 +398,16 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
                 rectH = rectW * (blobImg.height / blobImg.width);
             }
 
-            // DYNAMIC POSITIONING (User Request: "Not centered 1 location")
-            // Use 5% Margin from edge
-            // ARABIC FIX: Mirror the text placement because the book flow is reversed?
-            // Or if AI generates "text on left", does it mean "Left of Hero"?
-            // If User says "Text covering hero", we should probably just SWAP the side for Arabic.
-            let finalIsLeft = isLeft;
-            if (language === 'ar') {
-                finalIsLeft = !isLeft; // Swap sides for Arabic
-            }
-
-            const rectX = finalIsLeft ? pdfW * 0.05 : pdfW * 0.60;
+            // DYNAMIC POSITIONING
+            const rectX = p.textSide === 'left' ? pdfW * 0.05 : pdfW * 0.60;
 
             // VERTICAL POSITION: Top-Third / Golden Ratio (38%)
             // This prevents the "dead center" look and usually frames nicely above the ground
             const rectY = (pdfH * 0.382) - (rectH / 2);
 
-            if (blobImg && blobImg.dataUrl) {
-                pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);
+                if (blobImg && blobImg.dataUrl) {
+                    pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);
+                }
             }
         }
 
@@ -414,12 +418,11 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const stripPxW = 50;
             const stripPxH = 5000;
 
-            const html2canvas = getHtml2Canvas();
+
             const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
             document.body.appendChild(metaContainer);
-            const metaCanvas = await html2canvas(metaContainer, { backgroundColor: null, scale: 2 });
+            const metaImg = await toPng(metaContainer, { pixelRatio: 2, backgroundColor: null });
             document.body.removeChild(metaContainer);
-            const metaImg = metaCanvas.toDataURL('image/png');
 
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
         }
@@ -432,7 +435,7 @@ export const generateStitchedPdf = async (
     coverBlob: Blob,
     spreadBlobs: Blob[],
     sizeConfig: ProductSize,
-    storyDetails: { title: string, childName: string, childAge: string },
+    storyDetails: { title: string, childName: string, childAge: string, secondCharacterName?: string },
     pages: { text: string }[],
     language: 'en' | 'ar' = 'en',
     orderNumber?: string
@@ -467,14 +470,18 @@ export const generateStitchedPdf = async (
             }
         }
 
-        const dim = getCoverDimensions(1600, 900, pdfW, pdfH);
+        const imgDim = await getImageDimensions(cleanCover);
+        const dim = getCoverDimensions(imgDim.w, imgDim.h, pdfW, pdfH);
         try {
             pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
         } catch (e) { console.warn("PDF Cover Add Failed", e); }
 
         // Add Title Overlay to Cover
         const isAr = language === 'ar';
-        const titleB64 = await createTextImage({ title: storyDetails.title }, language);
+        const subtitle = storyDetails.secondCharacterName
+            ? `${storyDetails.childName} ${isAr ? 'و' : '&'} ${storyDetails.secondCharacterName}`
+            : storyDetails.childName;
+        const titleB64 = await createTextImage({ title: storyDetails.title, subtitle }, language);
 
         const tw = pdfW * 0.4;
         const titleAspect = 1000 / 200;
@@ -495,14 +502,12 @@ export const generateStitchedPdf = async (
             const stripHeightMm = pdfH;
             const stripPxW = 50;
             const stripPxH = 5000;
-            const html2canvas = getHtml2Canvas();
 
             // Strip
             const metaContainer = createMetadataStripElement(orderNumber, 0, stripPxW, stripPxH);
             document.body.appendChild(metaContainer);
-            const metaCanvas = await html2canvas(metaContainer, { backgroundColor: null, scale: 2 });
+            const metaImg = await toPng(metaContainer, { pixelRatio: 2, backgroundColor: null });
             document.body.removeChild(metaContainer);
-            const metaImg = metaCanvas.toDataURL('image/png');
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
 
             // BACK COVER ELEMENTS (Barcode + Logo)
@@ -537,9 +542,8 @@ export const generateStitchedPdf = async (
             const bcPxH = 180; // Proportional for 15mm
             const bcEl = createBarcodeStripElement(orderNumber, bcPxW, bcPxH);
             document.body.appendChild(bcEl);
-            const bcCanvas = await html2canvas(bcEl, { backgroundColor: null, scale: 2 });
+            const bcImg = await toPng(bcEl, { pixelRatio: 2, backgroundColor: null });
             document.body.removeChild(bcEl);
-            const bcImg = bcCanvas.toDataURL('image/png');
             pdf.addImage(bcImg, 'PNG', barcodeX, barcodeY, barcodeW, barcodeH);
 
             // Render Logo
@@ -547,9 +551,8 @@ export const generateStitchedPdf = async (
             const logoPxH = 200;
             const logoEl = await createRawyLogoElement(logoPxW, logoPxH); // ADDED AWAIT
             document.body.appendChild(logoEl);
-            const logoCanvas = await html2canvas(logoEl, { backgroundColor: null, scale: 2 });
+            const logoImg = await toPng(logoEl, { pixelRatio: 2, backgroundColor: null });
             document.body.removeChild(logoEl);
-            const logoImg = logoCanvas.toDataURL('image/png');
             pdf.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH);
         }
     }
@@ -611,13 +614,11 @@ export const generateStitchedPdf = async (
             const stripHeightMm = pdfH;
             const stripPxW = 50;
             const stripPxH = 5000;
-            const html2canvas = getHtml2Canvas();
 
             const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
             document.body.appendChild(metaContainer);
-            const metaCanvas = await html2canvas(metaContainer, { backgroundColor: null, scale: 2 });
+            const metaImg = await toPng(metaContainer, { pixelRatio: 2, backgroundColor: null });
             document.body.removeChild(metaContainer);
-            const metaImg = metaCanvas.toDataURL('image/png');
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
         }
     }
@@ -653,7 +654,7 @@ export const uploadOrderFiles = async (orderNumber: string, zipBlob: Blob): Prom
 
 export const generatePrintPackage = async (storyData: StoryData, shipping: ShippingDetails, language: Language, orderNumber: string) => {
     try {
-        const zip = new (window as any).JSZip();
+        const zip = new JSZip();
 
         // 1. Generate PDF
         const pdfBlob = await generatePreviewPdf(storyData, language, undefined, orderNumber);
@@ -672,13 +673,28 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
 
         // Helper to get Base64 from URL or Raw String
         const getBase64Data = async (input: string): Promise<string> => {
-            if (input.startsWith('http')) {
+            // Support both standard HTTP and local Browser Blob URLs
+            if (input.startsWith('http') || input.startsWith('blob:')) {
                 try {
-                    const resp = await fetch(input);
+                    // Try fetching; blob URLs don't need CORS, but standard ones might
+                    const fetchOptions: RequestInit = input.startsWith('blob:') ? {} : { mode: 'cors' };
+                    const resp = await fetch(input, fetchOptions);
+
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                     const blob = await resp.blob();
-                    return await blobToBase64(blob).then(res => res.split(',')[1]);
+
+                    // Convert blob to base64
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const result = reader.result as string;
+                            resolve(result.includes(',') ? result.split(',')[1] : result);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
                 } catch (e) {
-                    console.error("Failed to fetch image for zip:", input);
+                    console.error("Failed to fetch image for zip. Ensure CORS is open on Supabase bucket:", input, e);
                     return "";
                 }
             }
@@ -688,6 +704,20 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         if (storyData.coverImageUrl) {
             const coverB64 = await getBase64Data(storyData.coverImageUrl);
             if (coverB64) imagesFolder.file("cover.jpg", coverB64, { base64: true });
+        }
+
+        // Add Reference Images (Visual DNA) to the raw_images folder
+        if (storyData.styleReferenceImageUrl) {
+            const ref1UrlB64 = await getBase64Data(storyData.styleReferenceImageUrl);
+            if (ref1UrlB64) imagesFolder.file("reference_main_character.jpg", ref1UrlB64, { base64: true });
+        } else if (storyData.styleReferenceImageBase64) {
+            const ref1B64 = await getBase64Data(storyData.styleReferenceImageBase64);
+            if (ref1B64) imagesFolder.file("reference_main_character.jpg", ref1B64, { base64: true });
+        }
+
+        if (storyData.secondCharacterImageBase64) {
+            const ref2B64 = await getBase64Data(storyData.secondCharacterImageBase64);
+            if (ref2B64) imagesFolder.file("reference_secondary_character.jpg", ref2B64, { base64: true });
         }
 
         // Use Promise.all for parallel fetching with better error handling
@@ -705,7 +735,30 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
 
         // 4. Workflow Artifacts (Debug/Re-creation)
         const artifactsFolder = zip.folder("workflow_artifacts");
+
+        // --- 0. Store Visual DNA Prompts used to build Reference Images ---
+        let dnaPrompts = `VISUAL DNA PROMPTS\n=================\n\n`;
+        dnaPrompts += `--- OVERARCHING ART STYLE ---\n`;
+        dnaPrompts += `Selected Style Name: ${storyData.selectedStyleNames?.join(', ') || 'Custom'}\n`;
+        dnaPrompts += `Style Prompt: ${storyData.selectedStylePrompt || 'None'}\n`;
+        if (storyData.technicalStyleGuide) dnaPrompts += `Technical Guide: ${storyData.technicalStyleGuide}\n`;
+
+        dnaPrompts += `\n--- MAIN CHARACTER DEFINITION ---\n`;
+        dnaPrompts += `Name: ${storyData.mainCharacter.name}\n`;
+        dnaPrompts += `Raw Description: ${storyData.mainCharacter.description}\n`;
+        if (storyData.mainCharacter.refinedDescription) dnaPrompts += `Refined AI Prompt: ${storyData.mainCharacter.refinedDescription}\n`;
+
+        if (storyData.useSecondCharacter && storyData.secondCharacter) {
+            dnaPrompts += `\n--- SECONDARY CHARACTER DEFINITION ---\n`;
+            dnaPrompts += `Name: ${storyData.secondCharacter.name}\n`;
+            dnaPrompts += `Raw Description: ${storyData.secondCharacter.description}\n`;
+            if (storyData.secondCharacter.refinedDescription) dnaPrompts += `Refined AI Prompt: ${storyData.secondCharacter.refinedDescription}\n`;
+        }
+
+        artifactsFolder.file("0_visual_dna_prompts.txt", dnaPrompts);
         if (storyData.blueprint) artifactsFolder.file("1_blueprint.json", JSON.stringify(storyData.blueprint, null, 2));
+        if (storyData.rawScript) artifactsFolder.file("2a_raw_script.json", JSON.stringify(storyData.rawScript, null, 2));
+        if (storyData.pages && storyData.pages.length > 0) artifactsFolder.file("2b_edited_script.json", JSON.stringify(storyData.pages.map(p => ({ spreadNumber: p.pageNumber, text: p.text })), null, 2));
         if (storyData.spreadPlan) artifactsFolder.file("3_visual_plan.json", JSON.stringify(storyData.spreadPlan, null, 2));
         if (storyData.finalPrompts) artifactsFolder.file("5_prompts.json", JSON.stringify(storyData.finalPrompts, null, 2));
 
@@ -743,6 +796,7 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
                 theme: storyData.theme,
                 childName: storyData.childName,
                 childAge: storyData.childAge, // Added for Stitcher
+                secondCharacterName: storyData.useSecondCharacter && storyData.secondCharacter ? storyData.secondCharacter.name : undefined,
                 size: storyData.size,         // Added for Stitcher
                 pageCount: storyData.pages.length
             },
@@ -856,7 +910,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
     });
 };
 
-export async function createTextImage(titleData: { title: string }, lang: Language): Promise<string> {
+export async function createTextImage(titleData: { title: string, subtitle?: string }, lang: Language): Promise<string> {
     // Ensure font is loaded for High-Res Capture
     const fontLink = document.createElement('link');
     // Load ALL necessary fonts: Luckiest Guy (En), Tajawal (Ar UI), Amiri (Ar Body)
@@ -866,7 +920,7 @@ export async function createTextImage(titleData: { title: string }, lang: Langua
     // Wait a moment for font to load (heuristic) - in real prod use document.fonts.ready
     await document.fonts.ready;
 
-    const html2canvas = getHtml2Canvas();
+
     const container = document.createElement('div');
 
     // Typography Logic
@@ -884,14 +938,21 @@ export async function createTextImage(titleData: { title: string }, lang: Langua
     // Let's keep Arabic straight for readability of connected letters
     const transform = isEn ? 'rotate(-2deg)' : 'none';
 
-    container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:${color};background:transparent;font-weight:900;text-shadow:${textShadow};padding:20px;text-align:center;width:1000px;line-height:1.1;font-size:90px;text-transform:uppercase;letter-spacing:${letterSpacing};transform:${transform};`;
+    container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:${color};background:transparent;text-shadow:${textShadow};padding:20px;text-align:center;width:1000px;text-transform:uppercase;letter-spacing:${letterSpacing};transform:${transform};display:flex;flex-direction:column;align-items:center;`;
 
     container.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    container.innerHTML = titleData.title;
+    container.innerHTML = `
+        <div style="font-weight:900;line-height:1.1;font-size:90px;">
+            ${titleData.title}
+        </div>
+        ${titleData.subtitle ? `<div style="font-weight:700;line-height:1.2;font-size:45px;margin-top:20px;opacity:0.95;">
+            ${titleData.subtitle}
+        </div>` : ''}
+    `;
     document.body.appendChild(container);
-    const canvas = await html2canvas(container, { backgroundColor: null, scale: 2 });
+    const dataUrl = await toPng(container, { pixelRatio: 2, backgroundColor: null });
     document.body.removeChild(container);
-    return canvas.toDataURL('image/png');
+    return dataUrl;
 }
 
 export function createBarcodeHtmlElement(orderNumber: string, width: number, height: number): HTMLElement {
@@ -963,7 +1024,7 @@ export async function createRawyLogoElement(width: number, height: number): Prom
     // Use Image Logo instead of Text
     const logoIcon = new Image();
     logoIcon.src = '/logo-icon.png';
-    logoIcon.style.cssText = "height: 100%; width: auto; object-fit: contain;";
+    logoIcon.style.cssText = "height: 70%; max-width: 50%; object-fit: contain;";
 
     // Improve loading reliability for PDF generation
     await new Promise((resolve) => {
@@ -973,7 +1034,7 @@ export async function createRawyLogoElement(width: number, height: number): Prom
 
     const logoText = new Image();
     logoText.src = '/logo-text.png';
-    logoText.style.cssText = "height: 60%; width: auto; object-fit: contain;";
+    logoText.style.cssText = "height: 40%; max-width: 50%; object-fit: contain;";
 
     await new Promise((resolve) => {
         logoText.onload = resolve;
@@ -1017,6 +1078,6 @@ export function createBarcodeStripElement(orderNumber: string, width: number, he
 }
 
 // DEPRECATED: Old Back Cover Element (Kept for safety if referenced elsewhere, though unlikely)
-export function createBackCoverElement(orderNumber: string, width: number, height: number): HTMLElement {
-    return createRawyLogoElement(width, height);
+export async function createBackCoverElement(orderNumber: string, width: number, height: number): Promise<HTMLElement> {
+    return await createRawyLogoElement(width, height);
 }

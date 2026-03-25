@@ -1,4 +1,3 @@
-
 export type Screen =
   | 'language'
   | 'welcome'
@@ -11,6 +10,7 @@ export type Screen =
   | 'workflow'
   | 'generating'
   | 'unified-generation'
+  | 'editor' // NEW: The spread editor and generation view
   | 'preview'
   | 'debug-view' // NEW: For showing the live logs
   | 'checkout'
@@ -18,14 +18,16 @@ export type Screen =
   | 'admin'
   | 'orderStatus';
 
-export type Language = 'ar' | 'en';
+export type Language = 'ar' | 'en' | 'de' | 'es' | 'fr' | 'pt' | 'it' | 'ru' | 'ja' | 'tr';
 
 export interface Character {
   name: string;
   type: 'person' | 'object';
   age?: string;
+  gender?: 'boy' | 'girl'; // NEW: For Second Character pronoun logic
   images: File[];
   imageBases64: string[];
+  imageDNA?: string[];
   description: string;
   refinedDescription?: string;
   relationship?: string;
@@ -85,13 +87,29 @@ export interface StoryBlueprint {
   };
 }
 
-export interface StoryTheme {
-  id: string;
+export interface ThemeVariant {
   title: { ar: string; en: string; };
   description: { ar: string; en: string; };
+  skeleton: {
+    storyCores: string[];
+    catalysts: string[];
+    limiters: string[];
+    themeVisualDNA: string[];
+    settingMandates: string[];
+  };
+}
+
+export interface StoryTheme {
+  id: string;
+  title: { ar: string; en: string;[key: string]: string | undefined };
+  description: { ar: string; en: string;[key: string]: string | undefined };
   emoji: string;
   category: 'values' | 'adventures' | 'custom';
   visualDNA: string;
+  variants?: {
+    younger: ThemeVariant; // Ages 1-5
+    older: ThemeVariant;   // Ages 6+
+  };
   skeleton: {
     storyCores: string[];
     catalysts: string[];
@@ -145,9 +163,14 @@ export interface CoverDebugImages {
 export interface StoryData {
   childName: string;
   childAge: string;
+  childGender?: 'boy' | 'girl'; // NEW: Captured conditionally for age >= 6
+  parentName?: string; // NEW: Capture parent name early
+  parentEmail?: string; // NEW: Capture parent email early
   title: string;
   theme: string;
   themeId?: string;
+  occasion?: string; // NEW: Special occasion like Birthday, Sibling etc.
+  themeVisualDNA?: string; // NEW: Thematic visual instructions (e.g. "Indigo and gold, Mashrabiya moon motifs")
   storyMode?: 'classic' | 'portals';
   mainCharacter: Character;
   secondCharacter?: Character;
@@ -164,14 +187,21 @@ export interface StoryData {
   customChallenge?: string;
   customIllustrationNotes?: string;
   blueprint?: StoryBlueprint;
+  script?: any[]; // NEW: The array of spread texts
+  rawScript?: any[]; // NEW: For logging the initial draft vs edited draft
   spreadPlan?: SpreadDesignPlan;
   finalPrompts?: string[];
   styleReferenceImageBase64?: string;
+  secondCharacterImageBase64?: string; // NEW: Hosted / Raw base64 for secondary character DNA
+  styleReferenceImageUrl?: string; // NEW: Hosted URL for the DNA image
   // Added optional fields for debug and comparison
   coverDebugImages?: CoverDebugImages;
   selectedDebugMethods?: string[];
   workflowLogs?: WorkflowLog[];
   language?: Language;
+  userId?: string;
+  orderId?: string; // NEW: Track the backend order ID
+  planType?: 'one_time' | 'monthly' | 'yearly'; // NEW: Track subscription choice
 }
 
 export interface WorkflowLog {
@@ -183,7 +213,7 @@ export interface WorkflowLog {
   durationMs: number;
 }
 
-export type OrderStatus = 'New Order' | 'Processing' | 'Shipping' | 'Completed';
+export type OrderStatus = 'New Order' | 'Processing' | 'Shipping' | 'Completed' | 'draft' | 'pending_payment' | 'paid' | 'processing' | 'shipped' | 'cancelled' | 'failed' | 'paid_confirmed' | 'queued' | 'theme_assigned' | 'story_generating' | 'story_ready' | 'illustrations_generating' | 'illustrations_ready' | 'book_compiling' | 'softcopy_ready' | 'awaiting_preview_approval' | 'sent_to_print' | 'printing' | 'delivered' | 'on_hold';
 
 export interface AdminCustomer {
   id: string;
@@ -279,4 +309,93 @@ export interface StoryPlan {
     objectName: string;
     description: string;
   }[];
+}
+
+// ==========================================
+// SUBSCRIPTION PIPELINE TYPES
+// ==========================================
+
+export type DbOrderStatus =
+  | 'draft' | 'pending_payment' | 'paid'
+  | 'paid_confirmed' | 'queued' | 'theme_assigned'
+  | 'story_generating' | 'story_ready'
+  | 'illustrations_generating' | 'illustrations_ready'
+  | 'book_compiling' | 'softcopy_ready'
+  | 'awaiting_preview_approval' | 'sent_to_print'
+  | 'printing' | 'shipped' | 'delivered'
+  | 'failed' | 'on_hold' | 'cancelled';
+
+export type SubscriptionStatus = 'active' | 'payment_retry' | 'paused' | 'cancelled' | 'expired';
+export type SubscriptionPlan = 'monthly' | 'yearly';
+export type JobStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+export interface Hero {
+  id: string;
+  user_id: string;
+  name: string;
+  date_of_birth: string;
+  dna_image_url?: string;
+  created_at?: string;
+}
+
+export interface HeroPreferences {
+  hero_id: string;
+  preferred_theme_tags: string[];
+  blocked_theme_tags: string[];
+  style_mode: 'fixed' | 'rotate';
+  style_reference_image_base64?: string;
+  updated_at?: string;
+}
+
+export interface Theme {
+  id: string;
+  title: string;
+  description?: string;
+  visual_dna_prompt: string;
+  tags: string[];
+  active_from: string;
+  active_to?: string;
+}
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  hero_id: string;
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  stripe_subscription_id?: string;
+  shipping_address_id?: string;
+  next_billing_date: string;
+}
+
+export interface HeroThemeHistory {
+  id: string;
+  hero_id: string;
+  theme_id: string;
+  subscription_id?: string;
+  order_id?: string;
+  assigned_at?: string;
+}
+
+export interface OrderJob {
+  id: string;
+  order_id: string;
+  job_type: 'story' | 'illustration' | 'compilation' | 'print_handoff';
+  status: JobStatus;
+  attempts: number;
+  started_at?: string;
+  finished_at?: string;
+  error_message?: string;
+  worker_name?: string;
+  artifact_refs?: Record<string, any>;
+}
+
+export interface EventAuditLog {
+  id: string;
+  event_type: string;
+  order_id?: string;
+  subscription_id?: string;
+  admin_id?: string;
+  details?: Record<string, any>;
+  created_at?: string;
 }

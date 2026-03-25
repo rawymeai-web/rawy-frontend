@@ -17,9 +17,10 @@ interface UnifiedGenerationScreenProps {
     onComplete: () => void;
     language: Language;
     quote?: string;
+    onStartWorkflow?: () => void; // NEW: Trigger for generation
 }
 
-export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = ({ progress, statusMessage, onComplete, language, quote }) => {
+export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = ({ progress, statusMessage, onComplete, language, quote, onStartWorkflow }) => {
     const { storyData } = useStory();
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -63,7 +64,14 @@ export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = (
                     <div className="w-12 opacity-50"><Logo /></div>
                     <div className="flex-1 space-y-2">
                         <div className="flex justify-between items-baseline">
-                            <h2 className="text-xl font-black text-brand-navy tracking-tight">{statusMessage}</h2>
+                            <div className="flex flex-col">
+                                <h2 className="text-xl font-black text-brand-navy tracking-tight">{statusMessage}</h2>
+                                {storyData.orderId && (
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest -mt-1">
+                                        {t('رقم الطلب', 'Order Number')}: {storyData.orderId}
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-2xl font-black text-brand-orange font-mono">{Math.round(progress)}%</span>
                         </div>
                         <div className="h-4 bg-gray-100 rounded-full overflow-hidden shadow-inner border border-black/5">
@@ -166,33 +174,30 @@ export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = (
                             </p>
                         </div>
 
-                        <form onSubmit={submitContactInfo} className="space-y-4 text-left">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">{t('البريد الإلكتروني', 'Email')}</label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-brand-coral focus:outline-none"
-                                    placeholder="name@example.com"
-                                    required
-                                />
+                        <div className="space-y-4 pt-2">
+                            <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-3">
+                                <div className="text-2xl">✅</div>
+                                <div className="text-left">
+                                    <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">{t('تم تأكيد الدفع', 'Payment Confirmed')}</p>
+                                    <p className="text-lg font-black text-brand-navy font-mono tracking-tight">{storyData.orderId}</p>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">{t('رقم الهاتف', 'Phone Number')}</label>
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={e => setPhone(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-brand-coral focus:outline-none"
-                                    placeholder="+123..."
-                                    required
-                                />
-                            </div>
-                            <Button type="submit" className="w-full py-4 rounded-xl text-lg shadow-xl mt-2">
-                                {t('ابدأ المغامرة!', 'Start Adventure!')}
+
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                {t('بطلنا جاهز للمغامرة! اضغط أدناه لبدء صنع القصة السحرية.', 'Our hero is ready! Click below to start crafting your magical story.')}
+                            </p>
+
+                            <Button
+                                onClick={() => {
+                                    setShowPopup(false);
+                                    onStartWorkflow?.();
+                                    onComplete(); // Jump straight to Editor Screen
+                                }}
+                                className="w-full py-4 rounded-xl text-lg shadow-xl mt-2 animate-pulse"
+                            >
+                                {t('ابدأ المغامرة السحرية!', 'Start Magical Adventure!')}
                             </Button>
-                        </form>
+                        </div>
                     </div>
                 </div>
             )}

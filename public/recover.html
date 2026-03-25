@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Recover Order Script</title>
+</head>
+
+<body>
+    <h1>Recovering RWY-XEUWLDJ9X</h1>
+    <pre id="output">Loading...</pre>
+
+    <script>
+        const supabaseUrl = 'https://ofsznchhhymfowdtnuux.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mc3puY2hoaHltZm93ZHRudXV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTgzMTU4MTcsImV4cCI6MjAzMzg5MTgxN30.HH9Q8bDlPuHxWIvjoopGEhD89Q8bDlPuHxWIvjoopGEhD8';
+
+        async function extractOrder(orderNumber) {
+            // Hit the local Next.js proxy on port 3000
+            const url = `http://localhost:3000/api/recover?order_number=${orderNumber}`;
+            document.getElementById('output').textContent += `\nFetching from proxy: ${url}`;
+
+            try {
+                const response = await fetch(url);
+
+                const json = await response.json();
+                if (json) {
+                    const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+                    const blobUrl = URL.createObjectURL(blob);
+
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.href = blobUrl;
+                    downloadAnchorNode.download = `recovered_order_${orderNumber}.json`;
+
+                    document.body.appendChild(downloadAnchorNode);
+                    downloadAnchorNode.click();
+
+                    setTimeout(() => {
+                        document.body.removeChild(downloadAnchorNode);
+                        URL.revokeObjectURL(blobUrl);
+                    }, 100);
+
+                    document.getElementById('output').textContent += `\n\nSuccess! Check your downloads for recovered_order_${orderNumber}.json`;
+                } else {
+                    document.getElementById('output').textContent += '\n\nOrder not found or no data returned.';
+                }
+            } catch (e) {
+                document.getElementById('output').textContent += `\n\nError: ${e.message}`;
+            }
+        }
+
+        extractOrder('RWY-XEUWLDJ9X');
+    </script>
+</body>
+
+</html>

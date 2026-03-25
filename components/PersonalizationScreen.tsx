@@ -39,13 +39,22 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
     e.preventDefault();
 
     const normalizedChildName = normalizeName(localData.childName);
+    const normalizedParentName = normalizeName(localData.parentName || '');
     const normalizedMainCharName = normalizeName(localData.mainCharacter.name);
     const normalizedSecondCharName = localData.secondCharacter
       ? normalizeName(localData.secondCharacter.name)
       : '';
 
-    const { childAge, mainCharacter, useSecondCharacter, secondCharacter } = localData;
+    const { childAge, parentEmail, mainCharacter, useSecondCharacter, secondCharacter } = localData;
 
+    if (!normalizedParentName.trim()) {
+      alert(language === 'ar' ? 'الرجاء إدخال اسم الوالد/الأم.' : "Please enter the parent's full name.");
+      return;
+    }
+    if (!parentEmail?.trim() || !parentEmail.includes('@')) {
+      alert(language === 'ar' ? 'الرجاء إدخال بريد إلكتروني صحيح.' : "Please enter a valid email address.");
+      return;
+    }
     if (!normalizedChildName.trim()) {
       alert(language === 'ar' ? 'الرجاء إدخال اسم الطفل.' : "Please enter the child's name.");
       return;
@@ -54,6 +63,14 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
       alert(language === 'ar' ? 'الرجاء إدخال عمر الطفل.' : "Please enter the child's age.");
       return;
     }
+
+    // NEW: Validation for gender if age >= 6
+    const numericAge = parseInt(childAge, 10);
+    if (!isNaN(numericAge) && numericAge >= 6 && !localData.childGender) {
+      alert(language === 'ar' ? 'الرجاء تحديد ما إذا كان البطل ولداً أم بنتاً للاستمرار.' : "Please select if the hero is a boy or a girl to continue.");
+      return;
+    }
+
     if (!normalizedMainCharName.trim()) {
       alert(language === 'ar' ? 'الرجاء إدخال اسم الشخصية الرئيسية.' : "Please enter the main character's name.");
       return;
@@ -92,22 +109,65 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
   return (
-    <form onSubmit={handleNext} className="max-w-3xl mx-auto space-y-8 pb-8" noValidate>
-      <div className="text-center space-y-2">
-        <h2 className="text-4xl font-bold text-brand-navy drop-shadow-sm">{t('الخطوة الأولى: التخصيص', 'Step 1: Personalization')}</h2>
-        <p className="text-lg text-brand-navy/80 font-medium">
+    <form onSubmit={handleNext} className="w-full max-w-6xl mx-auto space-y-4 pb-4 px-2" noValidate>
+      <div className="text-center space-y-1 mb-2">
+        <h2 className="text-3xl font-bold text-brand-navy drop-shadow-sm">{t('الخطوة الأولى: التخصيص', 'Step 1: Personalization')}</h2>
+        <p className="text-base text-brand-navy/80 font-medium">
           {t('أخبرنا قليلاً عن بطل القصة.', 'Tell us a little about the hero of the story.')}
         </p>
       </div>
 
-      {/* Glassmorphism Container 1 */}
-      <div className="p-8 bg-white/70 backdrop-blur-md rounded-3xl shadow-xl border border-white/50 space-y-6">
-        <h3 className="text-2xl font-bold text-brand-coral flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-          {t('معلومات الطفل', "Child's Information")}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left Column: Customer & Child Info */}
+        <div className="space-y-4">
+          {/* Customer Information Section */}
+          <div className="p-5 bg-brand-navy/5 backdrop-blur-md rounded-2xl shadow-md border border-brand-navy/10 space-y-4">
+        <h3 className="text-2xl font-bold text-brand-navy flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+          {t('معلومات العميل', "Customer Information")}
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="parentName" className="block text-sm font-bold text-gray-700 mb-1">{t('اسم الوالد/الأم الكامل', "Parent's Full Name")}</label>
+            <input
+              type="text"
+              id="parentName"
+              value={localData.parentName || ''}
+              onChange={(e) => setLocalData({ ...localData, parentName: e.target.value })}
+              className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900 placeholder-gray-400"
+              placeholder={t('مثال: شادي أيمن', 'Example: Shady Ayman')}
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="parentEmail" className="block text-sm font-bold text-gray-700 mb-1">{t('البريد الإلكتروني', "Email Address")}</label>
+            <input
+              type="email"
+              id="parentEmail"
+              value={localData.parentEmail || ''}
+              onChange={(e) => setLocalData({ ...localData, parentEmail: e.target.value })}
+              className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900 placeholder-gray-400"
+              placeholder={t('مثال: name@example.com', 'Example: name@example.com')}
+              required
+            />
+          </div>
+        </div>
+        <p className="text-xs text-brand-navy/60">
+          {t('* سنستخدم هذا البريد لإرسال رابط القصة وتفاصيل الطلب.', '* We will use this email to send the story link and order details.')}
+        </p>
+      </div>
+
+          </div>
+
+          {/* Child Information Section */}
+          <div className="p-5 bg-white/70 backdrop-blur-md rounded-2xl shadow-md border border-white/50 space-y-4">
+            <h3 className="text-xl font-bold text-brand-coral flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              {t('معلومات الطفل', "Child's Information")}
+            </h3>
+
+            <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="childName" className="block text-sm font-bold text-gray-700 mb-1">{t('اسم الطفل الكامل', "Child's Full Name")}</label>
             <input
@@ -135,14 +195,52 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
             />
           </div>
         </div>
+
+        {/* NEW: Conditional Gender Dropdown for Age >= 6 */}
+        {parseInt(localData.childAge, 10) >= 6 && (
+          <div className="animate-fade-in">
+            <label htmlFor="childGender" className="block text-sm font-bold text-gray-700 mb-1">
+              {t('جنس البطل (مهم لدقة القصة)', "Hero's Gender (Important for story accuracy)")}
+            </label>
+            <select
+              id="childGender"
+              value={localData.childGender || ''}
+              onChange={(e) => setLocalData({ ...localData, childGender: e.target.value as 'boy' | 'girl' })}
+              className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900"
+              required
+            >
+              <option value="" disabled>{t('اختر ولد أو بنت...', 'Select boy or girl...')}</option>
+              <option value="boy">{t('ولد', 'Boy (He/Him)')}</option>
+              <option value="girl">{t('بنت', 'Girl (She/Her)')}</option>
+            </select>
+          </div>
+        )}
       </div>
 
-      {/* Glassmorphism Container 2 */}
-      <div className="p-8 bg-white/70 backdrop-blur-md rounded-3xl shadow-xl border border-white/50 space-y-6">
-        <h3 className="text-2xl font-bold text-brand-coral flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-          {t('الشخصيات', 'Characters')}
-        </h3>
+      {/* Occasion Section moved here to save space */}
+          <div className="p-5 bg-white/70 backdrop-blur-md rounded-2xl shadow-md border border-white/50 space-y-3">
+            <h3 className="text-xl font-bold text-brand-coral flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+              {t('مناسبة خاصة (اختياري)', 'Special Occasion')}
+            </h3>
+            <input
+              type="text"
+              id="occasion"
+              value={localData.occasion || ''}
+              onChange={(e) => setLocalData({ ...localData, occasion: e.target.value })}
+              className="block w-full px-4 py-2 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900 placeholder-gray-400 text-sm"
+              placeholder={t('مثال: عيد ميلاد تيكو السابع', "Example: Tiko's 7th Birthday")}
+            />
+          </div>
+        </div>
+
+        {/* Right Column: Characters */}
+        <div className="space-y-4">
+          <div className="p-5 bg-white/70 backdrop-blur-md rounded-2xl shadow-md border border-white/50 space-y-4">
+            <h3 className="text-xl font-bold text-brand-coral flex items-center gap-2 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              {t('الشخصيات', 'Characters')}
+            </h3>
 
         <CharacterInput
           label={t('الشخصية الرئيسية', 'Main Character')}
@@ -228,6 +326,20 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                     max="99"
                   />
                 </div>
+
+                <div>
+                  <label htmlFor="secondCharacterGender" className="block text-sm font-medium text-gray-700 mb-1">{t('جنس الشخصية (اختياري)', "Character's Gender (Optional)")}</label>
+                  <select
+                    id="secondCharacterGender"
+                    value={localData.secondCharacter.gender || ''}
+                    onChange={(e) => handleSecondCharacterChange({ gender: e.target.value as 'boy' | 'girl' })}
+                    className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900"
+                  >
+                    <option value="">{t('اختر ولد أو بنت...', 'Select boy or girl...')}</option>
+                    <option value="boy">{t('ولد', 'Boy (He/Him)')}</option>
+                    <option value="girl">{t('بنت', 'Girl (She/Her)')}</option>
+                  </select>
+                </div>
               </div>
             )}
             <CharacterInput
@@ -240,13 +352,15 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
           </div>
         )}
       </div>
+    </div>
 
-      <div className="text-center flex flex-col sm:flex-row justify-center items-center gap-6 pt-4">
-        <Button type="button" onClick={onBack} variant="outline" className="text-xl px-10 py-4 rounded-2xl border-2">
+      {/* Action Buttons */}
+      <div className="text-center flex justify-center items-center gap-4 pt-2 pb-6">
+        <Button type="button" onClick={onBack} variant="outline" className="text-lg px-8 py-3 rounded-xl border-2">
           {t('رجوع', 'Back')}
         </Button>
-        <Button type="submit" className="text-xl px-12 py-4 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all">
-          {t('التالي: اختيار وضع القصة', 'Next: Choose Story Mode')}
+        <Button type="submit" className="text-lg px-10 py-3 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
+          {t('التالي', 'Next')} &rarr;
         </Button>
       </div>
     </form>

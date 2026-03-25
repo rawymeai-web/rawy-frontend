@@ -49,7 +49,21 @@ interface DBSettings {
 }
 
 // --- Converters ---
-const mapDBOrder = (o: DBOrder): AdminOrder => ({
+const mapDBOrderList = (o: DBOrder): AdminOrder => ({
+  orderNumber: o.order_number,
+  customerName: o.customer_name,
+  orderDate: o.created_at,
+  status: o.status as OrderStatus,
+  total: o.total,
+  productionCost: o.production_cost || 0,
+  aiCost: o.ai_cost || 0,
+  shippingCost: o.shipping_cost || 0,
+  storyData: o.story_data || {} as any, // Might be empty in list view
+  shippingDetails: o.shipping_details || {} as any, // Might be empty in list view
+  packageUrl: o.package_url
+});
+
+const mapDBOrderFull = (o: DBOrder): AdminOrder => ({
   orderNumber: o.order_number,
   customerName: o.customer_name,
   orderDate: o.created_at,
@@ -144,11 +158,29 @@ function getLocalOrders(): AdminOrder[] {
 }
 
 function saveLocalOrder(order: AdminOrder) {
-  const current = getLocalOrders();
-  // Avoid duplicates
-  if (current.find(o => o.orderNumber === order.orderNumber)) return;
-  const updated = [order, ...current];
-  window.localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updated));
+  let current = getLocalOrders();
+  const index = current.findIndex(o => o.orderNumber === order.orderNumber);
+  
+  if (index !== -1) {
+    current[index] = order;
+  } else {
+    current = [order, ...current];
+  }
+
+  try {
+    window.localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(current));
+  } catch (e: any) {
+    if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+      console.warn("Local storage full, purging old orders...");
+      // Remove the last 5 oldest orders
+      const trimmed = current.slice(0, Math.max(1, current.length - 5));
+      try {
+        window.localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(trimmed));
+      } catch (e2) {
+        console.error("Local storage still full after purge.");
+      }
+    }
+  }
 }
 
 function updateLocalOrderStatus(orderNumber: string, status: OrderStatus) {
@@ -156,21 +188,31 @@ function updateLocalOrderStatus(orderNumber: string, status: OrderStatus) {
   const index = current.findIndex(o => o.orderNumber === orderNumber);
   if (index !== -1) {
     current[index].status = status;
-    window.localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(current));
+    try {
+      window.localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(current));
+    } catch (e: any) {
+      if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+        console.warn("Local storage full on status update, purging old orders...");
+        const trimmed = current.slice(0, Math.max(1, current.length - 5));
+        try {
+          window.localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(trimmed));
+        } catch (e2) {}
+      }
+    }
   }
 }
 
 // 2. Orders
 export async function getOrders(): Promise<AdminOrder[]> {
-  // 1. Fetch Remote
+  // 1. Fetch Remote - OMIT story_data to prevent statement timeouts on older massive DB entries
   let remoteOrders: AdminOrder[] = [];
   const { data, error } = await supabase
     .from('orders')
-    .select('*')
+    .select('order_number, customer_id, customer_name, total, status, created_at, production_cost, ai_cost, shipping_cost')
     .order('created_at', { ascending: false });
 
   if (!error && data) {
-    remoteOrders = data.map(mapDBOrder);
+    remoteOrders = data.map(mapDBOrderList);
   } else {
     console.warn('Supabase fetch failed, using local orders only.');
   }
@@ -185,6 +227,36 @@ export async function getOrders(): Promise<AdminOrder[]> {
   return [...remoteOrders, ...uniqueLocal].sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 }
 
+export async function getOrderById(orderNumber: string): Promise<AdminOrder | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('order_number', orderNumber)
+    .single();
+
+  if (!error && data) {
+    return mapDBOrderFull(data);
+  }
+
+  // Fallback to local storage if not found in DB
+  const localItems = getLocalOrders();
+  const localMatch = localItems.find(o => o.orderNumber === orderNumber);
+  if (localMatch) return localMatch;
+
+  return null;
+}
+
+export async function getOrderStatus(orderNumber: string): Promise<{ status: OrderStatus; error_message?: string } | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('status, error_message')
+    .eq('order_number', orderNumber)
+    .single();
+
+  if (error || !data) return null;
+  return data as any;
+}
+
 export async function saveOrder(orderNumber: string, storyData: StoryData, shippingDetails: ShippingDetails): Promise<void> {
   const settings = await getSettings();
   const product = await getProductSizeById(storyData.size);
@@ -194,7 +266,7 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
   // OPTIMIZATION: Create a "Light" version of storyData for Fallback/Storage immediately
   // We MUST remove the massive Base64 strings to prevent "Invalid String Length" crashes in JSON.stringify
   const heavyStoryData = storyData;
-  const lightPages = heavyStoryData.pages.map(p => ({
+  const lightPages = (heavyStoryData.pages || []).map(p => ({
     ...p,
     illustrationUrl: p.illustrationUrl?.substring(0, 50) + '...' // Truncate for safety in logs/fallback
   }));
@@ -203,16 +275,16 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
     ...heavyStoryData,
     coverImageUrl: heavyStoryData.coverImageUrl?.substring(0, 50) + '...',
     pages: lightPages,
-    // Remove character base64s
-    mainCharacter: { ...heavyStoryData.mainCharacter, imageBases64: [], images: [] },
-    secondCharacter: heavyStoryData.secondCharacter ? { ...heavyStoryData.secondCharacter, imageBases64: [], images: [] } : undefined
+    // Remove character base64s and DNA for local storage fallback to save quota
+    mainCharacter: { ...heavyStoryData.mainCharacter, imageBases64: [], images: [], imageDNA: [] },
+    secondCharacter: heavyStoryData.secondCharacter ? { ...heavyStoryData.secondCharacter, imageBases64: [], images: [], imageDNA: [] } : undefined
   };
 
   const fallbackOrder: AdminOrder = {
     orderNumber,
     customerName: shippingDetails.name,
     orderDate: new Date().toISOString(),
-    status: 'New Order',
+    status: 'paid_confirmed',
     total: totalPrice,
     productionCost: settings.unitProductionCost,
     aiCost: settings.unitAiCost,
@@ -223,11 +295,13 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
 
   try {
     // 1. Upload Images to Bucket
-    // We recreate the blobs only when needed to save memory
     const imageFiles: imageStore.OrderImages = {
-      cover: new File([await (await fetch(`data:image/jpeg;base64,${heavyStoryData.coverImageUrl}`)).blob()], 'cover.jpeg', { type: 'image/jpeg' }),
-      spreads: await Promise.all(heavyStoryData.pages.filter((_, i) => i % 2 === 0).map(async (p, i) => {
-        return new File([await (await fetch(`data:image/jpeg;base64,${p.illustrationUrl}`)).blob()], `spread_${i + 1}.jpeg`, { type: 'image/jpeg' });
+      cover: heavyStoryData.coverImageUrl && heavyStoryData.coverImageUrl.length > 500 && !heavyStoryData.coverImageUrl.startsWith('http')
+        ? new File([await (await fetch(`data:image/jpeg;base64,${heavyStoryData.coverImageUrl}`)).blob()], 'cover.jpeg', { type: 'image/jpeg' }) 
+        : undefined,
+      spreads: await Promise.all(heavyStoryData.pages.map(async (p, i) => {
+        if (!p.illustrationUrl || p.illustrationUrl.length < 500 || p.illustrationUrl.startsWith('http')) return undefined;
+        return new File([await (await fetch(`data:image/jpeg;base64,${p.illustrationUrl}`)).blob()], `page_${i + 1}.jpeg`, { type: 'image/jpeg' });
       }))
     };
 
@@ -236,14 +310,22 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
     // 2. Prepare Final Data with URLs (No Base64)
     const finalStoryData = {
       ...lightStoryData,
-      coverImageUrl: imageUrls.cover, // Replace truncated with URL
-      pages: heavyStoryData.pages.map((page, i) => {
-        const spreadIndex = Math.floor((Math.max(1, page.pageNumber) - 1) / 2);
+      coverImageUrl: imageUrls.cover || heavyStoryData.coverImageUrl, // Replace truncated with URL
+      pages: (heavyStoryData.pages || []).map((page, i) => {
         return {
           ...page,
-          illustrationUrl: imageUrls.spreads[spreadIndex] || ''
+          illustrationUrl: imageUrls.spreads[i] || page.illustrationUrl || ''
         };
       }),
+      // REQUIRED FOR LEGACY PIPELINE: Do NOT strip the original user portraits (Selfies) from the Cloud Database.
+      mainCharacter: { 
+        ...lightStoryData.mainCharacter, 
+        imageBases64: heavyStoryData.mainCharacter?.imageBases64 || [] 
+      },
+      secondCharacter: heavyStoryData.secondCharacter ? { 
+        ...lightStoryData.secondCharacter, 
+        imageBases64: heavyStoryData.secondCharacter.imageBases64 || [] 
+      } : undefined
     };
 
     // 3. Upsert Customer
@@ -256,19 +338,34 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
       last_order_date: new Date().toISOString(),
     }, { onConflict: 'id' });
 
-    // 4. Insert Order
-    const { error: orderError } = await supabase.from('orders').insert({
+    // 4. Upsert Order
+    const { error: orderError } = await supabase.from('orders').upsert({
       order_number: orderNumber,
       customer_id: customerId,
       customer_name: shippingDetails.name,
       total: totalPrice,
       status: 'New Order',
-      story_data: finalStoryData,
+      story_data: {
+        ...finalStoryData,
+        // CRITICAL: Re-merge character detail fields that might have been stripped in lightStoryData but are present in heavyStoryData
+        mainCharacter: {
+            ...finalStoryData.mainCharacter,
+            imageDNA: heavyStoryData.mainCharacter?.imageDNA || [],
+            imageBases64: heavyStoryData.mainCharacter?.imageBases64 || [],
+            images: heavyStoryData.mainCharacter?.images || []
+        },
+        secondCharacter: heavyStoryData.secondCharacter ? {
+            ...finalStoryData.secondCharacter,
+            imageDNA: heavyStoryData.secondCharacter?.imageDNA || [],
+            imageBases64: heavyStoryData.secondCharacter?.imageBases64 || [],
+            images: heavyStoryData.secondCharacter?.images || []
+        } : undefined
+      },
       shipping_details: shippingDetails,
       production_cost: settings.unitProductionCost,
       ai_cost: settings.unitAiCost,
       shipping_cost: settings.unitShippingCost
-    });
+    }, { onConflict: 'order_number' });
 
     if (orderError) throw orderError;
 
@@ -325,6 +422,20 @@ export async function updateOrderStatus(orderNumber: string, status: OrderStatus
   if (error) {
     console.warn("Supabase update failed, trying local.");
     updateLocalOrderStatus(orderNumber, status);
+  }
+}
+
+export async function dispatchJob(orderId: string, jobType: 'story' | 'illustration' | 'compilation' | 'print_handoff'): Promise<void> {
+  // Simple insertion from admin client
+  const { error } = await supabase.from('order_jobs').insert({
+    order_id: orderId,
+    job_type: jobType,
+    status: 'queued',
+    attempts: 0
+  });
+  if (error) {
+    console.error(`Failed to dispatch job ${jobType} for ${orderId}`, error);
+    throw new Error(`Queue dispatch failed: ${error.message}`);
   }
 }
 

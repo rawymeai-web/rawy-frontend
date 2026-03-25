@@ -1,13 +1,13 @@
 import { supabase } from '../utils/supabaseClient';
 
 export interface OrderImages {
-    cover: File;
-    spreads: File[];
+    cover?: File;
+    spreads: (File | undefined)[];
 }
 
 export interface UploadedImageUrls {
-    cover: string;
-    spreads: string[];
+    cover?: string;
+    spreads: (string | undefined)[];
 }
 
 /**
@@ -19,7 +19,8 @@ export async function saveImagesForOrder(orderNumber: string, images: OrderImage
     const folder = `${orderNumber}`;
 
     // Helper to upload a single file
-    const uploadFile = async (file: File, name: string): Promise<string> => {
+    const uploadFile = async (file: File | undefined, name: string): Promise<string | undefined> => {
+        if (!file) return undefined;
         const path = `${folder}/${name}`;
         const { data, error } = await supabase.storage
             .from(bucket)
@@ -42,7 +43,7 @@ export async function saveImagesForOrder(orderNumber: string, images: OrderImage
 
     // Upload Spreads
     const spreadUrls = await Promise.all(
-        images.spreads.map((file, index) => uploadFile(file, `spread_${index + 1}.jpg`))
+        images.spreads.map((file, index) => uploadFile(file, `page_${index + 1}.jpg`))
     );
 
     return {

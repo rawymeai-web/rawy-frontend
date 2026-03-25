@@ -30,8 +30,8 @@ const getTitleFontSizeClass = (title: string, language: Language): string => {
     return `${font} text-3xl md:text-5xl`;
 };
 
-const formatStoryTextHTML = (text: string, childName: string): string => {
-    if (!text) return '';
+const formatStoryTextHTML = (text: any, childName: string): string => {
+    if (!text || typeof text !== 'string') return '';
 
     // Normalize spaces and casing for detection
     const childFirstName = childName.trim().split(/\s+/)[0];
@@ -121,7 +121,7 @@ const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange:
                             suppressContentEditableWarning
                             onBlur={(e) => onTitleChange(e.currentTarget.innerText)}
                             style={titleStyle}
-                            className="text-5xl md:text-7xl text-center transform -rotate-2 cursor-text uppercase"
+                            className="text-3xl md:text-4xl text-center transform -rotate-2 cursor-text uppercase"
                         >
                             {storyData.title}
                         </div>
@@ -142,7 +142,7 @@ const Cover: React.FC<{ storyData: StoryData, language: Language, onTitleChange:
                             suppressContentEditableWarning
                             onBlur={(e) => onTitleChange(e.currentTarget.innerText)}
                             style={titleStyle}
-                            className="text-5xl md:text-7xl text-center transform -rotate-2 cursor-text uppercase"
+                            className="text-3xl md:text-4xl text-center transform -rotate-2 cursor-text uppercase"
                         >
                             {storyData.title}
                         </div>
@@ -256,7 +256,7 @@ export interface PreviewScreenProps {
 }
 
 const PreviewScreen: React.FC<PreviewScreenProps> = (props) => {
-    const [viewMode, setViewMode] = useState<'presentation' | 'scroll'>('presentation');
+    const [viewMode, setViewMode] = useState<'presentation' | 'scroll'>('scroll');
     const t = (ar: string, en: string) => props.language === 'ar' ? ar : en;
 
     return (

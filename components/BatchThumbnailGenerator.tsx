@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Language, StoryTheme, Character } from '../types';
 import * as adminService from '../services/adminService';
-import * as geminiService from '../services/geminiService';
+import { backendApi } from '../services/backendApi';
 import { ART_STYLE_OPTIONS } from '../constants';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
@@ -114,13 +114,12 @@ export const BatchThumbnailGenerator: React.FC<{ language: Language }> = ({ lang
                 // Rate limit spacing from Admin Settings
                 if (i > 0 && delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
 
-                const { imageBase64 } = await geminiService.generateThemeStylePreview(
-                    mockCharacter,
-                    undefined,
-                    task.themeDesc,
-                    task.stylePrompt,
-                    "5" // Default age for batch generation
-                );
+                const { imageBase64 } = await backendApi.generatePreview({
+                    character: mockCharacter,
+                    themeDescription: task.themeDesc,
+                    stylePrompt: task.stylePrompt,
+                    age: "5" // Default age for batch generation
+                }) as any;
 
                 setThumbnails(prev => [...prev, {
                     name: task.fileName,
