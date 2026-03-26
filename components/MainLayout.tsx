@@ -206,8 +206,8 @@ const MainLayout: React.FC = () => {
             ...data,
             styleReferenceImageBase64: compressedRefImg,
             secondCharacterImageBase64: compressedSecondImg,
-            mainCharacter: { ...data.mainCharacter, imageBases64: compressedMainImages, images: [], imageDNA: [] },
-            secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: compressedSecondImages, images: [], imageDNA: [] } : undefined,
+            mainCharacter: { ...data.mainCharacter, imageBases64: compressedMainImages, images: [] },
+            secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: compressedSecondImages, images: [] } : undefined,
             coverImageUrl: data.coverImageUrl ? data.coverImageUrl.substring(0, 100) + '...[TRUNCATED]' : undefined,
             pages: (data.pages || []).map(p => ({ ...p, illustrationUrl: p.illustrationUrl ? p.illustrationUrl.substring(0, 100) + '...[TRUNCATED]' : undefined }))
         };
@@ -361,7 +361,8 @@ const MainLayout: React.FC = () => {
                                script: [], 
                                blueprint: undefined, 
                                finalPrompts: [], 
-                               mainCharacter: { ...order.storyData.mainCharacter, imageDNA: [], description: '' } as any,
+                               // We deliberately DO NOT wipe mainCharacter.imageDNA or description here!
+                               // The user selected this DNA during Checkout on the frontend, and it is the only copy.
                                orderId: order.orderNumber 
                            });
                         }
