@@ -1,0 +1,12 @@
+﻿services/archived/generation_imageGenerator.ts(2,40): error TS2307: Cannot find module './modelGateway' or its corresponding type declarations.
+services/archived/story_blueprintAgent.legacy.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.
+services/archived/story_blueprintAgent.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.
+services/archived/story_narrativeAgent.legacy.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.
+services/archived/story_narrativeAgent.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.
+services/archived/useStoryGeneration.v1.ts(2,61): error TS2307: Cannot find module '../types' or its corresponding type declarations.
+services/archived/useStoryGeneration.v1.ts(3,28): error TS2307: Cannot find module '../services/backendApi' or its corresponding type declarations.
+services/archived/visual_director.legacy.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.
+services/archived/visual_director.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.
+services/archived/visual_promptEngineer.legacy.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.
+services/archived/visual_promptEngineer.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.
+services/archived/visual_qualityAssurance.ts(2,48): error TS2307: Cannot find module '../generation/modelGateway' or its corresponding type declarations.

@@ -267,11 +267,11 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
   let calculatedTotal = total;
   if (calculatedTotal === undefined) {
     if (storyData.planType === 'monthly') {
-      calculatedTotal = (standardBase + premiumAddon) * (14 / 17);
+      calculatedTotal = 16.000;
     } else if (storyData.planType === 'yearly') {
-      calculatedTotal = (standardBase + premiumAddon) * (10.8 / 17);
+      calculatedTotal = 12.500; // Note: For single order record, we might store the cycle price
     } else {
-      calculatedTotal = standardBase + premiumAddon + 1.500;
+      calculatedTotal = 18.000 + premiumAddon + 1.500;
     }
   }
 
