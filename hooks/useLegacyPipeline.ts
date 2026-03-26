@@ -319,7 +319,7 @@ export const useLegacyPipeline = (
                     pages[pageIndex + 1].actualPrompt = imagePrompt;
                 }
             }
-            pages = pages.slice(0, 8); // Force 8 pages
+            // Ensure array has exactly 16 pages if 8 spreads are processed (No slicing to 8)
             
             storyData = { ...storyData, pages };
             storyDataRef.current = storyData;
