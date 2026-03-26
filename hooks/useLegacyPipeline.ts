@@ -327,15 +327,20 @@ export const useLegacyPipeline = (
             await adminService.saveOrder(orderNumber, storyData, initialShippingDetails);
 
             // Generation Phase (Spreads)
+            // pagePrompts = [spread0_cover, spread1, spread2, ..., spread8]
+            // Each spread i maps to pages[i*2] and pages[i*2+1]
+            // CRITICAL: check pages[i*2], NOT pages[i], to avoid false-skip on even-page slots
             for (let i = 0; i < pagePrompts.length; i++) {
                 setStatus(t(`رسم المشهد ${i + 1}/${pagePrompts.length}...`, `Painting Scene ${i + 1}/${pagePrompts.length}...`));
-                const existingUrl = pages[i]?.illustrationUrl;
+                const spreadPageIndex = i * 2;  // The LEFT page of this spread
+                const existingUrl = pages[spreadPageIndex]?.illustrationUrl;
                 const isCorrupted = existingUrl && (existingUrl.endsWith('...') || existingUrl.length < 55);
 
                 if (!existingUrl || isCorrupted) {
                     // Check for latest prompt from props right before generation
                     const currentPropStory = storyDataPropRef.current;
-                    const propPrompts = currentPropStory.finalPrompts ? (currentPropStory.finalPrompts.length > 8 ? currentPropStory.finalPrompts.slice(1) : currentPropStory.finalPrompts) : [];
+                    // finalPrompts[0] is always cover, finalPrompts[1..8] are spreads 1-8
+                    const propPrompts = currentPropStory.finalPrompts || [];
                     const latestPrompt = propPrompts[i] || pagePrompts[i];
                     
                     if (isCorrupted) logMsg(`Repainting corrupted image for Scene ${i+1}...`);

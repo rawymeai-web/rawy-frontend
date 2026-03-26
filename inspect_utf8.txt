@@ -1,0 +1,41 @@
+﻿== ORDER RWY-KMIG8IBZP ==
+Blueprint Spreads length: 8
+Blueprint Spread 1: focus="╪º┘ä╪╡┘å╪»┘ê┘é ╪º┘ä┘â╪▒╪¬┘ê┘å┘è ┘ü┘è ╪º┘ä╪¡╪»┘è┘é╪⌐.", action="╪│╪º╪▒╪⌐ ╪¬┘å╪╕╪▒ ╪¿╪º┘ç╪¬┘à╪º┘à ╪Ñ┘ä┘ë ╪º┘ä╪║╪º╪¿╪⌐."
+Blueprint Spread 2: focus="╪│╪º╪▒╪⌐ ┘ê┘ü╪▒╪¡.", action="┘ü╪▒╪¡ ╪¬┘à╪│┘â ╪¿┘è╪» ╪│╪º╪▒╪⌐."
+Blueprint Spread 3: focus="╪º┘ä╪░╪ª╪¿.", action="╪│╪º╪▒╪⌐ ╪¬╪¡╪º┘ê┘ä ┘ü┘ç┘à ╪º┘ä╪░╪ª╪¿."
+Blueprint Spread 4: focus="╪│╪º╪▒╪⌐ ┘ê╪º┘ä╪░╪ª╪¿ ┘ê┘ü╪▒╪¡.", action="╪º┘ä╪░╪ª╪¿ ┘è╪┤┘è╪▒ ╪Ñ┘ä┘ë ╪╣┘ä╪º┘à╪⌐ ╪║╪▒┘è╪¿╪⌐ ╪╣┘ä┘ë ╪┤╪¼╪▒╪⌐."
+Blueprint Spread 5: focus="╪│╪º╪▒╪⌐ ╪¼╪º┘ä╪│╪⌐ ╪¡╪▓┘è┘å╪⌐.", action="╪│╪º╪▒╪⌐ ╪¬┘à╪│╪¡ ╪»┘à┘ê╪╣┘ç╪º."
+Blueprint Spread 6: focus="┘ü╪▒╪¡ ╪¬╪¿╪¬╪│┘à.", action="╪│╪º╪▒╪⌐ ╪¬┘å╪╕╪▒ ╪Ñ┘ä┘ë ┘ü╪▒╪¡ ╪¿╪¬┘à╪╣┘å."
+Blueprint Spread 7: focus="╪│╪º╪▒╪⌐ ┘ê┘ü╪▒╪¡ ╪¬╪╣┘à┘ä╪º┘å ┘à╪╣┘ï╪º.", action="┘ü╪▒╪¡ ╪¬╪┤┘è╪▒ ╪Ñ┘ä┘ë ╪¼╪▓╪í ┘à┘å ╪º┘ä┘ä╪║╪▓."
+Blueprint Spread 8: focus="╪º┘ä╪╡┘å╪»┘ê┘é ╪º┘ä┘â╪▒╪¬┘ê┘å┘è ┘ü┘è ╪º┘ä╪¡╪»┘è┘é╪⌐.", action="╪│╪º╪▒╪⌐ ┘ê┘ü╪▒╪¡ ╪¬╪¿╪¬╪│┘à╪º┘å ╪»╪º╪«┘ä ╪º┘ä╪╡┘å╪»┘ê┘é."
+
+Spread Plan (Director) Spreads length: 9
+Plan Spread 0: action="Sarah runs excitedly towards a group of playful wolves at the forest edge, her cardboard box slightly ajar, revealing drawings inside. The wolves playfully nip at her outstretched hands."
+Plan Spread 1: action="Sarah sits inside her large cardboard box in the garden, gazing intently towards the distant forest, her face filled with curiosity. She clutches a drawing of a wolf."
+Plan Spread 2: action="Farah runs towards Sarah, grabbing Sarah's hand. Farah is telling Sarah about her dream to understand animals and join the pack of wolves, and Farah offers to go with Sarah to the forest."
+Plan Spread 3: action="Sarah listens intently to a wolf who is speaking in an unknown language. She strains to understand him, her brow furrowed in frustration. Farah stands slightly behind Sarah."
+Plan Spread 4: action="The wolf points with its snout towards a strange symbol carved into a tree trunk. Farah looks on with curiosity, but Sarah shrinks back, appearing scared. Sarah is hesitant to accept help."
+Plan Spread 5: action="Sarah sits slumped under the tree, her shoulders drooping, with a tear rolling down her cheek. She looks defeated and disheartened."
+Plan Spread 6: action="Sarah watches Farah playing and laughing nearby, her face slowly lighting up with a glimmer of hope. Farah is unaware she is being watched."
+Plan Spread 7: action="Sarah and Farah work together to decipher the carving on the tree. Farah points to a specific part of the symbol, and Sarah nods in understanding, smiling. The wolf watches from a distance."
+Plan Spread 8: action="Sarah and Farah sit happily inside their cardboard box in the garden, surrounded by a group of friendly wolves. They smile contentedly at each other."
+
+Final Prompts length: 9
+Prompt 0 (Spread 0):
+ Sarah runs excitedly towards a group of playful wolves at the forest edge, her cardboard box slightly ajar, revealing drawings inside. The wolves playfully nip at her outstretched hands.
+Prompt 1 (Spread 1):
+ Sarah sits inside her large cardboard box in the garden, gazing intently towards the distant forest, her face filled with curiosity. She clutches a drawing of a wolf.
+Prompt 2 (Spread 2):
+ Farah runs towards Sarah, grabbing Sarah's hand. Farah is telling Sarah about her dream to understand animals and join the pack of wolves, and Farah offers to go with Sarah to the forest.
+Prompt 3 (Spread 3):
+ Sarah listens intently to a wolf who is speaking in an unknown language. She strains to understand him, her brow furrowed in frustration. Farah stands slightly behind Sarah.
+Prompt 4 (Spread 4):
+ The wolf points with its snout towards a strange symbol carved into a tree trunk. Farah looks on with curiosity, but Sarah shrinks back, appearing scared. Sarah is hesitant to accept help.
+Prompt 5 (Spread 5):
+ Sarah sits slumped under the tree, her shoulders drooping, with a tear rolling down her cheek. She looks defeated and disheartened.
+Prompt 6 (Spread 6):
+ Sarah watches Farah playing and laughing nearby, her face slowly lighting up with a glimmer of hope. Farah is unaware she is being watched.
+Prompt 7 (Spread 7):
+ Sarah and Farah work together to decipher the carving on the tree. Farah points to a specific part of the symbol, and Sarah nods in understanding, smiling. The wolf watches from a distance.
+Prompt 8 (Spread 8):
+ Sarah and Farah sit happily inside their cardboard box in the garden, surrounded by a group of friendly wolves. They smile contentedly at each other.
