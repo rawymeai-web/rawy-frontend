@@ -102,6 +102,8 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   const [planType, setPlanType] = useState<PlanType>('monthly');
   const [basePrice, setBasePrice] = useState<number>(18.000); // New default base
 
+  const selectedPlan = PLANS.find(p => p.id === planType)!;
+
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
   const tObj = (obj: { ar: string; en: string }) => language === 'ar' ? obj.ar : obj.en;
 
