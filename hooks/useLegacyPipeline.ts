@@ -84,18 +84,22 @@ export const useLegacyPipeline = (
                 logMsg(`Pre-flight: Wiping old intermediate data for clean run...`);
                 storyData.blueprint = undefined;
                 storyData.script = [];
+                storyData.rawScript = undefined;       // Bug 5: clear stale raw script
                 storyData.spreadPlan = undefined;
-                storyData.spreads = [];   // Clear spreads (replaces old pages[])
+                storyData.spreads = [];
                 storyData.finalPrompts = [];
-                storyData.prompts = [];   // Clear backend worker prompts
+                storyData.prompts = [];
                 storyData.actualCoverPrompt = undefined;
                 storyData.coverImageUrl = undefined;
+                storyData.themeVisualDNA = undefined;  // Bug 5: wipe old Oryx/anchor visual DNA
+                storyData.technicalStyleGuide = undefined; // Bug 5: wipe old style guide
                 
                 storyDataRef.current = storyData;
                 storyDataPropRef.current = storyData;
                 onUpdateStory({ 
-                    blueprint: undefined, script: [], spreadPlan: undefined, 
-                    spreads: [], finalPrompts: [], prompts: [], actualCoverPrompt: undefined 
+                    blueprint: undefined, script: [], rawScript: undefined, spreadPlan: undefined, 
+                    spreads: [], finalPrompts: [], prompts: [], actualCoverPrompt: undefined,
+                    themeVisualDNA: undefined, technicalStyleGuide: undefined
                 } as any);
                 await adminService.saveOrder(storyData.orderId || orderNumber || 'RWY-UNKNOWN', storyData, initialShippingDetails || {}, total);
             } else {
@@ -282,11 +286,20 @@ export const useLegacyPipeline = (
             if (!prompts || prompts.length === 0) throw new Error("No prompts found to generate images.");
             
             // finalPrompts[0] = Cover, finalPrompts[1..N] = inner spreads
-            // If backend returned without a separate cover prompt, treat all as inner spreads
             const hasCoverPrompt = prompts.length > spreadCount;
             const coverPrompt = hasCoverPrompt ? prompts[0] : null;
-            const innerPrompts = hasCoverPrompt ? prompts.slice(1) : prompts;
+            const rawInnerPrompts = hasCoverPrompt ? prompts.slice(1) : prompts;
+            // Bug 1: Clamp inner prompts to exactly spreadCount — AI sometimes returns N+1
+            const innerPrompts = rawInnerPrompts.slice(0, spreadCount);
             const finalScript = storyData.script || [];
+            
+            // Bug 2: If cover prompt is missing, synthesize one from the blueprint
+            let resolvedCoverPrompt = coverPrompt;
+            if (!resolvedCoverPrompt && storyData.blueprint?.foundation) {
+                const bp = storyData.blueprint.foundation;
+                resolvedCoverPrompt = `Book cover illustration: ${bp.title || storyData.title}. Hero: ${bp.heroDesire || ''}. Setting: ${(storyData.blueprint.structure?.spreads?.[0]?.specificLocation) || 'magical world'}. Wide panoramic establishing shot.`;
+                logMsg(`⚠️ No cover prompt returned by AI — synthesized fallback from blueprint.`);
+            }
 
             // Build the Spreads array — one object per spread, no i*2 duplication
             let spreads: import('../types').Spread[] = storyData.spreads || [];
@@ -329,7 +342,9 @@ export const useLegacyPipeline = (
             await adminService.saveOrder(orderNumber, storyData, initialShippingDetails);
 
             const mainDNA = storyData.styleReferenceImageUrl || storyData.styleReferenceImageBase64 || storyData.mainCharacter?.imageDNA?.[0] || storyData.mainCharacter?.imageBases64?.[0];
-            const visualStylePrompt = `${storyData.selectedStylePrompt}. Theme: ${storyData.themeVisualDNA || storyData.theme || 'Neutral'}`;
+            // Bug 5: Do NOT embed themeVisualDNA — it can carry old-order Arabic/Oryx data.
+            // Style comes only from selectedStylePrompt (user's chosen art style).
+            const visualStylePrompt = storyData.selectedStylePrompt || 'Painterly, flat 2D illustrated children\'s book style';
             const secondDNA = storyData.useSecondCharacter ? (storyData.secondCharacterImageBase64 || storyData.secondCharacterImageUrl || storyData.secondCharacter?.imageDNA?.[0] || storyData.secondCharacter?.imageBases64?.[0]) : undefined;
 
             const uploadSpreadImage = async (spreadNum: number, base64: string, promptUsed: string) => {
@@ -343,9 +358,9 @@ export const useLegacyPipeline = (
 
             // --- Generate Cover (Spread 0) ---
             const coverAlreadyDone = storyData.coverImageUrl && storyData.coverImageUrl.length > 55 && !storyData.coverImageUrl.endsWith('...');
-            if (!coverAlreadyDone && coverPrompt && mainDNA) {
+            if (!coverAlreadyDone && resolvedCoverPrompt && mainDNA) {
                 setStatus(t('رسم الغلاف...', 'Painting Cover...'));
-                const rawCover = storyDataPropRef.current.finalPrompts?.[0] || coverPrompt;
+                const rawCover = storyDataPropRef.current.finalPrompts?.[0] || resolvedCoverPrompt;
                 const coverImagePrompt = typeof rawCover === 'string' ? rawCover : (rawCover?.imagePrompt || rawCover?.prompt);
                 logMsg(`--> Painting Cover...`);
                 await sleep(delayBetweenScenes);

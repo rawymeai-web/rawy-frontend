@@ -124,24 +124,34 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         }
     }, [coverPrompt]);
 
+    // Bug 3: Helper to get the display text of a spread (combines leftText + rightText)
+    const getSpreadText = (spread: any): string => {
+        if (!spread) return '';
+        // Support new Spread model (leftText/rightText) and legacy fallback
+        if (spread.leftText || spread.rightText) {
+            return [spread.leftText, spread.rightText].filter(Boolean).join(' ');
+        }
+        return spread.text || '';
+    };
+
     const handleTextChange = (index: number, newText: string) => {
         setPageEdits(prev => ({
             ...prev,
-            [index]: { ...(prev[index] || { text: spreads[index]?.text || '', prompt: getPromptForIndex(index, spreads[index]) }), text: newText }
+            [index]: { ...(prev[index] || { text: getSpreadText(spreads[index]), prompt: getPromptForIndex(index, spreads[index]) }), text: newText }
         }));
     };
 
     const handlePromptChange = (index: number, newPrompt: string) => {
         setPageEdits(prev => ({
             ...prev,
-            [index]: { ...(prev[index] || { text: spreads[index]?.text || '', prompt: getPromptForIndex(index, spreads[index]) }), prompt: newPrompt }
+            [index]: { ...(prev[index] || { text: getSpreadText(spreads[index]), prompt: getPromptForIndex(index, spreads[index]) }), prompt: newPrompt }
         }));
     };
 
     const handleRegenerateText = async (index: number) => {
         setTextRegeneratingIndex(index);
         try {
-            const currentText = pageEdits[index]?.text || spreads[index]?.text || '';
+            const currentText = pageEdits[index]?.text || getSpreadText(spreads[index]);
             const res = await backendApi.generateSpreadText({
                 blueprint: storyData.blueprint,
                 language,
@@ -163,7 +173,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         setRegeneratingIndex(index);
         try {
             const masterDNA = storyData.styleReferenceImageUrl || storyData.styleReferenceImageBase64 || storyData.mainCharacter?.imageDNA?.[0] || (storyData.mainCharacter?.imageBases64 && storyData.mainCharacter.imageBases64[0]);
-            let visualDNA = `${storyData.selectedStylePrompt}. Theme: ${storyData.themeVisualDNA || storyData.theme}`;
+        // Bug 5: never embed themeVisualDNA — use only the art style
+            let visualDNA = storyData.selectedStylePrompt || 'Painterly, flat 2D illustrated children\'s book style';
 
             let promptToUse = '';
             if (index === 'cover') {
@@ -200,14 +211,14 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                 });
                 await adminService.saveOrder(storyData.orderId || 'RWY-UNKNOWN', newStory, shippingDetails || {});
             } else {
-                const newPages = [...spreads];
-                newPages[index] = {
-                    ...newPages[index],
+                const newSpreads = [...spreads];
+                newSpreads[index] = {
+                    ...newSpreads[index],
                     illustrationUrl: imgRes.imageBase64,
                     actualPrompt: imgRes.fullPrompt || promptToUse
                 };
-                const newStory = { ...storyData, pages: newPages };
-                onUpdateStory({ pages: newPages });
+                const newStory = { ...storyData, spreads: newSpreads };
+                onUpdateStory({ spreads: newSpreads });
                 await adminService.saveOrder(storyData.orderId || 'RWY-UNKNOWN', newStory, shippingDetails || {});
             }
         } catch (e: any) {
@@ -231,12 +242,12 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                 if (index === 'cover') {
                     onUpdateStory({ coverImageUrl: base64 });
                 } else {
-                    const newPages = [...spreads];
-                    newPages[index] = {
-                        ...newPages[index],
+                    const newSpreads = [...spreads];
+                    newSpreads[index] = {
+                        ...newSpreads[index],
                         illustrationUrl: base64
                     };
-                    onUpdateStory({ pages: newPages });
+                    onUpdateStory({ spreads: newSpreads });
                 }
             };
             reader.readAsDataURL(file);
@@ -284,11 +295,11 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const handleDownloadText = () => {
         let fullTextContent = `Story: ${storyData.title || 'Untitled'}\n\n`;
-        const finalPages = [...spreads];
-        for (let i = 0; i < Math.max(8, finalPages.length); i++) {
-            const pageText = pageEdits[i]?.text !== undefined ? pageEdits[i].text : finalPages[i]?.text || '';
-            if (pageText || finalPages[i]) {
-                fullTextContent += `Spread ${i + 1}:\n${pageText}\n\n`;
+        const finalSpreads = [...spreads];
+        for (let i = 0; i < Math.max(8, finalSpreads.length); i++) {
+            const spreadText = pageEdits[i]?.text !== undefined ? pageEdits[i].text : getSpreadText(finalSpreads[i]);
+            if (spreadText || finalSpreads[i]) {
+                fullTextContent += `Spread ${i + 1}:\n${spreadText}\n\n`;
             }
         }
         const blob = new Blob([fullTextContent], { type: 'text/plain' });
@@ -315,22 +326,19 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const applyAllEditsAndFinalize = async () => {
         setIsFinalizing(true);
-        const finalPages = [...spreads];
-        for (let i = 0; i < finalPages.length; i++) {
-            if (pageEdits[i]?.text !== undefined && pageEdits[i].text !== finalPages[i].text) {
-                finalPages[i].text = pageEdits[i].text;
-                finalPages[i].textBlocks = [{
-                    ...finalPages[i].textBlocks?.[0],
-                    text: pageEdits[i].text,
-                    position: finalPages[i].textBlocks?.[0]?.position || { top: 10, left: 10, width: 80 },
-                    alignment: finalPages[i].textBlocks?.[0]?.alignment || 'center'
-                }];
+        const finalSpreads = [...spreads];
+        for (let i = 0; i < finalSpreads.length; i++) {
+            const editedText = pageEdits[i]?.text;
+            const currentText = getSpreadText(finalSpreads[i]);
+            if (editedText !== undefined && editedText !== currentText) {
+                // Store edited text back into the spread's leftText field (unified)
+                finalSpreads[i] = { ...finalSpreads[i], leftText: editedText, rightText: '' };
             }
-            if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalPages[i].actualPrompt) {
-                finalPages[i].actualPrompt = pageEdits[i].prompt;
+            if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalSpreads[i].actualPrompt) {
+                finalSpreads[i] = { ...finalSpreads[i], actualPrompt: pageEdits[i].prompt };
             }
         }
-        onUpdateStory({ pages: finalPages, actualCoverPrompt: coverEdit });
+        onUpdateStory({ spreads: finalSpreads, actualCoverPrompt: coverEdit });
         
         // Give the UI a moment to render the loading spinner before locking the thread
         await new Promise(r => setTimeout(r, 50));
@@ -347,24 +355,20 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const handleSilentSave = async () => {
         if (!storyData.orderId) return;
-        const finalPages = [...spreads];
-        for (let i = 0; i < finalPages.length; i++) {
-            if (pageEdits[i]?.text !== undefined && pageEdits[i].text !== finalPages[i].text) {
-                finalPages[i].text = pageEdits[i].text;
-                finalPages[i].textBlocks = [{
-                    ...finalPages[i].textBlocks?.[0],
-                    text: pageEdits[i].text,
-                    position: finalPages[i].textBlocks?.[0]?.position || { top: 10, left: 10, width: 80 },
-                    alignment: finalPages[i].textBlocks?.[0]?.alignment || 'center'
-                }];
+        const finalSpreads = [...spreads];
+        for (let i = 0; i < finalSpreads.length; i++) {
+            const editedText = pageEdits[i]?.text;
+            const currentText = getSpreadText(finalSpreads[i]);
+            if (editedText !== undefined && editedText !== currentText) {
+                finalSpreads[i] = { ...finalSpreads[i], leftText: editedText, rightText: '' };
             }
-            if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalPages[i].actualPrompt) {
-                finalPages[i].actualPrompt = pageEdits[i].prompt;
+            if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalSpreads[i].actualPrompt) {
+                finalSpreads[i] = { ...finalSpreads[i], actualPrompt: pageEdits[i].prompt };
             }
         }
-        onUpdateStory({ pages: finalPages, actualCoverPrompt: coverEdit });
+        onUpdateStory({ spreads: finalSpreads, actualCoverPrompt: coverEdit });
         try {
-            await adminService.saveOrder(storyData.orderId as string, { ...storyData, pages: finalPages, actualCoverPrompt: coverEdit }, shippingDetails || {});
+            await adminService.saveOrder(storyData.orderId as string, { ...storyData, spreads: finalSpreads, actualCoverPrompt: coverEdit }, shippingDetails || {});
         } catch(e) {
             console.error("Silent save failed", e);
         }
@@ -599,7 +603,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                     <button onClick={() => handleUploadText(i)} className="text-[9px] font-black uppercase text-brand-teal hover:underline">Upload .txt</button>
                                                 </div>
                                             </div>
-                                            <textarea value={pageEdits[i]?.text !== undefined ? pageEdits[i].text : (spreads[i]?.text || '')} onChange={(e) => handleTextChange(i, e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-sm h-32 focus:ring-2 focus:ring-brand-teal/10 outline-none transition-all font-medium leading-relaxed" />
+                                            <textarea value={pageEdits[i]?.text !== undefined ? pageEdits[i].text : getSpreadText(spreads[i])} onChange={(e) => handleTextChange(i, e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-sm h-32 focus:ring-2 focus:ring-brand-teal/10 outline-none transition-all font-medium leading-relaxed" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-brand-navy uppercase tracking-widest px-1">Illustration Technical Prompt</label>
