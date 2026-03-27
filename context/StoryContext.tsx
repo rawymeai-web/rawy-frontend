@@ -21,7 +21,7 @@ const initialStoryData: StoryData = {
     mainCharacter: { ...initialCharacter },
     useSecondCharacter: false,
     coverImageUrl: '',
-    pages: [],
+    spreads: [],
     size: '20x20',
     selectedStylePrompt: ''
 };

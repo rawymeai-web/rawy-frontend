@@ -209,7 +209,7 @@ const MainLayout: React.FC = () => {
             mainCharacter: { ...data.mainCharacter, imageBases64: compressedMainImages, images: [] },
             secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: compressedSecondImages, images: [] } : undefined,
             coverImageUrl: data.coverImageUrl ? data.coverImageUrl.substring(0, 100) + '...[TRUNCATED]' : undefined,
-            pages: (data.pages || []).map(p => ({ ...p, illustrationUrl: p.illustrationUrl ? p.illustrationUrl.substring(0, 100) + '...[TRUNCATED]' : undefined }))
+            spreads: (data.spreads || []).map((s: any) => ({ ...s, illustrationUrl: s.illustrationUrl ? s.illustrationUrl.substring(0, 100) + '...[TRUNCATED]' : undefined }))
         };
     };
 
@@ -237,7 +237,7 @@ const MainLayout: React.FC = () => {
                         ...storyData,
                         ...data,
                         size: defaultSize,
-                        pages: Array(defaultSpreadCount).fill({})
+                        spreads: []
                     };
                     updateStory(updatedStory);
 
@@ -336,7 +336,7 @@ const MainLayout: React.FC = () => {
                         // Explicitly wipe intermediate states to prevent context bleed from previous orders
                         updateStory({ 
                             coverImageUrl: '', 
-                            pages: [], 
+                            spreads: [], 
                             script: [], 
                             blueprint: undefined, 
                             finalPrompts: [], 
@@ -357,7 +357,7 @@ const MainLayout: React.FC = () => {
                         if (isRestart) {
                            updateStory({ 
                                coverImageUrl: '', 
-                               pages: [], 
+                               spreads: [], 
                                script: [], 
                                blueprint: undefined, 
                                finalPrompts: [], 

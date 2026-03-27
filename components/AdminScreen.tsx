@@ -321,7 +321,7 @@ const OrdersView: React.FC<{ orders: AdminOrder[], language: Language, refreshOr
         // Minimal valid story data structure
         const dummyStory: any = {
             childName: "Test Child", childAge: "5", title: "The Test Adventure", theme: "Space",
-            size: "A4", coverImageUrl: "", pages: [], mainCharacter: { description: "Test" }
+            size: "A4", coverImageUrl: "", spreads: [], mainCharacter: { description: "Test" }
         };
 
         try {

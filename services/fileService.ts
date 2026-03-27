@@ -336,13 +336,14 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         }
     }
 
-    // 2. Spreads
-    // 2. Handle Spreads (Back to 2:1 Mapping)
-    const pageCount = storyData.pages.length;
+    // 2. Spreads — one object per spread, direct indexing (no i*2)
+    const spreadsData = storyData.spreads || [];
+    const spreadCount = storyData.spreadCount || Math.max(0, spreadsData.length - 1); // exclude cover
 
-    for (let i = 0; i < pageCount / 2; i++) {
+    for (let i = 1; i <= spreadCount; i++) {
         pdf.addPage();
-        const spread = storyData.pages[i * 2];
+        const spread = spreadsData[i];
+        if (!spread) continue;
 
         // Get image source
         let illustration = spread.illustrationUrl;
@@ -362,52 +363,32 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
-        // Draw Text Blobs (Paired Model: i*2 and i*2+1)
-        const p1 = storyData.pages[i * 2];
-        const p2 = storyData.pages[i * 2 + 1];
-        for (const p of [p1, p2].filter(Boolean)) {
-            const blocks = p.textBlocks || [];
-            for (let bIdx = 0; bIdx < blocks.length; bIdx++) {
-            const block = blocks[bIdx];
-            // Calculate dynamic font size based on age (UPDATED: Larger Fonts)
+        // Draw Text (left + right from Spread object)
+        const textItems = [
+            { text: spread.leftText, textSide: 'left' as const },
+            { text: spread.rightText, textSide: 'right' as const }
+        ].filter(t => t.text);
+        for (let bIdx = 0; bIdx < textItems.length; bIdx++) {
+            const item = textItems[bIdx];
             const ageNum = parseInt(storyData.childAge, 10) || 6;
-            let fontSize = 48; // Default Base
-            if (ageNum >= 10) fontSize = 32; // Older kids -> Smaller (but bigger than before)
+            let fontSize = 48;
+            if (ageNum >= 10) fontSize = 32;
             else if (ageNum >= 7) fontSize = 40;
-            else if (ageNum >= 4) fontSize = 48; // Young kids -> Huge font
+            else if (ageNum >= 4) fontSize = 48;
 
-            // Scale 3 for sharper text
             const blobImg = await renderTextBlobToImage(
-                block.text,
-                800,
-                600,
-                bIdx,
-                language,
-                fontSize,
-                storyData.childName,
-                'box'
+                item.text, 800, 600, bIdx, language, fontSize, storyData.childName, 'box'
             );
 
-            // Layout Logic:
-            // Box Width: 35% of PDF Width (approx 70% of a page)
             const rectW = pdfW * 0.35;
+            let rectH = rectW * 0.6;
+            if (blobImg && blobImg.width > 0) { rectH = rectW * (blobImg.height / blobImg.width); }
 
-            // DYNAMIC HEIGHT: Match blob aspect ratio exactly
-            let rectH = rectW * 0.6; // Fallback
-            if (blobImg && blobImg.width > 0) {
-                rectH = rectW * (blobImg.height / blobImg.width);
-            }
-
-            // DYNAMIC POSITIONING
-            const rectX = p.textSide === 'left' ? pdfW * 0.05 : pdfW * 0.60;
-
-            // VERTICAL POSITION: Top-Third / Golden Ratio (38%)
-            // This prevents the "dead center" look and usually frames nicely above the ground
+            const rectX = item.textSide === 'left' ? pdfW * 0.05 : pdfW * 0.60;
             const rectY = (pdfH * 0.382) - (rectH / 2);
 
-                if (blobImg && blobImg.dataUrl) {
-                    pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);
-                }
+            if (blobImg && blobImg.dataUrl) {
+                pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);
             }
         }
 
@@ -662,8 +643,9 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
 
         // 2. Full Written Story
         let storyText = `Title: ${storyData.title}\nAuthor: ${storyData.childName}\n\n`;
-        storyData.pages.forEach(p => {
-            storyText += `[Page ${p.pageNumber}]\n${p.text}\n\n`;
+        (storyData.spreads || []).forEach((s, i) => {
+            if (i === 0) return; // skip cover
+            storyText += `[Spread ${s.spreadNumber}]\n${s.leftText} ${s.rightText}\n\n`;
         });
         zip.file('story_narrative.txt', storyText);
 
@@ -721,17 +703,17 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         }
 
         // Use Promise.all for parallel fetching with better error handling
-        const pagePromises = storyData.pages.map(async (p, i) => {
-            if (p.illustrationUrl) {
-                const imgB64 = await getBase64Data(p.illustrationUrl);
-                if (imgB64) {
-                    imagesFolder.file(`page_${p.pageNumber}.jpg`, imgB64, { base64: true });
-                } else {
-                    console.warn(`Failed to package image for page ${p.pageNumber}`);
-                }
+        const spreadPromises = (storyData.spreads || []).map(async (s, i) => {
+            if (!s.illustrationUrl) return;
+            const imgB64 = await getBase64Data(s.illustrationUrl);
+            if (imgB64) {
+                const filename = i === 0 ? 'cover.jpg' : `spread_${s.spreadNumber}.jpg`;
+                imagesFolder.file(filename, imgB64, { base64: true });
+            } else {
+                console.warn(`Failed to package image for spread ${s.spreadNumber}`);
             }
         });
-        await Promise.all(pagePromises);
+        await Promise.all(spreadPromises);
 
         // 4. Workflow Artifacts (Debug/Re-creation)
         const artifactsFolder = zip.folder("workflow_artifacts");
@@ -758,7 +740,7 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         artifactsFolder.file("0_visual_dna_prompts.txt", dnaPrompts);
         if (storyData.blueprint) artifactsFolder.file("1_blueprint.json", JSON.stringify(storyData.blueprint, null, 2));
         if (storyData.rawScript) artifactsFolder.file("2a_raw_script.json", JSON.stringify(storyData.rawScript, null, 2));
-        if (storyData.pages && storyData.pages.length > 0) artifactsFolder.file("2b_edited_script.json", JSON.stringify(storyData.pages.map(p => ({ spreadNumber: p.pageNumber, text: p.text })), null, 2));
+        if (storyData.spreads && storyData.spreads.length > 0) artifactsFolder.file("2b_edited_script.json", JSON.stringify(storyData.spreads.map(s => ({ spreadNumber: s.spreadNumber, leftText: s.leftText, rightText: s.rightText })), null, 2));
         if (storyData.spreadPlan) artifactsFolder.file("3_visual_plan.json", JSON.stringify(storyData.spreadPlan, null, 2));
         if (storyData.finalPrompts) artifactsFolder.file("5_prompts.json", JSON.stringify(storyData.finalPrompts, null, 2));
 
@@ -778,10 +760,12 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
             artifactsFolder.file("0_cover_prompt.txt", storyData.actualCoverPrompt);
         }
 
-        storyData.pages.forEach(p => {
-            detailedPrompts += `PAGE ${p.pageNumber}\n`;
-            detailedPrompts += `TEXT: ${p.text}\n`;
-            detailedPrompts += `PROMPT USED:\n${p.actualPrompt || 'N/A'}\n`;
+        (storyData.spreads || []).forEach(s => {
+            if (s.spreadNumber === 0) return; // skip cover
+            detailedPrompts += `SPREAD ${s.spreadNumber}\n`;
+            detailedPrompts += `LEFT TEXT: ${s.leftText}\n`;
+            detailedPrompts += `RIGHT TEXT: ${s.rightText}\n`;
+            detailedPrompts += `PROMPT USED:\n${s.actualPrompt || 'N/A'}\n`;
             detailedPrompts += `--------------------------------\n\n`;
         });
         artifactsFolder.file("debug_creation_prompts.txt", detailedPrompts);
@@ -798,11 +782,12 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
                 childAge: storyData.childAge, // Added for Stitcher
                 secondCharacterName: storyData.useSecondCharacter && storyData.secondCharacter ? storyData.secondCharacter.name : undefined,
                 size: storyData.size,         // Added for Stitcher
-                pageCount: storyData.pages.length
+                spreadCount: storyData.spreadCount || (storyData.spreads?.length ?? 1) - 1
             },
-            pages: storyData.pages.map(p => ({
-                pageNumber: p.pageNumber,
-                text: p.text
+            spreads: (storyData.spreads || []).filter(s => s.spreadNumber > 0).map(s => ({
+                spreadNumber: s.spreadNumber,
+                leftText: s.leftText,
+                rightText: s.rightText
             }))
         };
         zip.file('order_manifest.json', JSON.stringify(manifest, null, 2));

@@ -158,16 +158,13 @@ export const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ order, onC
                 </div>
               </DetailSection>
 
-              <DetailSection title={t('تفاصيل الصفحات والرسوم', 'Page & Illustration Details')} className="col-span-full">
+              <DetailSection title={t('تفاصيل المشاهد والرسوم', 'Spread & Illustration Details')} className="col-span-full">
                 <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                  {order.storyData.pages.map(page => (
-                    <div key={page.pageNumber} className="text-xs border-b pb-2 last:border-b-0">
-                      <p className="font-bold text-gray-700">Page {page.pageNumber}:</p>
-                      <p className="text-gray-600 italic">"{page.text}"</p>
-                      <p className="mt-1 font-mono text-blue-800 bg-blue-50 p-1 rounded">
-                        <span className="font-semibold">Summary:</span> {page.pageSummary || 'N/A'}
-                      </p>
-                      <p className="mt-1 text-[10px] text-gray-400">Prompt: {page.actualPrompt?.substring(0, 50)}...</p>
+                  {(order.storyData.spreads || []).filter((s: any) => s.spreadNumber > 0).map((s: any) => (
+                    <div key={s.spreadNumber} className="text-xs border-b pb-2 last:border-b-0">
+                      <p className="font-bold text-gray-700">Spread {s.spreadNumber}:</p>
+                      <p className="text-gray-600 italic">"{s.leftText} {s.rightText}"</p>
+                      <p className="mt-1 text-[10px] text-gray-400">Prompt: {s.actualPrompt?.substring(0, 50)}...</p>
                     </div>
                   ))}
                 </div>

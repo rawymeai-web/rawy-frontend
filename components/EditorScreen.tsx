@@ -80,7 +80,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         if (isProcessing) setShowTerminal(true);
     }, [isProcessing]);
 
-    const spreads = storyData.pages || [];
+    const spreads = storyData.spreads || [];
     const blueprint = storyData.blueprint;
     const coverUrl = storyData.coverImageUrl;
     const coverPrompt = storyData.actualCoverPrompt || storyData.finalPrompts?.[0] || '';

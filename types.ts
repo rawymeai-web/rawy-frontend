@@ -177,7 +177,9 @@ export interface StoryData {
   useSecondCharacter: boolean;
   coverImageUrl: string;
   actualCoverPrompt?: string;
-  pages: Page[];
+  spreadCount?: number;   // Resolved from settings.defaultSpreadCount; defaults to 8
+  spreads: Spread[];      // Cover (index 0) + N inner spreads
+  pages?: Page[];         // @deprecated — kept for legacy order migration only
   size: string;
   selectedStylePrompt: string;
   selectedStyleNames?: string[];
@@ -273,6 +275,7 @@ export interface TextBlock {
   alignment: string;
 }
 
+/** @deprecated Use Spread instead */
 export interface Page {
   pageNumber: number;
   text: string;
@@ -285,6 +288,16 @@ export interface Page {
   debugContext?: any;
   sceneBlueprint?: any;
   pageSummary?: string;
+}
+
+/** One visual unit = one широко illustration + its two halves of story text */
+export interface Spread {
+  spreadNumber: number;       // 0 = cover, 1–N = inner spreads
+  illustrationUrl: string;    // Supabase Storage public URL (or temp base64 during generation)
+  leftText: string;           // Story text displayed on the left half
+  rightText: string;          // Story text displayed on the right half
+  actualPrompt?: string;      // The exact image prompt used
+  textSide?: 'left' | 'right'; // Which side the subject occupies (drives layout)
 }
 
 export interface StoryPlan {
