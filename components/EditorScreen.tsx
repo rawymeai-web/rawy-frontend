@@ -107,12 +107,17 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     };
 
     const cleanupPromptText = (text: any) => {
-        if (!text) return '';
-        if (typeof text !== 'string') {
-            console.warn("cleanupPromptText received non-string:", text);
-            return typeof text === 'object' ? JSON.stringify(text) : String(text);
+        if (text === undefined || text === null) return '';
+        let strText = typeof text === 'object' ? JSON.stringify(text, null, 2) : String(text);
+        
+        // Pretty print JSON strings for easier editing
+        if (typeof text === 'string' && (text.trim().startsWith('{') || text.trim().startsWith('['))) {
+            try {
+                strText = JSON.stringify(JSON.parse(text), null, 2);
+            } catch (e) {}
         }
-        return text.replace(/([A-Za-z0-9+/]{100,}=*)/g, '[REDACTED_BASE64_DATA]');
+        
+        return strText.replace(/([A-Za-z0-9+/]{100,}=*)/g, '[REDACTED_BASE64_DATA]');
     };
 
     const [regeneratingIndex, setRegeneratingIndex] = useState<number | 'cover' | null>(null);
@@ -558,8 +563,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                     </div>
                                 </div>
                                 <div className="w-full xl:w-1/2 flex flex-col gap-4">
-                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Cover Art AI Prompt</label>
-                                     <textarea value={cleanupPromptText(coverEdit)} onChange={(e) => setCoverEdit(e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-sm h-full min-h-[160px] resize-none focus:ring-2 focus:ring-brand-orange/10 outline-none transition-all font-medium leading-relaxed" />
+                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Cover Art AI Prompt (JSON)</label>
+                                     <textarea value={cleanupPromptText(coverEdit)} onChange={(e) => setCoverEdit(e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-xs h-full min-h-[300px] resize-none focus:ring-2 focus:ring-brand-orange/10 outline-none transition-all font-mono leading-relaxed" spellCheck={false} />
                                 </div>
                             </div>
                         </div>
@@ -608,8 +613,8 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                             <textarea value={pageEdits[i]?.text !== undefined ? pageEdits[i].text : getSpreadText(spreads[i])} onChange={(e) => handleTextChange(i, e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-sm h-32 focus:ring-2 focus:ring-brand-teal/10 outline-none transition-all font-medium leading-relaxed" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-brand-navy uppercase tracking-widest px-1">Illustration Technical Prompt</label>
-                                            <textarea value={cleanupPromptText(pageEdits[i]?.prompt || getPromptForIndex(i, spreads[i]))} onChange={(e) => handlePromptChange(i, e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-xs h-40 focus:ring-2 focus:ring-brand-navy/10 outline-none transition-all font-mono leading-relaxed" />
+                                            <label className="text-[10px] font-black text-brand-navy uppercase tracking-widest px-1">Illustration Technical Prompt (JSON)</label>
+                                            <textarea value={cleanupPromptText(pageEdits[i]?.prompt !== undefined ? pageEdits[i].prompt : getPromptForIndex(i, spreads[i]))} onChange={(e) => handlePromptChange(i, e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-xs h-64 focus:ring-2 focus:ring-brand-navy/10 outline-none transition-all font-mono leading-relaxed" spellCheck={false} />
                                         </div>
                                     </div>
                                 </div>
