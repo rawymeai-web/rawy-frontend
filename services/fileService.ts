@@ -585,9 +585,14 @@ export const generateStitchedPdf = async (
             const txtH = txtW / ratio;
             const marginX = pdfW * 0.05;
             const marginY = pdfH * 0.08;
-
-            let isLeft = true; // Default
-            if (language === 'ar') isLeft = false; // Swap
+            let isLeft: boolean;
+            if (pages[i] && (pages[i] as any).textSide === 'left') {
+                isLeft = true;
+            } else if (pages[i] && (pages[i] as any).textSide === 'right') {
+                isLeft = false;
+            } else {
+                isLeft = language !== 'ar'; // Legacy fallback for Stitched: English left page, Arabic right page.
+            }
 
             const txtX = isLeft ? marginX : (pdfW - txtW - marginX);
             const txtY = pdfH - txtH - marginY;
