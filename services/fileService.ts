@@ -380,10 +380,19 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             let rectH = rectW * 0.6;
             if (blobImg && blobImg.width > 0) { rectH = rectW * (blobImg.height / blobImg.width); }
 
-            // Text goes on the side opposite the image.
-            // For Arabic RTL books: image is on the right → text on the left (and vice versa for EN).
+            // Issue 2 Fix: Use spread.textSide to determine position instead of hardcoding by language.
+            // textSide stores which side the TEXT block should appear.
+            // If not set, fallback: for Arabic, hero is on left (after image flip) so text goes right.
             const isAr = language === 'ar';
-            const textOnLeft = isAr; // AR: text left, image right. EN: text right, image left.
+            let textOnLeft: boolean;
+            if (spread.textSide === 'left') {
+                textOnLeft = true;
+            } else if (spread.textSide === 'right') {
+                textOnLeft = false;
+            } else {
+                // Legacy fallback: for Arabic the image is left (flipped), text right
+                textOnLeft = !isAr;
+            }
             const rectX = textOnLeft ? pdfW * 0.05 : pdfW * 0.55;
             const rectY = (pdfH / 2) - (rectH / 2);
 
@@ -923,7 +932,7 @@ export async function createTextImage(titleData: { title: string, subtitle?: str
     // Let's keep Arabic straight for readability of connected letters
     const transform = isEn ? 'rotate(-2deg)' : 'none';
 
-    container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:${color};background:transparent;text-shadow:${textShadow};padding:20px;text-align:center;width:1000px;text-transform:uppercase;letter-spacing:${letterSpacing};transform:${transform};display:flex;flex-direction:column;align-items:center;`;
+    container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:${color};background:rgba(0,0,0,0.35);border-radius:24px;text-shadow:${textShadow};padding:28px 40px;text-align:center;width:1000px;text-transform:uppercase;letter-spacing:${letterSpacing};transform:${transform};display:flex;flex-direction:column;align-items:center;`;
 
     container.dir = lang === 'ar' ? 'rtl' : 'ltr';
     container.innerHTML = `

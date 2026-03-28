@@ -321,7 +321,9 @@ export const useLegacyPipeline = (
                 const imagePrompt = typeof rawPrompt === 'string' ? rawPrompt : (rawPrompt?.imagePrompt || rawPrompt?.prompt || '');
                 const scriptItem = finalScript[i];
                 const txt = typeof scriptItem === 'string' ? scriptItem : (scriptItem?.text || '');
-                const textSide = storyData.spreadPlan?.spreads?.[spreadNum]?.mainContentSide?.toLowerCase().includes('left') ? 'left' as const : 'right' as const;
+                // textSide = where the TEXT block goes = opposite of where the image hero/content is.
+                // mainContentSide = where the hero/image is. So text goes on the OTHER side.
+                const textSide = storyData.spreadPlan?.spreads?.[spreadNum]?.mainContentSide?.toLowerCase().includes('left') ? 'right' as const : 'left' as const;
 
                 if (!spreads[spreadNum]) {
                     // Split text roughly in half: first half is left, second half is right
