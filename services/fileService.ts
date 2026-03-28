@@ -213,17 +213,10 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
     if (coverData && coverData.length > 50) {
         let cleanB64 = coverData.includes(',') ? coverData.split(',')[1] : coverData;
 
-        // ARABIC FIX: FLIP THE COVER
-        // We generate "Hero Right" (English Style) always.
-        // For Arabic, we flip it so Hero becomes "Left" (Front).
-        if (language === 'ar') {
-            try {
-                const flippedDataUrl = await flipImageHorizontal(cleanB64);
-                cleanB64 = flippedDataUrl.split(',')[1];
-            } catch (e) {
-                console.error("Failed to flip Arabic cover", e);
-            }
-        }
+        // ARABIC FIX: REMOVED.
+        // promptEngineer.ts now correctly generates the Hero on the Right (Back Cover) natively
+        // to ensure the Title on the Left (Front Cover) does not overlap.
+        // No horizontal flip is needed here.
 
         // Use dynamic dimensions to prevent stretching
         const imgDim = await getImageDimensions(cleanB64);
@@ -450,15 +443,8 @@ export const generateStitchedPdf = async (
     }
 
     if (cleanCover) {
-        // ARABIC FIX: FLIP THE COVER (Stitched Version)
-        if (language === 'ar') {
-            try {
-                const flippedDataUrl = await flipImageHorizontal(cleanCover);
-                cleanCover = flippedDataUrl.split(',')[1];
-            } catch (e) {
-                console.error("Failed to flip Arabic cover (Stitched)", e);
-            }
-        }
+        // ARABIC FIX: REMOVED (Stitched Version).
+        // promptEngineer.ts now perfectly aligns Arabic cover orientation natively.
 
         const imgDim = await getImageDimensions(cleanCover);
         const dim = getCoverDimensions(imgDim.w, imgDim.h, pdfW, pdfH);

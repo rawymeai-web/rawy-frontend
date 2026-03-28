@@ -250,18 +250,18 @@ const themeLibrary: Record<string, ThemeContent> = {
     heritageContext: "The Mystery of the Arabian Oryx.",
     visualStyle: "Ethereal moonlight, silvery Oryx coats, glowing desert flora.",
     goals: [
-      "To learn the song of the Great Rain.",
-      "To become an honorary member of the Wolf Pack.",
-      "To deliver a message to the Wise Lion King.",
-      "To help the Elephant remember a forgotten memory.",
-      "To race the Cheetah to the edge of the world."
+      "To find the lost baby oryx calf and guide it safely back to its herd.",
+      "To carry fresh desert grass to the tired old Arabian horse at the farm.",
+      "To help the confused migratory bird find the right direction on its long journey.",
+      "To earn the trust of the wild desert fox by being patient and very still.",
+      "To call back the escaped racing camel before the big race in the morning."
     ],
     challenges: [
-      "The animals only speak in riddles.",
-      "Walking softly on the crunchiest leaves.",
-      "The River of Roars is hard to cross.",
-      "The fear of the sharp teeth.",
-      "Keeping up with the fast herd."
+      "Animals only communicate through gentle sounds and body language — no words.",
+      "Moving softly and slowly across the loud, crunchy desert pebble floor.",
+      "Crossing the wide wadi river that the animals use as their road.",
+      "Earning the animal's trust takes patience and sitting very, very still.",
+      "The desert is wide and the herd moves fast under the silver moon."
     ]
   },
   'adv-magic': {
