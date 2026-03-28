@@ -143,6 +143,24 @@ const MainLayout: React.FC = () => {
     }, [shippingDetails, storyData, language, setPaymentModalOpen, setScreen, startWorkflow]);
 
     const lightenStoryData = async (data: StoryData) => {
+        // DIAGNOSTIC CORE: Log the size of all top-level keys to investigate the 7.06MB bloat
+        try {
+            const report = Object.entries(data).map(([key, value]) => {
+                const size = encodeURI(JSON.stringify(value)).split(/%..|./).length - 1;
+                return { 
+                    key, 
+                    sizeMB: (size / (1024 * 1024)).toFixed(2) + ' MB',
+                    rawSize: size
+                };
+            }).sort((a, b) => b.rawSize - a.rawSize)
+              .filter(x => x.rawSize > 1024); // Only show > 1KB
+            
+            console.warn("🚨 [PAYLOAD DIAGNOSTIC] Analyzing StoryData Components:");
+            console.table(report);
+        } catch (e) {
+            console.error("Failed to run payload diagnostic:", e);
+        }
+
         let compressedRefImg = data.styleReferenceImageBase64;
         let compressedSecondImg = data.secondCharacterImageBase64;
     

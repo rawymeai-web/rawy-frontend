@@ -564,12 +564,14 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             </div>
                         </div>
 
-                        {/* Spreads */}
-                        {Array.from({ length: Math.max(8, spreads.length) }).map((_, i) => (
+                        {/* Spreads — start at index 1; index 0 is the cover rendered above */}
+                        {Array.from({ length: storyData.spreadCount || Math.max(8, spreads.length - 1) }).map((_, idx) => {
+                        const i = idx + 1; // spreads[0] = cover, spreads[1..N] = inner spreads
+                        return (
                             <div key={i} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
                                 <h3 className="text-xl font-black mb-6 text-brand-navy uppercase tracking-tighter flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-brand-orange/10 text-brand-orange rounded-lg flex items-center justify-center text-xs">{i+1}</div>
-                                    {t('صفحة', 'Spread')} {i + 1}
+                                    <div className="w-8 h-8 bg-brand-orange/10 text-brand-orange rounded-lg flex items-center justify-center text-xs">{i}</div>
+                                    {t('صفحة', 'Spread')} {i}
                                 </h3>
                                 <div className="flex flex-col xl:flex-row gap-10">
                                     <div className="w-full xl:w-1/2 flex flex-col gap-4">
@@ -612,7 +614,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                        ); })}
                     </div>
                 </div>
             </div>

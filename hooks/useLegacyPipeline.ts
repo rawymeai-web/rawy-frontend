@@ -179,11 +179,16 @@ export const useLegacyPipeline = (
                 const blueprintRes = await retryStep('Architect AI Blueprint', () => backendApi.generateBlueprint({ storyData: blueprintPayload, language: lang, spreadCount: storyData.spreadCount || 8 })) as any;
                 if (blueprintRes.error) throw new Error(blueprintRes.error);
 
-                storyData = { ...storyData, blueprint: blueprintRes.blueprint };
+                storyData = { 
+                    ...storyData, 
+                    blueprint: blueprintRes.blueprint,
+                    // Extract title from blueprint so cover PDF includes it
+                    title: storyData.title || blueprintRes.blueprint?.foundation?.title || storyData.title
+                };
                 storyDataRef.current = storyData;
                 onUpdateStory(storyData);
                 await adminService.saveOrder(orderNumber, storyData, initialShippingDetails);
-                logMsg(`✓ Story Blueprint constructed successfully.`);
+                logMsg(`✓ Story Blueprint constructed successfully. Title: "${storyData.title}")`);
             } else {
                 logMsg(`Blueprint already exists, skipping Phase 2A.`);
             }

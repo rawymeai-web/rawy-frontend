@@ -363,13 +363,9 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
-        // Draw Text (left + right from Spread object)
-        const textItems = [
-            { text: spread.leftText, textSide: 'left' as const },
-            { text: spread.rightText, textSide: 'right' as const }
-        ].filter(t => t.text);
-        for (let bIdx = 0; bIdx < textItems.length; bIdx++) {
-            const item = textItems[bIdx];
+        // Draw Text — ONE combined text box, placed on the side OPPOSITE the image
+        const fullText = [spread.leftText, spread.rightText].filter(Boolean).join(' ');
+        if (fullText) {
             const ageNum = parseInt(storyData.childAge, 10) || 6;
             let fontSize = 48;
             if (ageNum >= 10) fontSize = 32;
@@ -377,15 +373,19 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             else if (ageNum >= 4) fontSize = 48;
 
             const blobImg = await renderTextBlobToImage(
-                item.text, 800, 600, bIdx, language, fontSize, storyData.childName, 'box'
+                fullText, 800, 600, 0, language, fontSize, storyData.childName, 'box'
             );
 
-            const rectW = pdfW * 0.35;
+            const rectW = pdfW * 0.40;
             let rectH = rectW * 0.6;
             if (blobImg && blobImg.width > 0) { rectH = rectW * (blobImg.height / blobImg.width); }
 
-            const rectX = item.textSide === 'left' ? pdfW * 0.05 : pdfW * 0.60;
-            const rectY = (pdfH * 0.382) - (rectH / 2);
+            // Text goes on the side opposite the image.
+            // For Arabic RTL books: image is on the right → text on the left (and vice versa for EN).
+            const isAr = language === 'ar';
+            const textOnLeft = isAr; // AR: text left, image right. EN: text right, image left.
+            const rectX = textOnLeft ? pdfW * 0.05 : pdfW * 0.55;
+            const rectY = (pdfH / 2) - (rectH / 2);
 
             if (blobImg && blobImg.dataUrl) {
                 pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);
