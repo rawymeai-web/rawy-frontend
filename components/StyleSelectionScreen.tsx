@@ -151,33 +151,14 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 console.warn("Settings fetch failed, using default delay", e);
             }
 
-            for (let i = 0; i < previews.length; i++) {
-                if (!isMounted) break;
-                if (previews[i].status === 'done') continue;
+            // 🚀 PARALLEL: Fire all 4 variation calls at the same time
+            // Each card shows its own spinner while its individual call is in-flight.
+            // Total wait = time of the SLOWEST single call (~15-20s), not 4x that.
+            if (isMounted) setDebugStatus("Generating all 4 variations in parallel...");
+            setPreviews(prev => prev.map(p => ({ ...p, status: 'loading' })));
 
-                if (i > 0 && delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-                if (!isMounted) break;
-
-                if (isMounted) {
-                    setDebugStatus(`Generating Variation ${i + 1} / 4...`);
-                    setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'loading' } : p));
-                }
-
+            const callPreview = async (index: number) => {
                 try {
-                    // DEBUG: Log what we're about to send
-                    console.log("=== FRONTEND DEBUG: Before API Call ===");
-                    console.log("storyData.mainCharacter:", {
-                        name: storyData.mainCharacter?.name,
-                        hasImages: !!storyData.mainCharacter?.imageBases64,
-                        imageCount: storyData.mainCharacter?.imageBases64?.length || 0,
-                        firstImageLength: storyData.mainCharacter?.imageBases64?.[0]?.length || 0
-                    });
-                    console.log("storyData.theme:", storyData.theme);
-                    console.log("storyData.themeId:", storyData.themeId);
-                    console.log("storyData.selectedStylePrompt:", storyData.selectedStylePrompt);
-                    console.log("storyData.childAge:", storyData.childAge);
-                    console.log("=== END FRONTEND DEBUG ===");
-
                     const { imageBase64, secondImageBase64 } = await backendApi.generatePreview({
                         character: storyData.mainCharacter,
                         secondCharacter: storyData.useSecondCharacter ? storyData.secondCharacter : undefined,
@@ -188,20 +169,31 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                     }) as any;
 
                     if (isMounted) {
-                        setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'done', imageBase64, secondImageBase64 } : p));
-                        setSelectedPrimaryIndex(prev => prev === null ? i : prev);
+                        setPreviews(prev => prev.map((p, idx) => idx === index
+                            ? { ...p, status: 'done', imageBase64, secondImageBase64 }
+                            : p
+                        ));
+                        setSelectedPrimaryIndex(prev => prev === null ? index : prev);
                         if (storyData.useSecondCharacter) {
-                            setSelectedSecondaryIndex(prev => prev === null ? i : prev);
+                            setSelectedSecondaryIndex(prev => prev === null ? index : prev);
                         }
                     }
                 } catch (e: any) {
-                    console.error(`Preview ${i} failed:`, e);
+                    console.error(`Preview ${index} failed:`, e);
                     if (isMounted) {
-                        setPreviews(prev => prev.map((p, idx) => idx === i ? { ...p, status: 'error', errorMessage: e.message || "Unknown error" } : p));
+                        setPreviews(prev => prev.map((p, idx) => idx === index
+                            ? { ...p, status: 'error', errorMessage: e.message || "Unknown error" }
+                            : p
+                        ));
                     }
                 }
-            }
+            };
+
+            // Fire all 4 in parallel — each resolves independently and updates its own card
+            await Promise.all(previews.map((_, i) => callPreview(i)));
+
             if (isMounted) setDebugStatus("Generation Complete");
+
         };
         generateVariations();
         return () => { isMounted = false; };
