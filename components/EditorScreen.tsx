@@ -88,8 +88,11 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const masterDNA2 = storyData.secondCharacter?.imageDNA?.[0] || storyData.secondCharacterImageBase64 || storyData.secondCharacter?.imageBases64?.[0];
 
     // Local state to handle edits before saving them back to storyData
-    const [pageEdits, setPageEdits] = useState<{ [index: number]: { text: string; prompt: string } }>({});
+    const [pageEdits, setPageEdits] = useState<{ [index: number]: { text: string; prompt: string; textSide?: 'left'|'right' } }>({});
     const [coverEdit, setCoverEdit] = useState(coverPrompt);
+    const [localTitle, setLocalTitle] = useState(storyData.title || '');
+    const [localSubtitle, setLocalSubtitle] = useState(storyData.coverSubtitle || storyData.secondCharacter?.name || storyData.childName || '');
+    const [localCoverTextSide, setLocalCoverTextSide] = useState<'left'|'right'>(storyData.coverTextSide || (language === 'ar' ? 'left' : 'right'));
 
     // Helper to safely extract prompt
     const getPromptForIndex = (pageIndex: number, pageData: any) => {
@@ -142,15 +145,24 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const handleTextChange = (index: number, newText: string) => {
         setPageEdits(prev => ({
             ...prev,
-            [index]: { ...(prev[index] || { text: getSpreadText(spreads[index]), prompt: getPromptForIndex(index, spreads[index]) }), text: newText }
+            [index]: { ...(prev[index] || { text: getSpreadText(spreads[index]), prompt: getPromptForIndex(index, spreads[index]), textSide: spreads[index]?.textSide }), text: newText }
         }));
     };
 
     const handlePromptChange = (index: number, newPrompt: string) => {
         setPageEdits(prev => ({
             ...prev,
-            [index]: { ...(prev[index] || { text: getSpreadText(spreads[index]), prompt: getPromptForIndex(index, spreads[index]) }), prompt: newPrompt }
+            [index]: { ...(prev[index] || { text: getSpreadText(spreads[index]), prompt: getPromptForIndex(index, spreads[index]), textSide: spreads[index]?.textSide }), prompt: newPrompt }
         }));
+    };
+
+    const handleTextSideChange = (index: number, newSide: 'left' | 'right') => {
+        setPageEdits(prev => ({
+            ...prev,
+            [index]: { ...(prev[index] || { text: getSpreadText(spreads[index]), prompt: getPromptForIndex(index, spreads[index]) }), textSide: newSide }
+        }));
+        // We trigger an immediate save for UX snappiness
+        setTimeout(handleSilentSave, 100);
     };
 
     const handleRegenerateText = async (index: number) => {
@@ -342,8 +354,11 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalSpreads[i].actualPrompt) {
                 finalSpreads[i] = { ...finalSpreads[i], actualPrompt: pageEdits[i].prompt };
             }
+            if (pageEdits[i]?.textSide !== undefined) {
+                finalSpreads[i] = { ...finalSpreads[i], textSide: pageEdits[i].textSide };
+            }
         }
-        onUpdateStory({ spreads: finalSpreads, actualCoverPrompt: coverEdit });
+        onUpdateStory({ spreads: finalSpreads, actualCoverPrompt: coverEdit, title: localTitle, coverSubtitle: localSubtitle, coverTextSide: localCoverTextSide });
         
         // Give the UI a moment to render the loading spinner before locking the thread
         await new Promise(r => setTimeout(r, 50));
@@ -370,10 +385,13 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalSpreads[i].actualPrompt) {
                 finalSpreads[i] = { ...finalSpreads[i], actualPrompt: pageEdits[i].prompt };
             }
+            if (pageEdits[i]?.textSide !== undefined) {
+                finalSpreads[i] = { ...finalSpreads[i], textSide: pageEdits[i].textSide };
+            }
         }
-        onUpdateStory({ spreads: finalSpreads, actualCoverPrompt: coverEdit });
+        onUpdateStory({ spreads: finalSpreads, actualCoverPrompt: coverEdit, title: localTitle, coverSubtitle: localSubtitle, coverTextSide: localCoverTextSide });
         try {
-            await adminService.saveOrder(storyData.orderId as string, { ...storyData, spreads: finalSpreads, actualCoverPrompt: coverEdit }, shippingDetails || {});
+            await adminService.saveOrder(storyData.orderId as string, { ...storyData, spreads: finalSpreads, actualCoverPrompt: coverEdit, title: localTitle, coverSubtitle: localSubtitle, coverTextSide: localCoverTextSide }, shippingDetails || {});
         } catch(e) {
             console.error("Silent save failed", e);
         }
@@ -563,8 +581,32 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                     </div>
                                 </div>
                                 <div className="w-full xl:w-1/2 flex flex-col gap-4">
-                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Cover Art AI Prompt (JSON)</label>
-                                     <textarea value={cleanupPromptText(coverEdit)} onChange={(e) => setCoverEdit(e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-xs h-full min-h-[300px] resize-none focus:ring-2 focus:ring-brand-orange/10 outline-none transition-all font-mono leading-relaxed" spellCheck={false} />
+                                     <div className="flex gap-4">
+                                         <div className="flex-1">
+                                             <label className="text-[10px] font-black text-brand-teal uppercase tracking-widest px-1">Book Title</label>
+                                             <input type="text" value={localTitle} onChange={(e) => setLocalTitle(e.target.value)} onBlur={handleSilentSave} className="w-full mt-1 p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-teal/20 outline-none transition-all" />
+                                         </div>
+                                         <div className="flex-1">
+                                             <div className="flex justify-between items-center px-1">
+                                                <label className="text-[10px] font-black text-brand-teal uppercase tracking-widest">Cover Subtitle</label>
+                                                {/* COVER TEXT ALIGNMENT TOGGLE */}
+                                                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                                                    <button 
+                                                        onClick={() => { setLocalCoverTextSide('left'); setTimeout(handleSilentSave, 100); }} 
+                                                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${localCoverTextSide === 'left' ? 'bg-white shadow text-brand-navy' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    >Left</button>
+                                                    <button 
+                                                        onClick={() => { setLocalCoverTextSide('right'); setTimeout(handleSilentSave, 100); }} 
+                                                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${localCoverTextSide === 'right' ? 'bg-white shadow text-brand-navy' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    >Right</button>
+                                                </div>
+                                             </div>
+                                             <input type="text" value={localSubtitle} onChange={(e) => setLocalSubtitle(e.target.value)} onBlur={handleSilentSave} className="w-full mt-1 p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-teal/20 outline-none transition-all" />
+                                         </div>
+                                     </div>
+
+                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 mt-2">Cover Art AI Prompt (JSON)</label>
+                                     <textarea value={cleanupPromptText(coverEdit)} onChange={(e) => setCoverEdit(e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-xs flex-1 min-h-[200px] resize-none focus:ring-2 focus:ring-brand-orange/10 outline-none transition-all font-mono leading-relaxed" spellCheck={false} />
                                 </div>
                             </div>
                         </div>
@@ -605,9 +647,26 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center px-1">
                                                 <label className="text-[10px] font-black text-brand-teal uppercase tracking-widest">Narrative Text Edit</label>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => handleRegenerateText(i)} className="text-[9px] font-black uppercase text-brand-orange hover:underline">{textRegeneratingIndex === i ? 'Writing...' : 'AI Rewrite'}</button>
-                                                    <button onClick={() => handleUploadText(i)} className="text-[9px] font-black uppercase text-brand-teal hover:underline">Upload .txt</button>
+                                                <div className="flex items-center gap-4">
+                                                    {/* TEXT ALIGNMENT TOGGLE */}
+                                                    <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                                                        <button 
+                                                            onClick={() => handleTextSideChange(i, 'left')} 
+                                                            className={`px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all ${((pageEdits[i]?.textSide || spreads[i]?.textSide) === 'left' || !(pageEdits[i]?.textSide || spreads[i]?.textSide)) ? 'bg-white shadow text-brand-navy' : 'text-gray-400 hover:text-gray-600'}`}
+                                                        >
+                                                            Left
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleTextSideChange(i, 'right')} 
+                                                            className={`px-3 py-1 rounded-md text-[10px] font-black uppercase transition-all ${(pageEdits[i]?.textSide || spreads[i]?.textSide) === 'right' ? 'bg-white shadow text-brand-navy' : 'text-gray-400 hover:text-gray-600'}`}
+                                                        >
+                                                            Right
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex gap-2 border-l border-gray-200 pl-4">
+                                                        <button onClick={() => handleRegenerateText(i)} className="text-[9px] font-black uppercase text-brand-orange hover:underline">{textRegeneratingIndex === i ? 'Writing...' : 'AI Rewrite'}</button>
+                                                        <button onClick={() => handleUploadText(i)} className="text-[9px] font-black uppercase text-brand-teal hover:underline">Upload .txt</button>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <textarea value={pageEdits[i]?.text !== undefined ? pageEdits[i].text : getSpreadText(spreads[i])} onChange={(e) => handleTextChange(i, e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-sm h-32 focus:ring-2 focus:ring-brand-teal/10 outline-none transition-all font-medium leading-relaxed" />

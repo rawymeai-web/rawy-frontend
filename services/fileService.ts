@@ -230,10 +230,11 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         // EN: Front is RIGHT half (50% to 100%)
         // AR: Front is LEFT half (0% to 50%)
         const isAr = language === 'ar';
-        const subtitle = storyData.useSecondCharacter && storyData.secondCharacter?.name
+        const subtitle = storyData.coverSubtitle || (storyData.useSecondCharacter && storyData.secondCharacter?.name
             ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter.name}`
-            : storyData.childName;
-        const titleB64 = await createTextImage({ title: storyData.title, subtitle }, language);
+            : storyData.childName);
+        const coverTitle = storyData.title || storyData.blueprint?.foundation?.title || storyData.childName || 'My Story';
+        const titleB64 = await createTextImage({ title: coverTitle, subtitle }, language);
 
         // Title Width: 40% of full PDF (80% of front cover)
         const tw = pdfW * 0.4;
@@ -241,13 +242,10 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         const th = tw / titleAspect;
 
         let tx;
-        if (isAr) {
-            // ARABIC logic: 
-            // User says "Hero should be on Right". 
-            // So we place Title on LEFT (0.25) to avoid covering the Hero.
+        const side = storyData.coverTextSide || (isAr ? 'left' : 'right');
+        if (side === 'left') {
             tx = (pdfW * 0.25) - (tw / 2);
         } else {
-            // ENGLISH logic (Unchanged):
             // Front is RIGHT (Standard). Title centered on Right side (0.75).
             tx = (pdfW * 0.75) - (tw / 2);
         }
@@ -373,9 +371,9 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             let rectH = rectW * 0.6;
             if (blobImg && blobImg.width > 0) { rectH = rectW * (blobImg.height / blobImg.width); }
 
-            // Issue 2 Fix: Use spread.textSide to determine position instead of hardcoding by language.
-            // textSide stores which side the TEXT block should appear.
-            // If not set, fallback: for Arabic, hero is on left (after image flip) so text goes right.
+            // Determine which side the text block should appear on.
+            // Priority: 1) spread.textSide (explicitly saved), 2) parse actualPrompt for "X side must be empty",
+            // 3) language-based fallback.
             const isAr = language === 'ar';
             let textOnLeft: boolean;
             if (spread.textSide === 'left') {
@@ -383,8 +381,23 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             } else if (spread.textSide === 'right') {
                 textOnLeft = false;
             } else {
-                // Legacy fallback: for Arabic the image is left (flipped), text right
-                textOnLeft = !isAr;
+                // Fallback: parse the image prompt for the "empty side" instruction.
+                // The prompt engineer writes: "The right side must be empty" (leave right for text)
+                // or "The left side must be empty" (leave left for text).
+                const promptText = (spread.actualPrompt || '').toLowerCase();
+                const rightEmptyMatch = /(?:the\s+)?right\s+(?:side|half)[^.]*empty/i.test(promptText);
+                const leftEmptyMatch = /(?:the\s+)?left\s+(?:side|half)[^.]*empty/i.test(promptText);
+                if (rightEmptyMatch) {
+                    // Right is empty for text → text goes RIGHT
+                    textOnLeft = false;
+                } else if (leftEmptyMatch) {
+                    // Left is empty for text → text goes LEFT
+                    textOnLeft = true;
+                } else {
+                    // Ultimate fallback: Arabic text goes left (RTL reading direction),
+                    // English text also goes left (book convention)
+                    textOnLeft = true;
+                }
             }
             const rectX = textOnLeft ? pdfW * 0.05 : pdfW * 0.55;
             const rectY = (pdfH / 2) - (rectH / 2);
@@ -418,7 +431,7 @@ export const generateStitchedPdf = async (
     coverBlob: Blob,
     spreadBlobs: Blob[],
     sizeConfig: ProductSize,
-    storyDetails: { title: string, childName: string, childAge: string, secondCharacterName?: string },
+    storyDetails: { title: string, childName: string, childAge: string, secondCharacterName?: string, coverSubtitle?: string, coverTextSide?: 'left'|'right' },
     pages: { text: string }[],
     language: 'en' | 'ar' = 'en',
     orderNumber?: string
@@ -454,16 +467,17 @@ export const generateStitchedPdf = async (
 
         // Add Title Overlay to Cover
         const isAr = language === 'ar';
-        const subtitle = storyDetails.secondCharacterName
+        const subtitle = storyDetails.coverSubtitle || (storyDetails.secondCharacterName
             ? `${storyDetails.childName} ${isAr ? 'و' : '&'} ${storyDetails.secondCharacterName}`
-            : storyDetails.childName;
+            : storyDetails.childName);
         const titleB64 = await createTextImage({ title: storyDetails.title, subtitle }, language);
 
         const tw = pdfW * 0.4;
         const titleAspect = 1000 / 200;
         const th = tw / titleAspect;
         let tx;
-        if (isAr) {
+        const side = storyDetails.coverTextSide || (isAr ? 'left' : 'right');
+        if (side === 'left') {
             tx = (pdfW * 0.25) - (tw / 2);
         } else {
             tx = (pdfW * 0.75) - (tw / 2);
@@ -577,7 +591,10 @@ export const generateStitchedPdf = async (
             } else if (pages[i] && (pages[i] as any).textSide === 'right') {
                 isLeft = false;
             } else {
-                isLeft = language !== 'ar'; // Legacy fallback for Stitched: English left page, Arabic right page.
+                // Default fallback: text goes on the left side.
+                // The prompt convention keeps the RIGHT side empty for text overlay (hero is on left).
+                // So for inner spread pages without an explicit textSide, text always goes left.
+                isLeft = true;
             }
 
             const txtX = isLeft ? marginX : (pdfW - txtW - marginX);
@@ -607,6 +624,43 @@ export const generateStitchedPdf = async (
     return pdf.output('blob');
 };
 
+async function createCoverWithText(coverBase64: string, titleBase64: string, coverTextSide?: 'left'|'right', isAr?: boolean): Promise<string> {
+    return new Promise((resolve) => {
+        const coverImg = new Image();
+        coverImg.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = coverImg.width;
+            canvas.height = coverImg.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(coverBase64.includes(',') ? coverBase64.split(',')[1] : coverBase64);
+            
+            ctx.drawImage(coverImg, 0, 0, canvas.width, canvas.height);
+            
+            const titleImg = new Image();
+            titleImg.onload = () => {
+                const tw = canvas.width * 0.4;
+                const titleAspect = titleImg.width / titleImg.height;
+                const th = tw / titleAspect;
+                let tx;
+                const side = coverTextSide || (isAr ? 'left' : 'right');
+                if (side === 'left') {
+                    tx = (canvas.width * 0.25) - (tw / 2);
+                } else {
+                    tx = (canvas.width * 0.75) - (tw / 2);
+                }
+                const ty = canvas.height * 0.08;
+                
+                ctx.drawImage(titleImg, tx, ty, tw, th);
+                const finalUrl = canvas.toDataURL('image/jpeg', 0.95);
+                resolve(finalUrl.includes(',') ? finalUrl.split(',')[1] : finalUrl);
+            };
+            titleImg.onerror = () => resolve(coverBase64.includes(',') ? coverBase64.split(',')[1] : coverBase64);
+            titleImg.src = titleBase64;
+        };
+        coverImg.onerror = () => resolve(coverBase64.includes(',') ? coverBase64.split(',')[1] : coverBase64);
+        coverImg.src = coverBase64.startsWith('data:') ? coverBase64 : `data:image/jpeg;base64,${coverBase64}`;
+    });
+}
 
 export const uploadOrderFiles = async (orderNumber: string, zipBlob: Blob): Promise<string | null> => {
     try {
@@ -683,9 +737,29 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
             return input.includes(',') ? input.split(',')[1] : input;
         };
 
+        let coverB64ToUse = "";
         if (storyData.coverImageUrl) {
             const coverB64 = await getBase64Data(storyData.coverImageUrl);
-            if (coverB64) imagesFolder.file("cover.jpg", coverB64, { base64: true });
+            if (coverB64) {
+                imagesFolder.file("cover_clean.jpg", coverB64, { base64: true });
+                coverB64ToUse = coverB64;
+            }
+        }
+
+        // Generate and add cover text and composite cover
+        const isAr = language === 'ar';
+        const subtitle = storyData.coverSubtitle || (storyData.useSecondCharacter && storyData.secondCharacter?.name ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter.name}` : storyData.childName);
+        const coverTitle = storyData.title || storyData.blueprint?.foundation?.title || storyData.childName || 'My Story';
+        const titleB64 = await createTextImage({ title: coverTitle, subtitle }, language);
+        
+        if (titleB64) {
+            const cleanTitleB64 = titleB64.includes(',') ? titleB64.split(',')[1] : titleB64;
+            imagesFolder.file("cover_text_overlay.png", cleanTitleB64, { base64: true });
+            
+            if (coverB64ToUse) {
+                const coverWithTextB64 = await createCoverWithText(coverB64ToUse, titleB64, storyData.coverTextSide, isAr);
+                imagesFolder.file("cover_with_text.jpg", coverWithTextB64, { base64: true });
+            }
         }
 
         // Add Reference Images (Visual DNA) to the raw_images folder
@@ -902,8 +976,21 @@ export async function createTextImage(titleData: { title: string, subtitle?: str
     fontLink.href = 'https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Tajawal:wght@400;700;900&family=Amiri:wght@400;700&display=swap';
     fontLink.rel = 'stylesheet';
     document.head.appendChild(fontLink);
-    // Wait a moment for font to load (heuristic) - in real prod use document.fonts.ready
+
+    // Wait for fonts to be ready with a robust timeout fallback
     await document.fonts.ready;
+
+    // Extra: Explicitly wait for the specific font needed (fixes timing issues with Google Fonts CDN)
+    const targetFont = lang === 'ar' ? 'Tajawal' : 'Luckiest Guy';
+    try {
+        await Promise.race([
+            document.fonts.load(`900 90px '${targetFont}'`),
+            new Promise(resolve => setTimeout(resolve, 3000)) // 3s fallback
+        ]);
+    } catch (e) {
+        // Ignore font-load errors; continue with best-effort rendering
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
 
 
     const container = document.createElement('div');

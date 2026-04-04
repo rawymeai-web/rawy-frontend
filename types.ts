@@ -167,6 +167,7 @@ export interface StoryData {
   parentName?: string; // NEW: Capture parent name early
   parentEmail?: string; // NEW: Capture parent email early
   title: string;
+  coverSubtitle?: string; // NEW: Allow explicit setting of Cover Subtitle
   theme: string;
   themeId?: string;
   occasion?: string; // NEW: Special occasion like Birthday, Sibling etc.
@@ -177,6 +178,7 @@ export interface StoryData {
   useSecondCharacter: boolean;
   coverImageUrl: string;
   actualCoverPrompt?: string;
+  coverTextSide?: 'left' | 'right';
   spreadCount?: number;   // Resolved from settings.defaultSpreadCount; defaults to 8
   spreads: Spread[];      // Cover (index 0) + N inner spreads
   pages?: Page[];         // @deprecated — kept for legacy order migration only

@@ -71,11 +71,16 @@ export const useLegacyPipeline = (
             // Helper to prevent Vercel 4.5MB payload limit errors by stripping heavy base64 images from JSON text requests
             const getCleanStoryDataForTextApi = (sd: any) => {
                 const clean = { ...sd };
-                if (clean.mainCharacter) clean.mainCharacter = { ...clean.mainCharacter, imageBases64: [], imageDNA: [] };
-                if (clean.secondCharacter) clean.secondCharacter = { ...clean.secondCharacter, imageBases64: [], imageDNA: [] };
+                if (clean.mainCharacter) clean.mainCharacter = { ...clean.mainCharacter, imageBases64: [], imageDNA: [], images: [] };
+                if (clean.secondCharacter) clean.secondCharacter = { ...clean.secondCharacter, imageBases64: [], imageDNA: [], images: [] };
                 clean.styleReferenceImageBase64 = undefined;
                 clean.mainCharacterImageBase64 = undefined;
                 clean.secondCharacterImageBase64 = undefined;
+                clean.styleReferenceImageUrl = undefined;
+                clean.coverImageUrl = undefined;
+                clean.pages = undefined;
+                clean.spreads = undefined;
+                clean.coverDebugImages = undefined;
                 return clean;
             };
 
@@ -321,9 +326,34 @@ export const useLegacyPipeline = (
                 const imagePrompt = typeof rawPrompt === 'string' ? rawPrompt : (rawPrompt?.imagePrompt || rawPrompt?.prompt || '');
                 const scriptItem = finalScript[i];
                 const txt = typeof scriptItem === 'string' ? scriptItem : (scriptItem?.text || '');
+
                 // textSide = where the TEXT block goes = opposite of where the image hero/content is.
                 // mainContentSide = where the hero/image is. So text goes on the OTHER side.
-                const textSide = storyData.spreadPlan?.spreads?.[spreadNum]?.mainContentSide?.toLowerCase().includes('left') ? 'right' as const : 'left' as const;
+                // Priority: 1) mainContentSide from spreadPlan, 2) parse the prompt for "X side must be empty"
+                const mainContentSide = storyData.spreadPlan?.spreads?.[spreadNum]?.mainContentSide || '';
+                let textSide: 'left' | 'right';
+                if (mainContentSide.toLowerCase().includes('left')) {
+                    // Hero on LEFT → Text on RIGHT
+                    textSide = 'right';
+                } else if (mainContentSide.toLowerCase().includes('right')) {
+                    // Hero on RIGHT → Text on LEFT
+                    textSide = 'left';
+                } else {
+                    // No mainContentSide from plan - parse the image prompt for the "empty side" instruction.
+                    // The prompt engineer writes: "The right side must be empty" (leave right for text overlay)
+                    const rightEmptyMatch = /(?:the\s+)?right\s+(?:side|half)[^.]*empty/i.test(imagePrompt);
+                    const leftEmptyMatch = /(?:the\s+)?left\s+(?:side|half)[^.]*empty/i.test(imagePrompt);
+                    if (rightEmptyMatch) {
+                        // Right is empty → text goes RIGHT
+                        textSide = 'right';
+                    } else if (leftEmptyMatch) {
+                        // Left is empty → text goes LEFT
+                        textSide = 'left';
+                    } else {
+                        // Ultimate fallback: text goes right (right side kept empty by convention)
+                        textSide = 'right';
+                    }
+                }
 
                 if (!spreads[spreadNum]) {
                     // Split text roughly in half: first half is left, second half is right
@@ -339,7 +369,9 @@ export const useLegacyPipeline = (
                         textSide
                     };
                 } else {
+                    // On resume: always update both actualPrompt AND textSide so they stay in sync with the plan.
                     spreads[spreadNum].actualPrompt = imagePrompt;
+                    spreads[spreadNum].textSide = textSide;
                 }
             }
 
