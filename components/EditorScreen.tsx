@@ -6,6 +6,15 @@ import { backendApi } from '../services/backendApi';
 import * as adminService from '../services/adminService';
 import { useLegacyPipeline } from '../hooks/useLegacyPipeline';
 import { compressBase64Image } from '../utils/imageUtils';
+import TitlePreviewPanel from './TitlePreviewPanel';
+
+interface FinalizeArgs {
+    title: string;
+    coverSubtitle: string;
+    coverTextSide: 'left' | 'right';
+    spreads: any[];
+    actualCoverPrompt: string;
+}
 
 interface EditorScreenProps {
     storyData: StoryData;
@@ -13,7 +22,7 @@ interface EditorScreenProps {
     isGenerating: boolean;
     generationProgress: number;
     onUpdateStory: (updates: Partial<StoryData>) => void;
-    onFinalize: () => void;
+    onFinalize: (args: FinalizeArgs) => void;
     isLegacy?: boolean;
     shippingDetails?: any;
     generationStatus?: string;
@@ -91,8 +100,21 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const [pageEdits, setPageEdits] = useState<{ [index: number]: { text: string; prompt: string; textSide?: 'left'|'right' } }>({});
     const [coverEdit, setCoverEdit] = useState(coverPrompt);
     const [localTitle, setLocalTitle] = useState(storyData.title || '');
-    const [localSubtitle, setLocalSubtitle] = useState(storyData.coverSubtitle || storyData.secondCharacter?.name || storyData.childName || '');
+    // Subtitle override: empty = use auto-computed smart subtitle
+    const [localSubtitleOverride, setLocalSubtitleOverride] = useState(storyData.coverSubtitle || '');
+    const [useSubtitleOverride, setUseSubtitleOverride] = useState(!!storyData.coverSubtitle);
     const [localCoverTextSide, setLocalCoverTextSide] = useState<'left'|'right'>(storyData.coverTextSide || (language === 'ar' ? 'left' : 'right'));
+
+    // Smart auto-computed subtitle — single hero vs double hero
+    const isAr = language === 'ar';
+    const hasSecondHero = !!(storyData.useSecondCharacter && storyData.secondCharacter?.name);
+    const computedSubtitle = hasSecondHero
+        ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter!.name}`
+        : isAr
+            ? `قصة ${storyData.childName}`
+            : `A Story for ${storyData.childName}`;
+    // Active subtitle: override if enabled, else auto
+    const localSubtitle = useSubtitleOverride ? localSubtitleOverride : computedSubtitle;
 
     // Helper to safely extract prompt
     const getPromptForIndex = (pageIndex: number, pageData: any) => {
@@ -254,9 +276,12 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             const file = e.target.files?.[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 const base64 = (event.target?.result as string).split(',')[1];
+                let newStoryData = { ...storyData };
+                
                 if (index === 'cover') {
+                    newStoryData = { ...storyData, coverImageUrl: base64 };
                     onUpdateStory({ coverImageUrl: base64 });
                 } else {
                     const newSpreads = [...spreads];
@@ -264,7 +289,17 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                         ...newSpreads[index],
                         illustrationUrl: base64
                     };
+                    newStoryData = { ...storyData, spreads: newSpreads };
                     onUpdateStory({ spreads: newSpreads });
+                }
+                
+                // Immediately save the upload to the database!
+                if (storyData.orderId) {
+                    try {
+                        await adminService.saveOrder(storyData.orderId, newStoryData, shippingDetails || {});
+                    } catch (err) {
+                        console.error('Failed to save uploaded image to DB', err);
+                    }
                 }
             };
             reader.readAsDataURL(file);
@@ -343,28 +378,38 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const applyAllEditsAndFinalize = async () => {
         setIsFinalizing(true);
-        const finalSpreads = [...spreads];
-        for (let i = 0; i < finalSpreads.length; i++) {
-            const editedText = pageEdits[i]?.text;
-            const currentText = getSpreadText(finalSpreads[i]);
-            if (editedText !== undefined && editedText !== currentText) {
-                // Store edited text back into the spread's leftText field (unified)
-                finalSpreads[i] = { ...finalSpreads[i], leftText: editedText, rightText: '' };
-            }
-            if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalSpreads[i].actualPrompt) {
-                finalSpreads[i] = { ...finalSpreads[i], actualPrompt: pageEdits[i].prompt };
-            }
-            if (pageEdits[i]?.textSide !== undefined) {
-                finalSpreads[i] = { ...finalSpreads[i], textSide: pageEdits[i].textSide };
-            }
-        }
-        onUpdateStory({ spreads: finalSpreads, actualCoverPrompt: coverEdit, title: localTitle, coverSubtitle: localSubtitle, coverTextSide: localCoverTextSide });
         
         // Give the UI a moment to render the loading spinner before locking the thread
         await new Promise(r => setTimeout(r, 50));
         
         try {
-            await onFinalize();
+            await handleSilentSave();
+
+            const finalSpreads = [...spreads];
+            for (let i = 0; i < finalSpreads.length; i++) {
+                const editedText = pageEdits[i]?.text;
+                const currentText = getSpreadText(finalSpreads[i]);
+                if (editedText !== undefined && editedText !== currentText) {
+                    finalSpreads[i] = { ...finalSpreads[i], leftText: editedText, rightText: '' };
+                }
+                if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalSpreads[i].actualPrompt) {
+                    finalSpreads[i] = { ...finalSpreads[i], actualPrompt: pageEdits[i].prompt };
+                }
+                if (pageEdits[i]?.textSide !== undefined) {
+                    finalSpreads[i] = { ...finalSpreads[i], textSide: pageEdits[i].textSide };
+                }
+            }
+
+            const finalStoryData = {
+                ...storyData,
+                title: localTitle,
+                coverSubtitle: localSubtitle,
+                coverTextSide: localCoverTextSide,
+                spreads: finalSpreads,
+                actualCoverPrompt: coverEdit,
+            };
+
+            await onFinalize(finalStoryData);
         } catch (error) {
             console.error("Finalize error:", error);
             alert("Error finalizing order: " + (error as any).message);
@@ -552,6 +597,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                             <Button onClick={() => runPipeline(true)} disabled={isAnyGenerating} variant="secondary" className="!py-2 !px-3 lg:!py-2.5 lg:!px-4 border-2 border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white transition-all shadow-lg font-black uppercase text-[9px] lg:text-[10px]">
                                 {t('إستكمال المعالجة', 'Continue Pipeline')}
                             </Button>
+                            <Button onClick={handleSilentSave} disabled={isAnyGenerating || isFinalizing} variant="secondary" className="!py-2 !px-4 lg:!py-2.5 lg:!px-6 border-2 border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white transition-all font-black uppercase text-[9px] lg:text-[10px] flex items-center justify-center gap-2">
+                                💾 {t('حفظ', 'Save to DB')}
+                            </Button>
                             <Button onClick={applyAllEditsAndFinalize} disabled={isAnyGenerating || isFinalizing} className="!py-2 !px-4 lg:!py-2.5 lg:!px-6 shadow-xl shadow-brand-orange/30 font-black uppercase text-[9px] lg:text-[10px] flex items-center justify-center gap-2">
                                 {isFinalizing ? <><Spinner size="sm" color="text-white" /> {t('جاري الإنهاء...', 'Finalizing...')}</> : t('إنهاء وحفظ', 'Finalize')}
                             </Button>
@@ -601,9 +649,52 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                     >Right</button>
                                                 </div>
                                              </div>
-                                             <input type="text" value={localSubtitle} onChange={(e) => setLocalSubtitle(e.target.value)} onBlur={handleSilentSave} className="w-full mt-1 p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-teal/20 outline-none transition-all" />
                                          </div>
                                      </div>
+
+                                     {/* SMART SUBTITLE UI */}
+                                     <div>
+                                         <div className="flex justify-between items-center px-1 mb-1">
+                                             <label className="text-[10px] font-black text-brand-teal uppercase tracking-widest">
+                                                 {storyData.useSecondCharacter ? '👥 Hero Names' : '🌟 Hero Name'}
+                                             </label>
+                                             <button
+                                                 onClick={() => { setUseSubtitleOverride(v => !v); setTimeout(handleSilentSave, 100); }}
+                                                 className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg transition-all ${
+                                                     useSubtitleOverride
+                                                         ? 'bg-brand-orange text-white'
+                                                         : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                 }`}
+                                             >
+                                                 {useSubtitleOverride ? '✏️ Custom' : '✨ Auto'}
+                                             </button>
+                                         </div>
+                                         {useSubtitleOverride ? (
+                                             <input
+                                                 type="text"
+                                                 value={localSubtitleOverride}
+                                                 onChange={(e) => setLocalSubtitleOverride(e.target.value)}
+                                                 onBlur={handleSilentSave}
+                                                 placeholder={computedSubtitle}
+                                                 className="w-full p-3 bg-white border-2 border-brand-orange/30 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-orange/20 outline-none transition-all"
+                                             />
+                                         ) : (
+                                             <div className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-600 flex items-center gap-2">
+                                                 <span className="text-base">{storyData.useSecondCharacter ? '👥' : '⭐'}</span>
+                                                 <span>{computedSubtitle}</span>
+                                                 <span className="ml-auto text-[8px] text-gray-300 font-mono uppercase">auto</span>
+                                             </div>
+                                         )}
+                                     </div>
+
+                                     {/* TITLE PNG PREVIEW PANEL */}
+                                     <TitlePreviewPanel
+                                         title={localTitle}
+                                         subtitle={localSubtitle}
+                                         language={language}
+                                         coverTextSide={localCoverTextSide}
+                                         coverImageUrl={coverUrl}
+                                     />
 
                                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 mt-2">Cover Art AI Prompt (JSON)</label>
                                      <textarea value={cleanupPromptText(coverEdit)} onChange={(e) => setCoverEdit(e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-xs flex-1 min-h-[200px] resize-none focus:ring-2 focus:ring-brand-orange/10 outline-none transition-all font-mono leading-relaxed" spellCheck={false} />

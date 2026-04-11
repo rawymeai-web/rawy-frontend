@@ -22,6 +22,7 @@ import Footer from './Footer';
 import PageDecorations from './PageDecorations';
 import PaymentModal from './PaymentModal';
 import OrderStatusModal from './OrderStatusModal';
+import { CustomerDashboard } from './CustomerDashboard';
 import StyleSelectionScreen from './StyleSelectionScreen';
 import SizeScreen from './SizeScreen';
 import { useStory } from '../context/StoryContext';
@@ -269,14 +270,19 @@ const MainLayout: React.FC = () => {
                     storyData={storyData}
                     language={language}
                     onUpdateStory={updateStory}
-                    onFinalize={async () => {
-                        console.log("Editor Finalized! Triggering Auto-Download...");
+                    onFinalize={async (finalizedStoryData) => {
+                        console.log("Editor Finalized! Args:", { title: finalizedStoryData?.title });
                         let blob;
                         try {
-                            blob = await fileService.generatePrintPackage(storyData, shippingDetails || {} as any, language, storyData.orderId || 'RWY-UNKNOWN');
+                            // CRITICAL FIX: The editor now passes the completely constructed, latest storyData.
+                            // We use it directly to avoid stale-closure issues with React state updates.
+                            const freshStoryData = finalizedStoryData || storyData;
+                            
+                            console.log("[Finalize] Using title:", freshStoryData.title);
+                            blob = await fileService.generatePrintPackage(freshStoryData, shippingDetails || {} as any, language, freshStoryData.orderId || 'RWY-UNKNOWN');
                             const link = document.createElement('a');
                             link.href = URL.createObjectURL(blob);
-                            link.download = `Order_${storyData.orderId || 'RWY'}_Package.zip`;
+                            link.download = `Order_${freshStoryData.orderId || 'RWY'}_Package.zip`;
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
@@ -390,6 +396,9 @@ const MainLayout: React.FC = () => {
                     language={language}
                 />;
                 break;
+            case 'customerDashboard':
+                content = <CustomerDashboard language={language} onLogout={() => setScreen('welcome')} onEditPreferences={() => {}} />;
+                break;
             default:
                 content = <WelcomeScreen onStart={() => setScreen('personalization')} onBack={() => { }} language={language} setLanguage={setLanguage} />;
         }
@@ -407,7 +416,7 @@ const MainLayout: React.FC = () => {
         <div className={`app-container font-sans bg-gray-50 text-gray-800 min-h-screen flex flex-col ${language === 'ar' ? 'rtl' : 'ltr'}`}>
             <Header
                 onAdminLoginClick={() => setScreen('admin')}
-                onMyOrdersClick={() => setOrderStatusModalOpen(true)}
+                onMyOrdersClick={() => setScreen('customerDashboard')}
                 language={language}
                 setLanguage={setLanguage}
                 currency={currency}
@@ -417,7 +426,7 @@ const MainLayout: React.FC = () => {
                 <PageDecorations />
                 <div className={`relative w-full h-full p-4 sm:p-8 flex flex-col justify-center ${(screen === 'unified-generation' || screen === 'editor') ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
             </main>
-            <Footer language={language} onCheckOrderStatus={() => setOrderStatusModalOpen(true)} />
+            <Footer language={language} onCheckOrderStatus={() => setScreen('customerDashboard')} />
             <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(paymentAmount, currency)} language={language} />
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
         </div>

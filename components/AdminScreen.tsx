@@ -21,7 +21,7 @@ interface AdminScreenProps {
     language: Language;
 }
 
-type AdminView = 'orders' | 'customers' | 'products' | 'themes' | 'bible' | 'prompts' | 'settings' | 'themePreview' | 'stitching' | 'metadata';
+type AdminView = 'orders' | 'customers' | 'subscriptions' | 'products' | 'themes' | 'bible' | 'prompts' | 'settings' | 'themePreview' | 'stitching' | 'metadata';
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color?: string }> = ({ title, value, icon, color = 'bg-brand-navy/5' }) => (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4 rtl:space-x-reverse">
@@ -127,6 +127,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, langu
         switch (view) {
             case 'orders': return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} onEditOrder={onEditOrder} />;
             case 'customers': return <CustomersView />;
+            case 'subscriptions': return <SubscriptionsView />;
             case 'bible': return <GuidelinesView />;
             case 'themes': return <ThemesView language={language} />;
             case 'products': return <ProductsView />;
@@ -147,6 +148,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, langu
                 <nav className="space-y-1.5 flex-grow overflow-y-auto no-scrollbar">
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} label="Performance" onClick={() => setView('orders')} isActive={view === 'orders'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>} label="Customers" onClick={() => setView('customers')} isActive={view === 'customers'} />
+                    <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>} label="Subscriptions" onClick={() => setView('subscriptions')} isActive={view === 'subscriptions'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 6.253v11.494m-9-5.747h18" /></svg>} label="Guidelines" onClick={() => setView('bible')} isActive={view === 'bible'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} label="Themes" onClick={() => setView('themes')} isActive={view === 'themes'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M4 6h16M4 12h16m-7 6h7" /></svg>} label="Products" onClick={() => setView('products')} isActive={view === 'products'} />
@@ -732,6 +734,61 @@ const CustomersView: React.FC = () => {
                                 <td className="px-6 py-5 font-mono text-[10px]">{c.firstOrderDate ? new Date(c.firstOrderDate).toLocaleDateString() : 'Unknown'}</td>
                                 <td className="px-6 py-5 font-mono text-[10px]">{c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleDateString() : 'Unknown'}</td>
                                 <td className="px-6 py-5 text-center font-black text-brand-teal text-lg">{c.orderCount}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+// -----------------------------------------------------------------
+// Subscriptions View
+// -----------------------------------------------------------------
+const SubscriptionsView: React.FC = () => {
+    const [subscriptions, setSubscriptions] = useState<any[]>([]);
+
+    useEffect(() => {
+        adminService.getSubscriptions().then(setSubscriptions);
+    }, []);
+
+    return (
+        <div className="space-y-4 animate-enter-forward">
+            <div className="flex justify-between items-center px-2">
+                <h2 className="text-2xl font-black text-brand-navy uppercase tracking-tight">Active Subscriptions</h2>
+            </div>
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full text-xs text-left text-gray-500">
+                    <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 border-b">
+                        <tr>
+                            <th className="px-6 py-4">Hero Identity</th>
+                            <th className="px-6 py-4">Customer</th>
+                            <th className="px-6 py-4">Plan / Status</th>
+                            <th className="px-6 py-4">Next Billing</th>
+                            <th className="px-6 py-4 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {subscriptions.length === 0 && (
+                            <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-medium">No active subscriptions found.</td></tr>
+                        )}
+                        {subscriptions.map(s => (
+                            <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                                <td className="px-6 py-5 font-black text-brand-navy">{s.hero?.name || 'Unknown'}</td>
+                                <td className="px-6 py-5">
+                                    <div className="font-medium text-gray-700">{s.customer?.name || 'No Name'}</div>
+                                    <div className="text-[10px] text-gray-400 mt-1">{s.customer?.email || 'N/A'}</div>
+                                </td>
+                                <td className="px-6 py-5">
+                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${s.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                        {s.plan} | {s.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-5 font-mono text-[10px]">{s.next_billing_date ? new Date(s.next_billing_date).toLocaleDateString() : 'N/A'}</td>
+                                <td className="px-6 py-5 text-center flex justify-center gap-2">
+                                    <Button variant="outline" className="!px-3 !py-1 text-[9px] font-black uppercase">Assign Theme</Button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>

@@ -280,7 +280,7 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
   // OPTIMIZATION: Create a "Light" version of storyData for Fallback/Storage immediately
   // We MUST remove the massive Base64 strings to prevent "Invalid String Length" crashes in JSON.stringify
   const heavyStoryData = storyData;
-  const lightPages = (heavyStoryData.pages || []).map(p => ({
+  const lightSpreads = (heavyStoryData.spreads || []).map(p => ({
     ...p,
     illustrationUrl: p.illustrationUrl?.substring(0, 50) + '...' // Truncate for safety in logs/fallback
   }));
@@ -288,7 +288,7 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
   const lightStoryData = {
     ...heavyStoryData,
     coverImageUrl: heavyStoryData.coverImageUrl?.substring(0, 50) + '...',
-    pages: lightPages,
+    spreads: lightSpreads,
     // Remove character base64s and DNA for local storage fallback to save quota
     mainCharacter: { ...heavyStoryData.mainCharacter, imageBases64: [], images: [], imageDNA: [] },
     secondCharacter: heavyStoryData.secondCharacter ? { ...heavyStoryData.secondCharacter, imageBases64: [], images: [], imageDNA: [] } : undefined
@@ -313,7 +313,7 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
       cover: heavyStoryData.coverImageUrl && heavyStoryData.coverImageUrl.length > 500 && !heavyStoryData.coverImageUrl.startsWith('http')
         ? new File([await (await fetch(`data:image/jpeg;base64,${heavyStoryData.coverImageUrl}`)).blob()], 'cover.jpeg', { type: 'image/jpeg' }) 
         : undefined,
-      spreads: await Promise.all(heavyStoryData.pages.map(async (p, i) => {
+      spreads: await Promise.all((heavyStoryData.spreads || []).map(async (p, i) => {
         if (!p.illustrationUrl || p.illustrationUrl.length < 500 || p.illustrationUrl.startsWith('http')) return undefined;
         return new File([await (await fetch(`data:image/jpeg;base64,${p.illustrationUrl}`)).blob()], `page_${i + 1}.jpeg`, { type: 'image/jpeg' });
       }))
@@ -325,10 +325,10 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
     const finalStoryData = {
       ...lightStoryData,
       coverImageUrl: imageUrls.cover || heavyStoryData.coverImageUrl, // Replace truncated with URL
-      pages: (heavyStoryData.pages || []).map((page, i) => {
+      spreads: (heavyStoryData.spreads || []).map((spread, i) => {
         return {
-          ...page,
-          illustrationUrl: imageUrls.spreads[i] || page.illustrationUrl || ''
+          ...spread,
+          illustrationUrl: imageUrls.spreads[i] || spread.illustrationUrl || ''
         };
       }),
       // REQUIRED FOR LEGACY PIPELINE: Do NOT strip the original user portraits (Selfies) from the Cloud Database.
@@ -573,7 +573,6 @@ export async function saveSeriesBible(bible: SeriesBible): Promise<void> {
 // For now, let's assume they are handled by promptService which might use localStorage.
 // If prompted, we can move them too.
 
-// 7. Customers (Read Only in Admin for now)
 export async function getCustomers(): Promise<AdminCustomer[]> {
   const { data, error } = await supabase.from('customers').select('*');
   if (error) return [];
@@ -586,4 +585,21 @@ export async function getCustomers(): Promise<AdminCustomer[]> {
     lastOrderDate: c.last_order_date || '',
     orderCount: c.order_count || 0
   }));
+}
+
+export async function getSubscriptions() {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select(`
+        *,
+        hero:heroes(*),
+        customer:customers!user_id(*)
+    `)
+    .order('next_billing_date', { ascending: true });
+
+  if (error) {
+    console.error("Failed to fetch subscriptions:", error);
+    return [];
+  }
+  return data;
 }

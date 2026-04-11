@@ -221,8 +221,12 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         // Use dynamic dimensions to prevent stretching
         const imgDim = await getImageDimensions(cleanB64);
         const dim = getCoverDimensions(imgDim.w, imgDim.h, pdfW, pdfH);
+        const isPng = cleanB64.startsWith('iVBOR');
+        const imgFmt = isPng ? 'PNG' : 'JPEG';
+        const dataPrefix = isPng ? 'data:image/png;base64,' : 'data:image/jpeg;base64,';
+
         try {
-            pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
+            pdf.addImage(`${dataPrefix}${cleanB64}`, imgFmt, dim.x, dim.y, dim.w, dim.h);
         } catch (e) { console.warn("PDF Cover Add Failed", e); }
 
         // Add Title Overlay to Cover
@@ -230,9 +234,14 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         // EN: Front is RIGHT half (50% to 100%)
         // AR: Front is LEFT half (0% to 50%)
         const isAr = language === 'ar';
-        const subtitle = storyData.coverSubtitle || (storyData.useSecondCharacter && storyData.secondCharacter?.name
-            ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter.name}`
-            : storyData.childName);
+        // Smart subtitle: double hero vs single hero (coverSubtitle = manual override)
+        const subtitle = storyData.coverSubtitle || (
+            storyData.useSecondCharacter && storyData.secondCharacter?.name
+                ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter.name}`
+                : isAr
+                    ? `قصة ${storyData.childName}`
+                    : `A Story for ${storyData.childName}`
+        );
         const coverTitle = storyData.title || storyData.blueprint?.foundation?.title || storyData.childName || 'My Story';
         const titleB64 = await createTextImage({ title: coverTitle, subtitle }, language);
 
@@ -349,13 +358,16 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             // Use Cover Logic with dynamic dimensions
             const imgDim = await getImageDimensions(cleanB64);
             const dim = getCoverDimensions(imgDim.w, imgDim.h, pdfW, pdfH);
+            const isPng = cleanB64.startsWith('iVBOR');
+            const imgFmt = isPng ? 'PNG' : 'JPEG';
+            const dataPrefix = isPng ? 'data:image/png;base64,' : 'data:image/jpeg;base64,';
             try {
-                pdf.addImage(`data:image/jpeg;base64,${cleanB64}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
+                pdf.addImage(`${dataPrefix}${cleanB64}`, imgFmt, dim.x, dim.y, dim.w, dim.h);
             } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
         // Draw Text — ONE combined text box, placed on the side OPPOSITE the image
-        const fullText = [spread.leftText, spread.rightText].filter(Boolean).join(' ');
+        const fullText = [spread.leftText, spread.rightText].filter(Boolean).join(' ') || (spread as any).text || '';
         if (fullText) {
             const ageNum = parseInt(storyData.childAge, 10) || 6;
             let fontSize = 48;
@@ -461,15 +473,23 @@ export const generateStitchedPdf = async (
 
         const imgDim = await getImageDimensions(cleanCover);
         const dim = getCoverDimensions(imgDim.w, imgDim.h, pdfW, pdfH);
+        const isPng = cleanCover.startsWith('iVBOR');
+        const imgFmt = isPng ? 'PNG' : 'JPEG';
+        const dataPrefix = isPng ? 'data:image/png;base64,' : 'data:image/jpeg;base64,';
         try {
-            pdf.addImage(`data:image/jpeg;base64,${cleanCover}`, 'JPEG', dim.x, dim.y, dim.w, dim.h);
+            pdf.addImage(`${dataPrefix}${cleanCover}`, imgFmt, dim.x, dim.y, dim.w, dim.h);
         } catch (e) { console.warn("PDF Cover Add Failed", e); }
 
         // Add Title Overlay to Cover
         const isAr = language === 'ar';
-        const subtitle = storyDetails.coverSubtitle || (storyDetails.secondCharacterName
-            ? `${storyDetails.childName} ${isAr ? 'و' : '&'} ${storyDetails.secondCharacterName}`
-            : storyDetails.childName);
+        // Smart subtitle: double hero vs single hero (coverSubtitle = manual override)
+        const subtitle = storyDetails.coverSubtitle || (
+            storyDetails.secondCharacterName
+                ? `${storyDetails.childName} ${isAr ? 'و' : '&'} ${storyDetails.secondCharacterName}`
+                : isAr
+                    ? `قصة ${storyDetails.childName}`
+                    : `A Story for ${storyDetails.childName}`
+        );
         const titleB64 = await createTextImage({ title: storyDetails.title, subtitle }, language);
 
         const tw = pdfW * 0.4;
@@ -557,8 +577,11 @@ export const generateStitchedPdf = async (
         }
 
         if (cleanSpread) {
+            const isPng = cleanSpread.startsWith('iVBOR');
+            const imgFmt = isPng ? 'PNG' : 'JPEG';
+            const dataPrefix = isPng ? 'data:image/png;base64,' : 'data:image/jpeg;base64,';
             try {
-                pdf.addImage(`data:image/jpeg;base64,${cleanSpread}`, 'JPEG', 0, 0, pdfW, pdfH);
+                pdf.addImage(`${dataPrefix}${cleanSpread}`, imgFmt, 0, 0, pdfW, pdfH);
             } catch (e) {
                 console.error(`Failed to add spread ${i} to PDF`, e);
             }
@@ -699,7 +722,8 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         let storyText = `Title: ${storyData.title}\nAuthor: ${storyData.childName}\n\n`;
         (storyData.spreads || []).forEach((s, i) => {
             if (i === 0) return; // skip cover
-            storyText += `[Spread ${s.spreadNumber}]\n${s.leftText} ${s.rightText}\n\n`;
+            const spreadText = [s.leftText, s.rightText].filter(Boolean).join(' ') || (s as any).text || '';
+            storyText += `[Spread ${s.spreadNumber}]\n${spreadText}\n\n`;
         });
         zip.file('story_narrative.txt', storyText);
 
@@ -748,7 +772,14 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
 
         // Generate and add cover text and composite cover
         const isAr = language === 'ar';
-        const subtitle = storyData.coverSubtitle || (storyData.useSecondCharacter && storyData.secondCharacter?.name ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter.name}` : storyData.childName);
+        // Smart subtitle: double hero vs single hero (coverSubtitle = manual override)
+        const subtitle = storyData.coverSubtitle || (
+            storyData.useSecondCharacter && storyData.secondCharacter?.name
+                ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter.name}`
+                : isAr
+                    ? `قصة ${storyData.childName}`
+                    : `A Story for ${storyData.childName}`
+        );
         const coverTitle = storyData.title || storyData.blueprint?.foundation?.title || storyData.childName || 'My Story';
         const titleB64 = await createTextImage({ title: coverTitle, subtitle }, language);
         
@@ -814,7 +845,7 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
         artifactsFolder.file("0_visual_dna_prompts.txt", dnaPrompts);
         if (storyData.blueprint) artifactsFolder.file("1_blueprint.json", JSON.stringify(storyData.blueprint, null, 2));
         if (storyData.rawScript) artifactsFolder.file("2a_raw_script.json", JSON.stringify(storyData.rawScript, null, 2));
-        if (storyData.spreads && storyData.spreads.length > 0) artifactsFolder.file("2b_edited_script.json", JSON.stringify(storyData.spreads.map(s => ({ spreadNumber: s.spreadNumber, leftText: s.leftText, rightText: s.rightText })), null, 2));
+        if (storyData.spreads && storyData.spreads.length > 0) artifactsFolder.file("2b_edited_script.json", JSON.stringify(storyData.spreads.map(s => ({ spreadNumber: s.spreadNumber, text: [s.leftText, s.rightText].filter(Boolean).join(' ') || (s as any).text || '' })), null, 2));
         if (storyData.spreadPlan) artifactsFolder.file("3_visual_plan.json", JSON.stringify(storyData.spreadPlan, null, 2));
         if (storyData.finalPrompts) artifactsFolder.file("5_prompts.json", JSON.stringify(storyData.finalPrompts, null, 2));
 
@@ -993,6 +1024,18 @@ export async function createTextImage(titleData: { title: string, subtitle?: str
     }
 
 
+    const clipper = document.createElement('div');
+    clipper.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 1px;
+        height: 1px;
+        overflow: visible;
+        z-index: -9999;
+        pointer-events: none;
+    `;
+
     const container = document.createElement('div');
 
     // Typography Logic
@@ -1010,20 +1053,49 @@ export async function createTextImage(titleData: { title: string, subtitle?: str
     // Let's keep Arabic straight for readability of connected letters
     const transform = isEn ? 'rotate(-2deg)' : 'none';
 
-    container.style.cssText = `position:absolute;left:-9999px;font-family:${fontFamily};color:${color};background:rgba(0,0,0,0.35);border-radius:24px;text-shadow:${textShadow};padding:28px 40px;text-align:center;width:1000px;text-transform:uppercase;letter-spacing:${letterSpacing};transform:${transform};display:flex;flex-direction:column;align-items:center;`;
+    container.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        font-family: ${fontFamily};
+        color: ${color};
+        background: rgba(0,0,0,0.35);
+        border-radius: 24px;
+        text-shadow: ${textShadow};
+        padding: 28px 40px;
+        text-align: center;
+        width: 1000px;
+        text-transform: uppercase;
+        letter-spacing: ${letterSpacing};
+        transform: ${transform};
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    `;
 
     container.dir = lang === 'ar' ? 'rtl' : 'ltr';
     container.innerHTML = `
         <div style="font-weight:900;line-height:1.1;font-size:90px;">
-            ${titleData.title}
+            ${titleData.title || '&nbsp;'}
         </div>
         ${titleData.subtitle ? `<div style="font-weight:700;line-height:1.2;font-size:45px;margin-top:20px;opacity:0.95;">
             ${titleData.subtitle}
         </div>` : ''}
     `;
-    document.body.appendChild(container);
-    const dataUrl = await toPng(container, { pixelRatio: 2, backgroundColor: null });
-    document.body.removeChild(container);
+
+    clipper.appendChild(container);
+    document.body.appendChild(clipper);
+
+    // Small delay to let browser layout & paint
+    await new Promise(r => setTimeout(r, 100));
+
+    const dataUrl = await toPng(container, {
+        pixelRatio: 2,
+        backgroundColor: null,
+        fontEmbedCSS: undefined,
+    });
+    
+    document.body.removeChild(clipper);
     return dataUrl;
 }
 

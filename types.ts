@@ -16,6 +16,7 @@ export type Screen =
   | 'checkout'
   | 'confirmation'
   | 'admin'
+  | 'customerDashboard'
   | 'orderStatus';
 
 export type Language = 'ar' | 'en' | 'de' | 'es' | 'fr' | 'pt' | 'it' | 'ru' | 'ja' | 'tr';
