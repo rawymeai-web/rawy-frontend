@@ -161,7 +161,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 try {
                     const { imageBase64, secondImageBase64 } = await backendApi.generatePreview({
                         character: storyData.mainCharacter,
-                        secondCharacter: storyData.useSecondCharacter ? storyData.secondCharacter : undefined,
+                        secondCharacter: (storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object') ? storyData.secondCharacter : undefined,
                         themeDescription: storyData.theme || "Likeness Portrait",
                         themeId: storyData.themeId,
                         stylePrompt: storyData.selectedStylePrompt,
@@ -201,13 +201,14 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
 
     const handleNext = async () => {
         if (selectedPrimaryIndex === null) return;
-        if (storyData.useSecondCharacter && selectedSecondaryIndex === null) return;
+        const isSecondSubjectObject = storyData.secondCharacter?.type === 'object';
+        if (storyData.useSecondCharacter && !isSecondSubjectObject && selectedSecondaryIndex === null) return;
 
         const primaryChoice = previews[selectedPrimaryIndex];
-        const secondaryChoice = storyData.useSecondCharacter ? previews[selectedSecondaryIndex!] : null;
+        const secondaryChoice = (storyData.useSecondCharacter && !isSecondSubjectObject) ? previews[selectedSecondaryIndex!] : null;
 
         if (!primaryChoice.imageBase64) return;
-        if (storyData.useSecondCharacter && (!secondaryChoice || !secondaryChoice.secondImageBase64)) return;
+        if (storyData.useSecondCharacter && !isSecondSubjectObject && (!secondaryChoice || !secondaryChoice.secondImageBase64)) return;
 
         setIsLocking(true);
         try {
@@ -219,7 +220,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
 
             onNext({
                 styleReferenceImageBase64: primaryChoice.imageBase64,
-                secondCharacterImageBase64: secondaryChoice ? secondaryChoice.secondImageBase64 : undefined,
+                secondCharacterImageBase64: isSecondSubjectObject ? storyData.secondCharacter?.imageBases64[0] : (secondaryChoice ? secondaryChoice.secondImageBase64 : undefined),
                 technicalStyleGuide: guide,
                 styleSeed: Math.floor(Math.random() * 1000000),
                 // CRITICAL: Save the generated description and the ACTUAL chosen image to imageDNA
@@ -230,7 +231,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 },
                 secondCharacter: storyData.secondCharacter ? {
                     ...storyData.secondCharacter,
-                    imageDNA: [secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64]
+                    imageDNA: [isSecondSubjectObject ? storyData.secondCharacter.imageBases64[0] : (secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64)]
                 } : undefined
             });
         } catch (e) {
@@ -238,14 +239,14 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
             // Fallback: Proceed without description if it fails (better than blocking)
             onNext({
                 styleReferenceImageBase64: primaryChoice.imageBase64,
-                secondCharacterImageBase64: secondaryChoice?.secondImageBase64,
+                secondCharacterImageBase64: isSecondSubjectObject ? storyData.secondCharacter?.imageBases64[0] : secondaryChoice?.secondImageBase64,
                 mainCharacter: {
                     ...storyData.mainCharacter,
                     imageDNA: [primaryChoice.imageBase64]
                 },
                 secondCharacter: storyData.secondCharacter ? {
                     ...storyData.secondCharacter,
-                    imageDNA: [secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64]
+                    imageDNA: [isSecondSubjectObject ? storyData.secondCharacter.imageBases64[0] : (secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64)]
                 } : undefined
             });
         } finally {
@@ -295,7 +296,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                     </div>
                 </div>
 
-                {storyData.useSecondCharacter && (
+                {storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object' && (
                     <div className="pt-8 border-t border-brand-orange/20">
                         <h3 className="text-xl font-bold text-brand-navy mb-4">
                             {t(`البطل الثاني: ${storyData.secondCharacter?.name || ''}`, `Hero 2: ${storyData.secondCharacter?.name || ''}`)}
@@ -321,7 +322,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 <Button onClick={handleRetry} variant="secondary" className="text-xl px-12 py-4 rounded-2xl shadow-sm text-brand-navy bg-white hover:bg-gray-50">
                     {t('إعادة المحاولة', 'Regenerate All')}
                 </Button>
-                <Button onClick={handleNext} className="text-xl px-12 py-4 rounded-2xl shadow-xl" disabled={selectedPrimaryIndex === null || (storyData.useSecondCharacter && selectedSecondaryIndex === null) || isLocking}>
+                <Button onClick={handleNext} className="text-xl px-12 py-4 rounded-2xl shadow-xl" disabled={selectedPrimaryIndex === null || (storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object' && selectedSecondaryIndex === null) || isLocking}>
                     {isLocking ? t('جاري القفل...', 'Locking DNA...') : t('اعتماد الأسلوب المختار', 'Lock Art Style')}
                 </Button>
             </div>
