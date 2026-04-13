@@ -384,7 +384,8 @@ export const useLegacyPipeline = (
             // Bug 5: Do NOT embed themeVisualDNA — it can carry old-order Arabic/Oryx data.
             // Style comes only from selectedStylePrompt (user's chosen art style).
             const visualStylePrompt = storyData.selectedStylePrompt || 'Painterly, flat 2D illustrated children\'s book style';
-            const secondDNA = storyData.useSecondCharacter ? (storyData.secondCharacterImageBase64 || storyData.secondCharacterImageUrl || storyData.secondCharacter?.imageDNA?.[0] || storyData.secondCharacter?.imageBases64?.[0]) : undefined;
+            // BUG FIX: Prioritize the stylized imageDNA[0] anchor over the raw uploaded photos to prevent realism bleed
+            const secondDNA = storyData.useSecondCharacter ? (storyData.secondCharacter?.imageDNA?.[0] || storyData.secondCharacterImageBase64 || storyData.secondCharacterImageUrl || storyData.secondCharacter?.imageBases64?.[0]) : undefined;
 
             const uploadSpreadImage = async (spreadNum: number, base64: string, promptUsed: string) => {
                 // Store directly as base64 for now; Supabase upload can be added here
