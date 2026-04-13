@@ -238,7 +238,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             // COMPRESS payloads to prevent Vercel 4.5MB Serverless Payload limit errors!
             const compressedMaster = await compressBase64Image(masterDNA, 1024, 0.85);
             let compressedSecond = undefined;
-            if (storyData.useSecondCharacter && storyData.secondCharacterImageBase64) {
+            if (storyData.useSecondCharacter && storyData.secondCharacterImageBase64 && storyData.secondCharacter?.type !== 'object') {
                 compressedSecond = await compressBase64Image(storyData.secondCharacterImageBase64, 1024, 0.85);
             }
 
