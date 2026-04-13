@@ -17,24 +17,25 @@ interface TitlePreviewPanelProps {
  * We render it into a fixed element at viewport edge with overflow:hidden clipping.
  */
 async function renderTitleToDataUrl(title: string, subtitle: string, lang: Language): Promise<string> {
-    const isEn = lang !== 'ar';
-    const fontFamily = isEn ? "'Luckiest Guy', cursive" : "'Tajawal', sans-serif";
-    const letterSpacing = isEn ? '2px' : 'normal';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const fontFamily = isAr ? "'Tajawal', sans-serif" : (isEn ? "'Luckiest Guy', cursive" : "'Nunito', sans-serif");
+    const letterSpacing = isAr ? 'normal' : '2px';
     const textShadow = '4px 4px 0 #203A72, -2px -2px 0 #203A72, 2px -2px 0 #203A72, -2px 2px 0 #203A72, 2px 2px 0 #203A72, 0 8px 15px rgba(0,0,0,0.3)';
-    const transform = isEn ? 'rotate(-2deg)' : 'none';
+    const transform = isAr ? 'none' : 'rotate(-2deg)';
 
     // Load Google Fonts
     if (!document.querySelector('link[data-title-fonts]')) {
         const fontLink = document.createElement('link');
         fontLink.setAttribute('data-title-fonts', 'true');
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Tajawal:wght@400;700;900&display=swap';
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Tajawal:wght@400;700;900&family=Nunito:wght@900&display=swap';
         fontLink.rel = 'stylesheet';
         document.head.appendChild(fontLink);
     }
     await document.fonts.ready;
     try {
         await Promise.race([
-            document.fonts.load(`900 90px '${isEn ? 'Luckiest Guy' : 'Tajawal'}'`),
+            document.fonts.load(`900 90px '${isAr ? 'Tajawal' : (isEn ? 'Luckiest Guy' : 'Nunito')}'`),
             new Promise(r => setTimeout(r, 3000))
         ]);
     } catch (_) {
