@@ -30,6 +30,19 @@ interface EditorScreenProps {
     total?: number;
 }
 
+const LANGUAGE_MAP: Record<string, string> = {
+    'en': 'English',
+    'ar': 'العربية (Arabic)',
+    'de': 'Deutsch (German)',
+    'es': 'Español (Spanish)',
+    'fr': 'Français (French)',
+    'pt': 'Português (Portuguese)',
+    'it': 'Italiano (Italian)',
+    'ru': 'Русский (Russian)',
+    'ja': '日本語 (Japanese)',
+    'tr': 'Türkçe (Turkish)'
+};
+
 const EditorScreen: React.FC<EditorScreenProps> = ({
     storyData,
     language,
@@ -496,6 +509,9 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
+    // Helper to get selected style string
+    const displayStyle = storyData.selectedStyleNames?.[0] || 'Unknown Style';
+
     return (
         <div className="w-full h-full min-h-[90vh] bg-[#fdfdfd] flex overflow-hidden">
             {/* Left Pane: Blueprint Reference */}
@@ -505,11 +521,21 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                 <div className="mb-6 space-y-3 p-4 bg-gray-50 rounded-2xl border border-gray-200 shadow-sm text-sm">
                     <div className="flex justify-between items-center border-b border-gray-200 pb-2">
                         <span className="font-bold text-gray-500 uppercase text-xs tracking-widest">Book Language</span>
-                        <span className="font-black text-brand-teal uppercase text-xs tracking-widest">{storyData.language === 'ar' ? 'العربية' : 'English'}</span>
+                        <span className="font-black text-brand-teal uppercase text-xs tracking-widest">{LANGUAGE_MAP[storyData.language] || storyData.language}</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-gray-200 pb-2">
                         <span className="font-bold text-gray-500 uppercase text-xs tracking-widest">Format</span>
-                        <span className="font-black text-brand-navy uppercase text-xs tracking-widest">{storyData.useSecondCharacter ? 'Dual Hero' : 'Single Hero'}</span>
+                        <span className="font-black text-brand-navy uppercase text-xs tracking-widest">
+                            {!storyData.useSecondCharacter 
+                                ? 'Single Hero' 
+                                : (storyData.secondCharacter?.type === 'object' ? 'Single Hero + Item' : 'Dual Hero')}
+                        </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-1">
+                        <span className="font-bold text-gray-500 uppercase text-xs tracking-widest">Art Style</span>
+                        <span className="font-black text-brand-orange uppercase text-xs tracking-widest text-right max-w-[120px] truncate" title={displayStyle}>
+                            {displayStyle}
+                        </span>
                     </div>
                 </div>
 

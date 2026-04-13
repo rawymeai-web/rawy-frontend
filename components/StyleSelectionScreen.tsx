@@ -213,10 +213,23 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
         setIsLocking(true);
         try {
             // Parallel: Get Style Guide AND Detailed Character Description (for consistency)
-            const [{ guide }, { description: charDesc }] = await Promise.all([
+            const promises: Promise<any>[] = [
                 backendApi.generateStyleGuide({ imageBase64: primaryChoice.imageBase64, stylePrompt: primaryChoice.prompt }),
                 backendApi.describeSubject({ imageBase64: primaryChoice.imageBase64 })
-            ]);
+            ];
+            
+            if (isSecondSubjectObject && storyData.secondCharacter?.imageBases64?.[0]) {
+                promises.push(backendApi.describeSubject({ imageBase64: storyData.secondCharacter.imageBases64[0] }));
+            }
+
+            const results = await Promise.all(promises);
+            const { guide } = results[0];
+            const { description: charDesc } = results[1];
+            
+            // Extract the actual description for the object if it was requested
+            const secondObjDesc = (isSecondSubjectObject && storyData.secondCharacter?.imageBases64?.[0] && results[2]) 
+                ? results[2].description 
+                : storyData.secondCharacter?.description;
 
             onNext({
                 styleReferenceImageBase64: primaryChoice.imageBase64,
@@ -231,6 +244,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 },
                 secondCharacter: storyData.secondCharacter ? {
                     ...storyData.secondCharacter,
+                    description: secondObjDesc,
                     imageDNA: [isSecondSubjectObject ? storyData.secondCharacter.imageBases64[0] : (secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64)]
                 } : undefined
             });
