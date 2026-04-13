@@ -857,12 +857,13 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
 
         // Add Cover Prompt
         if (storyData.actualCoverPrompt) {
+            const coverPromptString = typeof storyData.actualCoverPrompt === 'string' ? storyData.actualCoverPrompt : JSON.stringify(storyData.actualCoverPrompt, null, 2);
             detailedPrompts += `COVER PROMPT\n`;
-            detailedPrompts += `${storyData.actualCoverPrompt}\n`;
+            detailedPrompts += `${coverPromptString}\n`;
             detailedPrompts += `--------------------------------\n\n`;
 
             // Allow separate artifact for easy reading
-            artifactsFolder.file("0_cover_prompt.txt", storyData.actualCoverPrompt);
+            artifactsFolder.file("0_cover_prompt.txt", coverPromptString);
         }
 
         (storyData.spreads || []).forEach(s => {
@@ -870,7 +871,8 @@ export const generatePrintPackage = async (storyData: StoryData, shipping: Shipp
             detailedPrompts += `SPREAD ${s.spreadNumber}\n`;
             detailedPrompts += `LEFT TEXT: ${s.leftText}\n`;
             detailedPrompts += `RIGHT TEXT: ${s.rightText}\n`;
-            detailedPrompts += `PROMPT USED:\n${s.actualPrompt || 'N/A'}\n`;
+            const spreadPromptString = typeof s.actualPrompt === 'string' ? s.actualPrompt : (s.actualPrompt ? JSON.stringify(s.actualPrompt, null, 2) : 'N/A');
+            detailedPrompts += `PROMPT USED:\n${spreadPromptString}\n`;
             detailedPrompts += `--------------------------------\n\n`;
         });
         artifactsFolder.file("debug_creation_prompts.txt", detailedPrompts);
