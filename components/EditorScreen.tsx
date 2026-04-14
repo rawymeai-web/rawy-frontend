@@ -118,6 +118,16 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const [useSubtitleOverride, setUseSubtitleOverride] = useState(!!storyData.coverSubtitle);
     const [localCoverTextSide, setLocalCoverTextSide] = useState<'left'|'right'>(storyData.coverTextSide || (language === 'ar' ? 'left' : 'right'));
 
+    // Re-sync all local cover state whenever the order changes (prevents stale data from previous orders)
+    useEffect(() => {
+        setLocalTitle(storyData.title || '');
+        setLocalSubtitleOverride(storyData.coverSubtitle || '');
+        setUseSubtitleOverride(!!storyData.coverSubtitle);
+        setLocalCoverTextSide(storyData.coverTextSide || (language === 'ar' ? 'left' : 'right'));
+        setCoverEdit(coverPrompt);
+        setPageEdits({}); // Clear all pending page edits too
+    }, [storyData.orderId, storyData.orderNumber]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Smart auto-computed subtitle — single hero vs double hero
     const isAr = language === 'ar';
     const hasSecondHero = !!(storyData.useSecondCharacter && storyData.secondCharacter?.name);
