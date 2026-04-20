@@ -11,27 +11,17 @@ export const colorfulBackgrounds = [
 export const TEXT_BLOB_COLOR = 'rgba(255, 255, 255, 0.45)';
 
 export const ART_STYLE_OPTIONS = [
-  // --- EXISTING KEPT & 3D ---
+  // --- 3D / REALISTIC ---
   { name: 'Cinematic 3D Pixar', category: '3d', prompt: 'High-end 3D animated film style. Features expressive characters with large eyes, rich subsurface scattering, and cinematic lighting with vibrant colors.', sampleUrl: '/style-previews/cinematic_3d_pixar_style.png' },
   { name: 'Dreamy Realism', category: '3d', prompt: 'A richly lit, cinematic painterly style inspired by animated feature lighting. It blends soft 3D realism with brush-painted warmth and magical atmosphere.', sampleUrl: '/style-previews/cinematic_painterly_realism.png' },
-  { name: 'Epic Scenic', category: '3d', prompt: 'A detailed, atmospheric illustration style with a focus on dramatic natural lighting, grand scale, and immersive world-building.', sampleUrl: '/style-previews/cinematic_concept_art.png' },
-  { name: 'Modern 3D Render', category: '3d', prompt: 'A soft, 3D-rendered illustration style, like a modern animated film. Features characters with round forms, rich lighting, and gentle shadows.', sampleUrl: '/style-previews/modern_3d_render.png' },
+  { name: 'Ultra Realistic', category: 'realistic', prompt: 'High-fidelity photography style. 8k resolution, highly detailed textures, realistic lighting and depth of field. Looks like a real photo.', sampleUrl: '/style-previews/ultra_realistic.png' },
 
   // --- PAINTERLY & ARTISTIC ---
-  { name: 'Painterly Anime', category: 'painterly', prompt: 'A beautiful, nostalgic illustration style inspired by classic Japanese animation (Ghibli). Features lush, painterly watercolor backgrounds, especially of nature and skies.', sampleUrl: '/style-previews/painterly_anime.png' },
   { name: 'Digital Watercolor', category: 'painterly', prompt: 'A beautiful and whimsical digital watercolor style. Features soft, dreamy washes with light color bleeding and a textured paper feel. Edges are loose and organic.', sampleUrl: '/style-previews/digital_watercolor.png' },
   { name: 'Gouache Art', category: 'painterly', prompt: 'A charming mixed-media style combining flat, opaque gouache blocks of color with colored pencil details for texture and shading. Handcrafted and organic.', sampleUrl: '/style-previews/mixed_media_gouache.png' },
-  { name: 'Paper Cutout', category: 'textured', prompt: 'A creative style that mimics overlapping colored paper shapes with visible shadows to create a sense of layered depth.', sampleUrl: '/style-previews/paper_cutout.png' },
 
-  // --- PORTALS OF WONDER (PREMIUM DYNAMIC STYLE) ---
-  { name: '✨ Portals of Wonder ✨', category: 'premium', prompt: 'PORTALS_OF_WONDER_DYNAMIC', sampleUrl: '/style-previews/portals_of_wonder.png' },
-
-  // --- NEW & STYLIZED ---
-  { name: 'Ultra Realistic', category: 'realistic', prompt: 'High-fidelity photography style. 8k resolution, highly detailed textures, realistic lighting and depth of field. Looks like a real photo.', sampleUrl: '/style-previews/ultra_realistic.png' },
-  { name: 'Kawaii Cute', category: 'graphic', prompt: 'Super cute Kawaii style. Big sparkly eyes, soft pastel colors, rounded shapes, and a very happy, bubbly atmosphere.', sampleUrl: '/style-previews/kawaii_cute.png' },
-  { name: 'Sticker Pop Art', category: 'graphic', prompt: 'Bold Sticker Art style. Thick white outlines around characters, vibrant solid colors, and a distinct "die-cut" sticker aesthetic.', sampleUrl: '/style-previews/sticker_pop_art.png' },
-  { name: 'Block World', category: '3d', prompt: 'Voxel art style reminiscent of Minecraft. Everything is made of colorful cubes and blocks. Playful, digital, and fun.', sampleUrl: '/style-previews/block_world.png' },
-  { name: 'Geometric Vector', category: 'graphic', prompt: 'Clean Geometric Vector style. Composed of simple shapes (circles, triangles) with flat colors and minimal shading. Modern and abstract.', sampleUrl: '/style-previews/geometric_vector.png' },
+  // --- PREMIUM DYNAMIC STYLE (LIMITED TIME) ---
+  { name: '✨ Portals of Wonder ✨', category: 'premium', prompt: 'PORTALS_OF_WONDER_DYNAMIC', sampleUrl: '/style-previews/portals_of_wonder.png', isLimitedTime: true },
 ];
 
 export const INITIAL_THEMES: StoryTheme[] = [

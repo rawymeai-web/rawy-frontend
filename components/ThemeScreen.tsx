@@ -70,6 +70,7 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const [customTitle, setCustomTitle] = useState(storyData.title);
   const [customGoal, setCustomGoal] = useState(storyData.customGoal || '');
   const [customChallenge, setCustomChallenge] = useState(storyData.customChallenge || '');
+  const [customStoryText, setCustomStoryText] = useState(storyData.customStoryText || '');
   const [customIllustrationNotes, setCustomIllustrationNotes] = useState(storyData.customIllustrationNotes || '');
   const [customStylePrompt, setCustomStylePrompt] = useState(storyData.selectedStylePrompt || '');
 
@@ -147,6 +148,7 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
       themeVisualDNA: thematicVisualDNA, // NEW: Pass the actual visual instructions
       customGoal,
       customChallenge,
+      customStoryText,
       customIllustrationNotes,
       selectedStylePrompt: finalStylePrompt,
       ...(selectedThemeId === 'val-teamwork' && secondHeroName ? {
@@ -189,7 +191,6 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
 
   const adventureThemes = themes.filter(t => t.category === 'adventures');
   const valueThemes = themes.filter(t => t.category === 'values');
-  const otherThemes = themes.filter(t => t.category !== 'adventures' && t.category !== 'values');
   const isCustomMode = selectedThemeId === null;
   const isTeamworkSelected = selectedThemeId === 'val-teamwork';
 
@@ -213,8 +214,6 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
       <div className="p-8 bg-white/70 backdrop-blur-md rounded-3xl shadow-xl border border-white/50">
         {valueThemes.length > 0 && <ThemeGrid themes={valueThemes} categoryTitle={t('قيم أخلاقية', 'Values')} icon={<ValuesCategoryIcon />} />}
         {adventureThemes.length > 0 && <ThemeGrid themes={adventureThemes} categoryTitle={t('مغامرات شيقة', 'Exciting Adventures')} icon={<AdventuresCategoryIcon />} />}
-        {otherThemes.length > 0 && <ThemeGrid themes={otherThemes} categoryTitle={t('مواضيع أخرى', 'Other Themes')} icon={<LightbulbIcon />} />}
-
         {isTeamworkSelected && (
           <div className="mt-8 mb-8 p-6 bg-brand-baby-blue/10 rounded-2xl border-2 border-brand-baby-blue/30 animate-fade-in">
             <h3 className="text-xl font-bold text-brand-navy mb-4">{t('من هو البطل الثاني؟', 'Who is the Second Hero?')}</h3>
@@ -253,6 +252,11 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
                   <label htmlFor="customChallenge" className="block text-sm font-medium text-gray-700 mb-1">{t('التحدي الرئيسي', 'The Main Challenge')}</label>
                   <textarea id="customChallenge" rows={3} value={customChallenge} onChange={(e) => { setCustomChallenge(e.target.value); handleCustomChange(); }} className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900" placeholder={t('ما هي العقبة التي تجعل القصة مثيرة؟', 'What obstacle makes the story exciting?')} required></textarea>
                 </div>
+              </div>
+              <div>
+                <label htmlFor="customStoryText" className="block text-sm font-medium text-gray-700 mb-1">{t('أنشودة أو نص مخصص (اختياري)', 'Custom Story Text / Poem (Optional)')}</label>
+                <textarea id="customStoryText" rows={5} value={customStoryText} onChange={(e) => { setCustomStoryText(e.target.value); handleCustomChange(); }} className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-mono text-sm leading-relaxed" placeholder={t('إذا كان لديك نص معين أو أنشودة تريد استخدامها، ضعها هنا...', 'If you have a specific poem or text you want the AI to use, paste it here...')}></textarea>
+                <p className="text-xs text-gray-500 mt-2">{t('ملاحظة: سيقوم الذكاء الاصطناعي بتكييف هذا النص وتوزيعه ليناسب صفحات القصة.', 'Note: The AI will adapt and distribute this text across the story spreads.')}</p>
               </div>
             </div>
           </div>

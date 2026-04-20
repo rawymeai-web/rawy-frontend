@@ -98,7 +98,13 @@ const PLANS: Plan[] = [
 
 
 const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onBack, language, storyData, currency }) => {
-  const [details, setDetails] = useState<ShippingDetails>({ name: '', address: '', city: '', phone: '', email: '' });
+  const [details, setDetails] = useState<ShippingDetails>({ 
+    name: storyData.parentName || '', 
+    address: '', 
+    city: '', 
+    phone: '', 
+    email: storyData.parentEmail || '' 
+  });
   const [planType, setPlanType] = useState<PlanType>('monthly');
   const [basePrice, setBasePrice] = useState<number>(18.000); // New default base
 

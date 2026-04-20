@@ -190,6 +190,7 @@ export interface StoryData {
   styleSeed?: number;
   customGoal?: string;
   customChallenge?: string;
+  customStoryText?: string; // NEW: Explicit script or poem provided by user
   customIllustrationNotes?: string;
   blueprint?: StoryBlueprint;
   script?: any[]; // NEW: The array of spread texts
@@ -301,7 +302,12 @@ export interface Spread {
   rightText: string;          // Story text displayed on the right half
   actualPrompt?: string;      // The exact image prompt used
   textSide?: 'left' | 'right'; // Which side the subject occupies (drives layout)
+  // Layout overrides (set in EditorScreen, applied in fileService PDF rendering)
+  textOffsetX?: number;       // PDF mm — left edge of text box (overrides auto calculation)
+  textOffsetY?: number;       // PDF mm — top edge of text box (overrides auto calculation)
+  imageOffsetX?: number;      // % shift of illustration horizontally (-50 to +50, default 0)
 }
+
 
 export interface StoryPlan {
   core: {

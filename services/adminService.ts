@@ -130,22 +130,37 @@ export async function saveSettings(s: AppSettings): Promise<void> {
   if (error) throw error;
 }
 
-// --- Connection Check ---
+// --- Connection Check (lightweight HTTP ping — no SQL needed) ---
 export async function checkConnection(): Promise<{ connected: boolean; reason?: string }> {
-  // Simple check: Try to fetch settings. If it returns the specific "Dummy Client" error, we know keys are missing.
-  const { error } = await supabase.from('settings').select('id').limit(1).single();
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  if (error?.message === "No Supabase Config (Dev Mode)") {
-    return { connected: false, reason: "Missing API Keys (.env)" };
+  if (!supabaseUrl || !supabaseKey) {
+    return { connected: false, reason: 'Missing API Keys (.env)' };
   }
 
-  if (error) {
-    // Other errors (network, auth, etc)
-    return { connected: false, reason: error.message };
-  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000); // 4s hard abort
 
-  return { connected: true };
+  try {
+    // Ping the REST root — returns 200 immediately without any SQL or RLS check
+    const res = await fetch(`${supabaseUrl}/rest/v1/`, {
+      method: 'HEAD',
+      headers: { 'apikey': supabaseKey },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    // 200 or 400 both mean the server responded — we're reachable
+    return { connected: res.status < 500 };
+  } catch (e: any) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') {
+      return { connected: false, reason: 'Network timeout — is Supabase paused?' };
+    }
+    return { connected: false, reason: e?.message || 'Unreachable' };
+  }
 }
+
 
 // --- Local Storage Fallback Helpers ---
 const LOCAL_ORDERS_KEY = 'rawy_local_orders';
@@ -203,9 +218,12 @@ function updateLocalOrderStatus(orderNumber: string, status: OrderStatus) {
 }
 
 // 2. Orders
-export async function getOrders(): Promise<AdminOrder[]> {
+export async function getOrders(): Promise<{ orders: AdminOrder[]; dbConnected: boolean; dbError?: string }> {
   // 1. Fetch Remote - OMIT story_data to prevent statement timeouts on older massive DB entries
   let remoteOrders: AdminOrder[] = [];
+  let dbConnected = false;
+  let dbError: string | undefined;
+
   const { data, error } = await supabase
     .from('orders')
     .select('order_number, customer_id, customer_name, total, status, created_at, production_cost, ai_cost, shipping_cost')
@@ -213,8 +231,10 @@ export async function getOrders(): Promise<AdminOrder[]> {
 
   if (!error && data) {
     remoteOrders = data.map(mapDBOrderList);
+    dbConnected = true;
   } else {
-    console.warn('Supabase fetch failed, using local orders only.');
+    dbError = error?.message || 'Supabase fetch failed';
+    console.warn('Supabase fetch failed, using local orders only.', error);
   }
 
   // 2. Fetch Local
@@ -224,7 +244,8 @@ export async function getOrders(): Promise<AdminOrder[]> {
   const remoteIds = new Set(remoteOrders.map(o => o.orderNumber));
   const uniqueLocal = localOrders.filter(o => !remoteIds.has(o.orderNumber));
 
-  return [...remoteOrders, ...uniqueLocal].sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+  const orders = [...remoteOrders, ...uniqueLocal].sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+  return { orders, dbConnected, dbError };
 }
 
 export async function getOrderById(orderNumber: string): Promise<AdminOrder | null> {

@@ -7,6 +7,7 @@ import * as adminService from '../services/adminService';
 import * as promptService from '../services/promptService';
 import * as fileService from '../services/fileService';
 import * as imageStore from '../services/imageStore';
+import * as storageCleanup from '../services/storageCleanupService';
 import type { Language, AdminOrder, AdminCustomer, OrderStatus, ProductSize, StoryTheme, AppSettings } from '../types';
 import { OrderPreviewModal } from './OrderPreviewModal';
 import { ProductEditorModal } from './ProductEditorModal';
@@ -21,7 +22,7 @@ interface AdminScreenProps {
     language: Language;
 }
 
-type AdminView = 'orders' | 'customers' | 'subscriptions' | 'products' | 'themes' | 'bible' | 'prompts' | 'settings' | 'themePreview' | 'stitching' | 'metadata';
+type AdminView = 'orders' | 'customers' | 'subscriptions' | 'products' | 'themes' | 'bible' | 'prompts' | 'settings' | 'themePreview' | 'stitching' | 'metadata' | 'storage';
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color?: string }> = ({ title, value, icon, color = 'bg-brand-navy/5' }) => (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4 rtl:space-x-reverse">
@@ -111,12 +112,28 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, langu
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [connection, setConnection] = useState<{ connected: boolean; reason?: string } | null>(null);
 
-    useEffect(() => {
-        // Initial Fetch
-        adminService.getOrders().then(setOrders);
-        adminService.getSettings().then(setSettings);
-        adminService.checkConnection().then(setConnection);
+    const refreshOrders = React.useCallback(async () => {
+        const result = await adminService.getOrders();
+        setOrders(result.orders);
+        // Derive DB connection status from whether the real DB returned data
+        setConnection({ connected: result.dbConnected, reason: result.dbError });
     }, []);
+
+    useEffect(() => {
+        // Initial Fetch — connection status derived from getOrders, no extra ping needed
+        refreshOrders();
+        adminService.getSettings().then(setSettings);
+    }, []);
+
+    // Auto-retry every 15s while DB is unhealthy (e.g. Supabase restoring after pause)
+    useEffect(() => {
+        if (connection === null || connection.connected) return; // Only retry when disconnected
+        const timer = setTimeout(() => {
+            setConnection(null); // Show "Checking..." while retrying
+            refreshOrders();
+        }, 15000);
+        return () => clearTimeout(timer);
+    }, [connection, refreshOrders]);
 
     const stats = React.useMemo(() => {
         const totalRevenue = orders.reduce((acc, o) => acc + o.total, 0);
@@ -125,7 +142,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, langu
 
     const renderView = () => {
         switch (view) {
-            case 'orders': return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} onEditOrder={onEditOrder} />;
+            case 'orders': return <OrdersView orders={orders} language={language} refreshOrders={refreshOrders} onEditOrder={onEditOrder} />;
             case 'customers': return <CustomersView />;
             case 'subscriptions': return <SubscriptionsView />;
             case 'bible': return <GuidelinesView />;
@@ -136,7 +153,8 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, langu
             case 'themePreview': return <ThemePreviewView language={language} />;
             case 'stitching': return <StitchingScreen onExit={() => setView('orders')} language={language} />;
             case 'metadata': return <MetadataView />;
-            default: return <OrdersView orders={orders} language={language} refreshOrders={() => adminService.getOrders().then(setOrders)} onEditOrder={onEditOrder} />;
+            case 'storage': return <StorageCleanupView />;
+            default: return <OrdersView orders={orders} language={language} refreshOrders={refreshOrders} onEditOrder={onEditOrder} />;
         }
     }
 
@@ -156,6 +174,7 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, langu
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} label="Tech Prompts" onClick={() => setView('prompts')} isActive={view === 'prompts'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>} label="Stitching" onClick={() => setView('stitching')} isActive={view === 'stitching'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 4v16m8-8H4" /></svg>} label="Metadata" onClick={() => setView('metadata')} isActive={view === 'metadata'} />
+                    <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>} label="Storage Cleanup" onClick={() => setView('storage')} isActive={view === 'storage'} />
                     <NavItem icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} label="Config" onClick={() => setView('settings')} isActive={view === 'settings'} />
                 </nav>
                 <div className="pt-4 border-t">
@@ -193,9 +212,24 @@ const AdminDashboard: React.FC<AdminScreenProps> = ({ onExit, onEditOrder, langu
                         </Button>
 
                         {/* DB Status Badge */}
-                        <div className={`px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 ${connection?.connected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                            <div className={`w-2 h-2 rounded-full ${connection?.connected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
-                            {connection?.connected ? 'DB Connected' : `DB Error: ${connection?.reason || 'Unknown'}`}
+                        <div className={`px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 ${connection === null ? 'bg-gray-100 text-gray-400' : connection.connected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            <div className={`w-2 h-2 rounded-full shrink-0 ${connection === null ? 'bg-gray-300 animate-pulse' : connection.connected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                            <span className="max-w-[160px] truncate" title={connection?.reason}>
+                                {connection === null ? 'Checking DB...' : connection.connected ? 'DB Connected' : (
+                                    connection.reason?.includes('fetch') ? 'DB Offline — Restoring...' :
+                                    connection.reason?.includes('timeout') ? 'DB Timeout — Waking up...' :
+                                    `DB Error: ${connection.reason || 'Unknown'}`
+                                )}
+                            </span>
+                            {connection !== null && !connection.connected && (
+                                <button
+                                    onClick={() => { setConnection(null); refreshOrders(); }}
+                                    className="ml-1 text-red-400 hover:text-red-600 transition-colors shrink-0"
+                                    title="Retry connection"
+                                >
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -688,10 +722,370 @@ const MetadataView: React.FC = () => {
 // Add to AdminView Type
 // Check line 22 for AdminView type definition update, or casting
 
+// -----------------------------------------------------------------
+// Storage Cleanup View
+// -----------------------------------------------------------------
+const StorageCleanupView: React.FC = () => {
+    // ── Smart cleanup (status-based) ──
+    const [phase, setPhase] = useState<'idle' | 'scanning' | 'preview' | 'running' | 'done'>('idle');
+    const [targets, setTargets] = useState<storageCleanup.CleanupTarget[]>([]);
+    const [dryRun, setDryRun] = useState<{ orderNumber: string; willDelete: string[]; willKeep: string[] }[]>([]);
+    const [summary, setSummary] = useState<storageCleanup.CleanupSummary | null>(null);
+    const [progress, setProgress] = useState<{ current: number; total: number; order: string } | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-// -----------------------------------------------------------------
-// Customers View
-// -----------------------------------------------------------------
+    // ── Date Purge ──
+    const [purgeDate, setPurgeDate] = useState('2026-03-26');
+    const [purgePhase, setPurgePhase] = useState<'idle' | 'scanning' | 'preview' | 'confirm' | 'running' | 'done'>('idle');
+    const [purgeScan, setPurgeScan] = useState<storageCleanup.DatePurgeScanResult | null>(null);
+    const [purgeConfirmText, setPurgeConfirmText] = useState('');
+    const [purgeProgress, setPurgeProgress] = useState<storageCleanup.DatePurgeProgress | null>(null);
+    const [purgeSummary, setPurgeSummary] = useState<storageCleanup.DatePurgeSummary | null>(null);
+    const [purgeError, setPurgeError] = useState<string | null>(null);
+
+    const handleScan = async () => {
+        setPhase('scanning'); setError(null);
+        try {
+            const found = await storageCleanup.scanForCleanup();
+            setTargets(found);
+            if (found.length === 0) { setPhase('done'); setSummary({ targets: [], results: [], totalDeleted: 0, totalSkipped: 0, totalErrors: 0 }); }
+            else { const preview = await storageCleanup.dryRunCleanup(found); setDryRun(preview); setPhase('preview'); }
+        } catch (e: any) { setError(e.message); setPhase('idle'); }
+    };
+
+    const handleExecute = async () => {
+        if (!window.confirm(`This will permanently delete images for ${targets.length} orders. DNA/character reference files will be kept. Proceed?`)) return;
+        setPhase('running'); setProgress({ current: 0, total: targets.length, order: '' });
+        try {
+            const result = await storageCleanup.executeCleanup(targets, (current, total, order) => setProgress({ current, total, order }));
+            setSummary(result); setPhase('done');
+        } catch (e: any) { setError(e.message); setPhase('preview'); }
+    };
+
+    const handlePurgeScan = async () => {
+        setPurgePhase('scanning'); setPurgeError(null); setPurgeScan(null); setPurgeConfirmText('');
+        try {
+            const cutoff = new Date(purgeDate + 'T00:00:00');
+            const result = await storageCleanup.scanDatePurge(cutoff);
+            setPurgeScan(result);
+            setPurgePhase(result.orderCount === 0 ? 'done' : 'preview');
+            if (result.orderCount === 0) setPurgeSummary({ deletedImageFiles: 0, deletedOrderRows: 0, errors: [] });
+        } catch (e: any) { setPurgeError(e.message); setPurgePhase('idle'); }
+    };
+
+    const handlePurgeExecute = async () => {
+        if (!purgeScan) return;
+        setPurgePhase('running');
+        try {
+            const result = await storageCleanup.executeDatePurge(purgeScan, (p) => setPurgeProgress(p));
+            setPurgeSummary(result); setPurgePhase('done');
+        } catch (e: any) { setPurgeError(e.message); setPurgePhase('preview'); }
+    };
+
+    const cancelledTargets = targets.filter(t => t.reason === 'cancelled_order');
+    const oldCompletedTargets = targets.filter(t => t.reason === 'completed_old');
+    const totalWillDelete = dryRun.reduce((sum, r) => sum + r.willDelete.length, 0);
+    const totalWillKeep = dryRun.reduce((sum, r) => sum + r.willKeep.length, 0);
+
+    // The user must type the date string to confirm (e.g. "26 Mar 2026")
+    const purgeConfirmTarget = purgeScan?.cutoffLabel ?? '';
+    const purgeConfirmReady = purgeConfirmText.trim() === purgeConfirmTarget;
+
+    return (
+        <div className="space-y-10 animate-enter-forward">
+
+            {/* ═══════════════════════════════════════════════
+                PANEL A — DATE PURGE  (full delete)
+            ═══════════════════════════════════════════════ */}
+            <div className="bg-white rounded-[2.5rem] border-2 border-red-100 shadow-sm overflow-hidden">
+                {/* Panel Header */}
+                <div className="bg-gradient-to-r from-red-500 to-rose-600 px-8 py-5 flex items-center gap-4">
+                    <div className="text-3xl">🗑️</div>
+                    <div>
+                        <p className="text-white font-black text-lg uppercase tracking-wide">Date Purge</p>
+                        <p className="text-white/75 text-xs font-medium">Permanently deletes ALL orders + images before a chosen date. Irreversible.</p>
+                    </div>
+                </div>
+
+                <div className="p-8 space-y-6">
+                    {/* Date Picker Row */}
+                    {(purgePhase === 'idle' || purgePhase === 'scanning') && (
+                        <div className="flex items-end gap-4">
+                            <div className="flex-1 space-y-2">
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Delete all orders created BEFORE</label>
+                                <input
+                                    type="date"
+                                    value={purgeDate}
+                                    onChange={e => setPurgeDate(e.target.value)}
+                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-red-400 transition-all font-black text-brand-navy text-lg"
+                                />
+                            </div>
+                            <Button
+                                onClick={handlePurgeScan}
+                                className="!bg-red-100 !text-red-600 hover:!bg-red-500 hover:!text-white !px-6 !py-4 shadow-none"
+                                disabled={purgePhase === 'scanning' || !purgeDate}
+                            >
+                                {purgePhase === 'scanning' ? <Spinner /> : 'Scan'}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Preview */}
+                    {purgePhase === 'preview' && purgeScan && (
+                        <div className="space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-red-50 rounded-2xl p-5 text-center">
+                                    <p className="text-4xl font-black text-red-600">{purgeScan.orderCount}</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-1">Orders to Delete</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-2xl p-5 text-center">
+                                    <p className="text-lg font-black text-brand-navy">Before</p>
+                                    <p className="text-2xl font-black text-red-500">{purgeScan.cutoffLabel}</p>
+                                </div>
+                            </div>
+
+                            {/* Scrollable order list */}
+                            <div className="bg-gray-50 rounded-2xl border border-gray-100 max-h-48 overflow-y-auto no-scrollbar px-4 py-3 space-y-1">
+                                {purgeScan.orderNumbers.map(n => (
+                                    <p key={n} className="text-[11px] font-mono text-gray-500">{n}</p>
+                                ))}
+                            </div>
+
+                            {/* Confirm by typing */}
+                            <div className="space-y-2 p-5 bg-red-50 rounded-2xl border border-red-200">
+                                <p className="text-xs font-black text-red-700 uppercase tracking-wider">⚠️ Type the date to confirm — this cannot be undone</p>
+                                <p className="text-[11px] text-red-600 font-mono">→ Type exactly: <strong>{purgeConfirmTarget}</strong></p>
+                                <input
+                                    type="text"
+                                    value={purgeConfirmText}
+                                    onChange={e => setPurgeConfirmText(e.target.value)}
+                                    placeholder={`Type "${purgeConfirmTarget}" to unlock`}
+                                    className="w-full p-3 bg-white border-2 border-red-200 rounded-xl outline-none focus:border-red-500 font-mono text-sm transition-all"
+                                />
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <Button variant="outline" onClick={() => { setPurgePhase('idle'); setPurgeScan(null); setPurgeConfirmText(''); }}>Cancel</Button>
+                                <Button
+                                    onClick={handlePurgeExecute}
+                                    className={`!px-8 shadow-lg transition-all ${purgeConfirmReady ? '!bg-red-600 hover:!bg-red-700 shadow-red-200' : '!bg-gray-200 !text-gray-400 cursor-not-allowed'}`}
+                                    disabled={!purgeConfirmReady}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        Permanently Delete {purgeScan.orderCount} Orders
+                                    </span>
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Running */}
+                    {purgePhase === 'running' && purgeProgress && (
+                        <div className="text-center space-y-4 py-6">
+                            <Spinner />
+                            <div>
+                                <p className="text-sm font-black text-brand-navy">
+                                    {purgeProgress.stage === 'images' ? '🗂️ Deleting images...' : '📋 Removing DB records...'}
+                                </p>
+                                <p className="text-xs text-brand-orange font-mono mt-1">{purgeProgress.orderNumber}</p>
+                                <p className="text-xs text-gray-400 mt-1">{purgeProgress.current} / {purgeProgress.total}</p>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                <div
+                                    className="h-3 bg-gradient-to-r from-red-400 to-rose-600 rounded-full transition-all duration-300"
+                                    style={{ width: `${(purgeProgress.current / purgeProgress.total) * 100}%` }}
+                                />
+                            </div>
+                            <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+                                Stage: {purgeProgress.stage === 'images' ? '1/2 — Bucket Cleanup' : '2/2 — Database Cleanup'}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Done */}
+                    {purgePhase === 'done' && purgeSummary && (
+                        <div className={`p-6 rounded-2xl border ${purgeSummary.errors.length === 0 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                            <p className="font-black text-brand-navy text-lg mb-4">
+                                {purgeSummary.errors.length === 0 ? '✅ Purge Complete' : '⚠️ Done with Errors'}
+                            </p>
+                            <div className="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <p className="text-3xl font-black text-red-500">{purgeSummary.deletedOrderRows}</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase">Orders Deleted</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-black text-orange-500">{purgeSummary.deletedImageFiles}</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase">Image Files Deleted</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-black text-amber-500">{purgeSummary.errors.length}</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase">Errors</p>
+                                </div>
+                            </div>
+                            {purgeSummary.errors.length > 0 && (
+                                <div className="mt-4 max-h-32 overflow-y-auto space-y-1">
+                                    {purgeSummary.errors.map((e, i) => <p key={i} className="text-[10px] text-red-600 font-mono">{e}</p>)}
+                                </div>
+                            )}
+                            <div className="mt-4 flex justify-center">
+                                <Button variant="outline" onClick={() => { setPurgePhase('idle'); setPurgeScan(null); setPurgeSummary(null); setPurgeConfirmText(''); }}>
+                                    New Purge
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {purgeError && <div className="p-4 bg-red-50 border border-red-200 rounded-2xl"><p className="text-xs font-bold text-red-600">Error: {purgeError}</p></div>}
+                </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════
+                PANEL B — SMART CLEANUP (status/age based)
+            ═══════════════════════════════════════════════ */}
+            <div className="space-y-6">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h2 className="text-2xl font-black text-brand-navy uppercase tracking-tight">Smart Cleanup</h2>
+                        <p className="text-sm text-gray-500 font-medium mt-1">Removes spread images from cancelled & old completed orders only. DNA and character reference files are always preserved.</p>
+                    </div>
+                    {phase === 'idle' && (
+                        <Button onClick={handleScan} className="shadow-lg shadow-brand-orange/20">
+                            <span className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                Scan Storage
+                            </span>
+                        </Button>
+                    )}
+                </div>
+
+                {/* Policy Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-red-50 border border-red-100 rounded-2xl p-5">
+                        <div className="text-2xl mb-2">🗑️</div>
+                        <p className="text-xs font-black text-red-700 uppercase tracking-wider">Purge Immediately</p>
+                        <p className="text-[11px] text-red-600 mt-1">All images for cancelled, failed, and draft orders.</p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
+                        <div className="text-2xl mb-2">📅</div>
+                        <p className="text-xs font-black text-amber-700 uppercase tracking-wider">7-Day Retention</p>
+                        <p className="text-[11px] text-amber-600 mt-1">Spread images for completed orders deleted after 7 days.</p>
+                    </div>
+                    <div className="bg-green-50 border border-green-100 rounded-2xl p-5">
+                        <div className="text-2xl mb-2">🔒</div>
+                        <p className="text-xs font-black text-green-700 uppercase tracking-wider">Always Protected</p>
+                        <p className="text-[11px] text-green-600 mt-1">DNA images, character references, and all text prompts.</p>
+                    </div>
+                </div>
+
+                {phase === 'scanning' && (
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center">
+                        <Spinner />
+                        <p className="text-sm font-black text-brand-navy mt-4">Scanning orders and storage bucket...</p>
+                    </div>
+                )}
+
+                {phase === 'preview' && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+                                <p className="text-3xl font-black text-red-500">{cancelledTargets.length}</p>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-1">Cancelled Orders</p>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+                                <p className="text-3xl font-black text-amber-500">{oldCompletedTargets.length}</p>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-1">Old Completed</p>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+                                <p className="text-3xl font-black text-brand-orange">{totalWillDelete}</p>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-1">Files to Delete</p>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+                                <p className="text-3xl font-black text-green-500">{totalWillKeep}</p>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-1">Files Protected</p>
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                            <div className="bg-gray-50 border-b px-6 py-4 flex justify-between items-center">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cleanup Preview — {targets.length} Orders</p>
+                                <p className="text-[10px] text-gray-400">Dry run — nothing deleted yet</p>
+                            </div>
+                            <div className="divide-y max-h-[400px] overflow-y-auto no-scrollbar">
+                                {dryRun.map((row) => {
+                                    const target = targets.find(t => t.orderNumber === row.orderNumber);
+                                    return (
+                                        <div key={row.orderNumber} className="px-6 py-4 flex items-center justify-between gap-4">
+                                            <div>
+                                                <p className="text-xs font-black text-brand-navy">{row.orderNumber}</p>
+                                                <p className="text-[10px] text-gray-400 mt-0.5">{target?.status} · {target?.createdAt ? new Date(target.createdAt).toLocaleDateString() : ''}</p>
+                                            </div>
+                                            <div className="flex gap-3 items-center">
+                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${target?.reason === 'cancelled_order' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                    {target?.reason === 'cancelled_order' ? 'Cancelled' : '7-Day'}
+                                                </span>
+                                                <span className="text-[10px] text-red-500 font-bold">{row.willDelete.length > 0 ? `🗑 ${row.willDelete.length} files` : 'No files'}</span>
+                                                {row.willKeep.length > 0 && <span className="text-[10px] text-green-500 font-bold">🔒 {row.willKeep.length} kept</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <Button variant="outline" onClick={() => { setPhase('idle'); setTargets([]); setDryRun([]); }}>Cancel</Button>
+                            <Button onClick={handleExecute} className="!bg-red-500 hover:!bg-red-700 shadow-lg shadow-red-200 !px-8" disabled={totalWillDelete === 0}>
+                                <span className="flex items-center gap-2">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    Delete {totalWillDelete} Files
+                                </span>
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {phase === 'running' && progress && (
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center space-y-4">
+                        <Spinner />
+                        <p className="text-sm font-black text-brand-navy">Deleting... {progress.current}/{progress.total}</p>
+                        <p className="text-xs text-brand-orange font-mono">{progress.order}</p>
+                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div className="h-2 bg-gradient-to-r from-brand-orange to-red-500 rounded-full transition-all" style={{ width: `${(progress.current / progress.total) * 100}%` }} />
+                        </div>
+                    </div>
+                )}
+
+                {phase === 'done' && summary && (
+                    <div className={`p-6 rounded-3xl border ${summary.totalErrors === 0 ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}`}>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="text-3xl">{summary.totalErrors === 0 ? '✅' : '⚠️'}</div>
+                            <div>
+                                <p className="font-black text-brand-navy text-lg">Cleanup {summary.totalErrors === 0 ? 'Complete' : 'Finished with Errors'}</p>
+                                <p className="text-sm text-gray-500">{summary.targets.length} orders processed</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="text-center"><p className="text-3xl font-black text-red-500">{summary.totalDeleted}</p><p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Files Deleted</p></div>
+                            <div className="text-center"><p className="text-3xl font-black text-green-500">{summary.totalSkipped}</p><p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Files Protected</p></div>
+                            <div className="text-center"><p className="text-3xl font-black text-amber-500">{summary.totalErrors}</p><p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Errors</p></div>
+                        </div>
+                        {summary.totalErrors > 0 && (
+                            <div className="mt-4 space-y-1">{summary.results.filter(r => r.error).map(r => <p key={r.orderNumber} className="text-[10px] text-red-600 font-mono">{r.orderNumber}: {r.error}</p>)}</div>
+                        )}
+                        <div className="flex justify-center mt-4">
+                            <Button variant="outline" onClick={() => { setPhase('idle'); setTargets([]); setDryRun([]); setSummary(null); }}>Run Another Scan</Button>
+                        </div>
+                    </div>
+                )}
+
+                {error && <div className="p-4 bg-red-50 border border-red-200 rounded-2xl"><p className="text-xs font-bold text-red-600">Error: {error}</p></div>}
+            </div>
+        </div>
+    );
+};
+
+
+
+
 const CustomersView: React.FC = () => {
     const [customers, setCustomers] = useState<AdminCustomer[]>([]);
 

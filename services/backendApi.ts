@@ -104,6 +104,13 @@ export const backendApi = {
         body: JSON.stringify(payload)
     }),
 
+    editSpreadImage: (payload: { imageBase64: string; editInstruction: string; stylePrompt: string; childDNA?: string; secondDNA?: string }) =>
+        fetchBackend<{ imageBase64: string }>('/generate/edit-image', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
+
     generatePreview: (payload: { character: any, secondCharacter?: any, themeDescription: string, themeId?: string, stylePrompt: string, age: string }) => fetchBackend<{ imageBase64: string, prompt: string, secondImageBase64?: string, secondPrompt?: string }>('/generate/preview', {
         method: 'POST',
         body: JSON.stringify(payload)

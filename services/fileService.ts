@@ -361,8 +361,10 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const isPng = cleanB64.startsWith('iVBOR');
             const imgFmt = isPng ? 'PNG' : 'JPEG';
             const dataPrefix = isPng ? 'data:image/png;base64,' : 'data:image/jpeg;base64,';
+            // Apply horizontal pan offset (imageOffsetX is % of pdfW converted to mm)
+            const imgShiftX = spread.imageOffsetX ? (spread.imageOffsetX / 100) * pdfW : 0;
             try {
-                pdf.addImage(`${dataPrefix}${cleanB64}`, imgFmt, dim.x, dim.y, dim.w, dim.h);
+                pdf.addImage(`${dataPrefix}${cleanB64}`, imgFmt, dim.x + imgShiftX, dim.y, dim.w, dim.h);
             } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
@@ -384,8 +386,6 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             if (blobImg && blobImg.width > 0) { rectH = rectW * (blobImg.height / blobImg.width); }
 
             // Determine which side the text block should appear on.
-            // Priority: 1) spread.textSide (explicitly saved), 2) parse actualPrompt for "X side must be empty",
-            // 3) language-based fallback.
             const isAr = language === 'ar';
             let textOnLeft: boolean;
             if (spread.textSide === 'left') {
@@ -393,26 +393,18 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             } else if (spread.textSide === 'right') {
                 textOnLeft = false;
             } else {
-                // Fallback: parse the image prompt for the "empty side" instruction.
-                // The prompt engineer writes: "The right side must be empty" (leave right for text)
-                // or "The left side must be empty" (leave left for text).
                 const promptText = (spread.actualPrompt || '').toLowerCase();
                 const rightEmptyMatch = /(?:the\s+)?right\s+(?:side|half)[^.]*empty/i.test(promptText);
                 const leftEmptyMatch = /(?:the\s+)?left\s+(?:side|half)[^.]*empty/i.test(promptText);
-                if (rightEmptyMatch) {
-                    // Right is empty for text → text goes RIGHT
-                    textOnLeft = false;
-                } else if (leftEmptyMatch) {
-                    // Left is empty for text → text goes LEFT
-                    textOnLeft = true;
-                } else {
-                    // Ultimate fallback: Arabic text goes left (RTL reading direction),
-                    // English text also goes left (book convention)
-                    textOnLeft = true;
-                }
+                if (rightEmptyMatch) textOnLeft = false;
+                else if (leftEmptyMatch) textOnLeft = true;
+                else textOnLeft = true;
             }
-            const rectX = textOnLeft ? pdfW * 0.05 : pdfW * 0.55;
-            const rectY = (pdfH / 2) - (rectH / 2);
+            // Apply per-spread X/Y overrides from the editor, fall back to auto calculations
+            const defaultRectX = textOnLeft ? pdfW * 0.05 : pdfW * 0.55;
+            const defaultRectY = (pdfH / 2) - (rectH / 2);
+            const rectX = spread.textOffsetX !== undefined ? spread.textOffsetX : defaultRectX;
+            const rectY = spread.textOffsetY !== undefined ? spread.textOffsetY : defaultRectY;
 
             if (blobImg && blobImg.dataUrl) {
                 pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);

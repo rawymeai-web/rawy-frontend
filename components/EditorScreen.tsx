@@ -5,8 +5,10 @@ import { Spinner } from './Spinner';
 import { backendApi } from '../services/backendApi';
 import * as adminService from '../services/adminService';
 import { useLegacyPipeline } from '../hooks/useLegacyPipeline';
-import { compressBase64Image } from '../utils/imageUtils';
+import { compressBase64Image, flipImageHorizontal } from '../utils/imageUtils';
 import TitlePreviewPanel from './TitlePreviewPanel';
+import SpreadLayoutPanel from './SpreadLayoutPanel';
+import SpreadGeminiEditPanel from './SpreadGeminiEditPanel';
 
 interface FinalizeArgs {
     title: string;
@@ -110,7 +112,7 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
     const masterDNA2 = storyData.secondCharacter?.imageDNA?.[0] || storyData.secondCharacterImageBase64 || storyData.secondCharacter?.imageBases64?.[0];
 
     // Local state to handle edits before saving them back to storyData
-    const [pageEdits, setPageEdits] = useState<{ [index: number]: { text: string; prompt: string; textSide?: 'left'|'right' } }>({});
+    const [pageEdits, setPageEdits] = useState<{ [index: number]: { text: string; prompt: string; textSide?: 'left'|'right'; textOffsetX?: number; textOffsetY?: number; imageOffsetX?: number } }>({});
     const [coverEdit, setCoverEdit] = useState(coverPrompt);
     const [localTitle, setLocalTitle] = useState(storyData.title || '');
     // Subtitle override: empty = use auto-computed smart subtitle
@@ -208,6 +210,28 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         }));
         // We trigger an immediate save for UX snappiness
         setTimeout(handleSilentSave, 100);
+    };
+
+    const handleLayoutOffsetChange = (index: number, field: 'textOffsetX' | 'textOffsetY' | 'imageOffsetX', value: number) => {
+        setPageEdits(prev => ({
+            ...prev,
+            [index]: { ...(prev[index] || { text: getSpreadText(spreads[index]), prompt: getPromptForIndex(index, spreads[index]) }), [field]: value }
+        }));
+        setTimeout(handleSilentSave, 500);
+    };
+
+    const handleGeminiImageEdit = async (index: number, newBase64: string) => {
+        const newSpreads = [...spreads];
+        newSpreads[index] = { ...newSpreads[index], illustrationUrl: newBase64 };
+        const newStory = { ...storyData, spreads: newSpreads };
+        onUpdateStory({ spreads: newSpreads });
+        if (storyData.orderId) {
+            try {
+                await adminService.saveOrder(storyData.orderId, newStory, shippingDetails || {});
+            } catch (err) {
+                console.error('Failed to save Gemini-edited image to DB', err);
+            }
+        }
     };
 
     const handleRegenerateText = async (index: number) => {
@@ -330,6 +354,39 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
         input.click();
     };
 
+    const handleFlipCover = async () => {
+        if (!coverUrl) return;
+        setRegeneratingIndex('cover');
+        try {
+            // Get original base64 to flip
+            let base64 = coverUrl;
+            if (coverUrl.startsWith('http')) {
+                // If it's a URL, we must fetch it first
+                const resp = await fetch(coverUrl);
+                const blob = await resp.blob();
+                base64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(blob);
+                });
+            }
+            
+            const flippedB64 = await flipImageHorizontal(base64);
+            const newStoryData = { ...storyData, coverImageUrl: flippedB64 };
+            onUpdateStory({ coverImageUrl: flippedB64 });
+            
+            // Instantly save to DB
+            if (storyData.orderId) {
+                await adminService.saveOrder(storyData.orderId, newStoryData, shippingDetails || {});
+            }
+        } catch (e) {
+            console.error("Flip failed", e);
+            alert("Failed to flip cover.");
+        } finally {
+            setRegeneratingIndex(null);
+        }
+    };
+
     const handleUploadText = (index: number) => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -413,13 +470,22 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                 const editedText = pageEdits[i]?.text;
                 const currentText = getSpreadText(finalSpreads[i]);
                 if (editedText !== undefined && editedText !== currentText) {
-                    finalSpreads[i] = { ...finalSpreads[i], leftText: editedText, rightText: '' };
+                                finalSpreads[i] = { ...finalSpreads[i], leftText: editedText, rightText: '' };
                 }
                 if (pageEdits[i]?.prompt !== undefined && pageEdits[i].prompt !== finalSpreads[i].actualPrompt) {
                     finalSpreads[i] = { ...finalSpreads[i], actualPrompt: pageEdits[i].prompt };
                 }
                 if (pageEdits[i]?.textSide !== undefined) {
                     finalSpreads[i] = { ...finalSpreads[i], textSide: pageEdits[i].textSide };
+                }
+                if (pageEdits[i]?.textOffsetX !== undefined) {
+                    finalSpreads[i] = { ...finalSpreads[i], textOffsetX: pageEdits[i].textOffsetX };
+                }
+                if (pageEdits[i]?.textOffsetY !== undefined) {
+                    finalSpreads[i] = { ...finalSpreads[i], textOffsetY: pageEdits[i].textOffsetY };
+                }
+                if (pageEdits[i]?.imageOffsetX !== undefined) {
+                    finalSpreads[i] = { ...finalSpreads[i], imageOffsetX: pageEdits[i].imageOffsetX };
                 }
             }
 
@@ -455,6 +521,15 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
             }
             if (pageEdits[i]?.textSide !== undefined) {
                 finalSpreads[i] = { ...finalSpreads[i], textSide: pageEdits[i].textSide };
+            }
+            if (pageEdits[i]?.textOffsetX !== undefined) {
+                finalSpreads[i] = { ...finalSpreads[i], textOffsetX: pageEdits[i].textOffsetX };
+            }
+            if (pageEdits[i]?.textOffsetY !== undefined) {
+                finalSpreads[i] = { ...finalSpreads[i], textOffsetY: pageEdits[i].textOffsetY };
+            }
+            if (pageEdits[i]?.imageOffsetX !== undefined) {
+                finalSpreads[i] = { ...finalSpreads[i], imageOffsetX: pageEdits[i].imageOffsetX };
             }
         }
         onUpdateStory({ spreads: finalSpreads, actualCoverPrompt: coverEdit, title: localTitle, coverSubtitle: localSubtitle, coverTextSide: localCoverTextSide });
@@ -657,9 +732,12 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                         {coverUrl ? <img src={coverUrl.startsWith('http') ? coverUrl : `data:image/jpeg;base64,${coverUrl}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" /> : <Spinner size="md" color="text-brand-orange" />}
                                         <div className="absolute inset-0 bg-brand-navy/0 group-hover:bg-brand-navy/5 transition-colors duration-300 pointer-events-none"></div>
                                     </div>
-                                    <div className="flex gap-3">
-                                        <Button variant="secondary" onClick={() => handleUploadImage('cover')} className="flex-1 text-xs py-3 font-black uppercase tracking-widest">{t('رفع صورة', 'Upload Art')}</Button>
-                                        <Button onClick={() => handleRegenerateImage('cover')} disabled={regeneratingIndex === 'cover'} className="flex-1 text-xs py-3 font-black uppercase tracking-widest shadow-lg shadow-brand-orange/20">
+                                    <div className="flex gap-2">
+                                        <Button variant="secondary" onClick={() => handleUploadImage('cover')} className="flex-[2] text-xs py-3 font-black uppercase tracking-widest px-2">{t('رفع صورة', 'Upload Art')}</Button>
+                                        <Button variant="outline" onClick={handleFlipCover} disabled={regeneratingIndex === 'cover' || !coverUrl} className="flex-1 text-xs py-3 font-black uppercase tracking-widest px-1 text-gray-500 border-gray-200">
+                                            {regeneratingIndex === 'cover' ? <Spinner size="sm" /> : t('قلب ↔', 'Flip ↔')}
+                                        </Button>
+                                        <Button onClick={() => handleRegenerateImage('cover')} disabled={regeneratingIndex === 'cover'} className="flex-[2] text-xs py-3 font-black uppercase tracking-widest shadow-lg shadow-brand-orange/20 px-2">
                                             {regeneratingIndex === 'cover' ? <Spinner size="sm" /> : t('إعادة توليد', 'Paint Art')}
                                         </Button>
                                     </div>
@@ -769,6 +847,19 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                                 {regeneratingIndex === i ? <Spinner size="sm" /> : t('إعادة', 'Paint Spread')}
                                             </Button>
                                         </div>
+                                        {/* Spread Layout Map + Position Controls */}
+                                        <SpreadLayoutPanel
+                                            spreadIndex={i}
+                                            illustrationUrl={spreads[i]?.illustrationUrl}
+                                            textSide={pageEdits[i]?.textSide || spreads[i]?.textSide || (language === 'ar' ? 'right' : 'left')}
+                                            language={language}
+                                            textOffsetX={pageEdits[i]?.textOffsetX ?? spreads[i]?.textOffsetX}
+                                            textOffsetY={pageEdits[i]?.textOffsetY ?? spreads[i]?.textOffsetY}
+                                            imageOffsetX={pageEdits[i]?.imageOffsetX ?? spreads[i]?.imageOffsetX ?? 0}
+                                            onTextOffsetXChange={v => handleLayoutOffsetChange(i, 'textOffsetX', v)}
+                                            onTextOffsetYChange={v => handleLayoutOffsetChange(i, 'textOffsetY', v)}
+                                            onImageOffsetXChange={v => handleLayoutOffsetChange(i, 'imageOffsetX', v)}
+                                        />
                                     </div>
                                     <div className="w-full xl:w-1/2 flex flex-col gap-6">
                                         <div className="space-y-2">
@@ -802,6 +893,17 @@ const EditorScreen: React.FC<EditorScreenProps> = ({
                                             <label className="text-[10px] font-black text-brand-navy uppercase tracking-widest px-1">Illustration Technical Prompt (JSON)</label>
                                             <textarea value={cleanupPromptText(pageEdits[i]?.prompt !== undefined ? pageEdits[i].prompt : getPromptForIndex(i, spreads[i]))} onChange={(e) => handlePromptChange(i, e.target.value)} onBlur={handleSilentSave} className="w-full p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] text-xs h-64 focus:ring-2 focus:ring-brand-navy/10 outline-none transition-all font-mono leading-relaxed" spellCheck={false} />
                                         </div>
+                                    </div>
+                                    {/* Gemini Image Edit Panel — collapsible, spans full width */}
+                                    <div className="col-span-full">
+                                        <SpreadGeminiEditPanel
+                                            spreadIndex={i}
+                                            illustrationUrl={spreads[i]?.illustrationUrl}
+                                            stylePrompt={storyData.selectedStylePrompt || 'Painterly children\'s book illustration style'}
+                                            childDNA={masterDNA}
+                                            secondDNA={masterDNA2}
+                                            onImageEdited={newB64 => handleGeminiImageEdit(i, newB64)}
+                                        />
                                     </div>
                                 </div>
                             </div>

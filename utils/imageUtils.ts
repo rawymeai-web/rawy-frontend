@@ -112,3 +112,32 @@ export function compressBase64Image(base64Str: string, maxDimension: number = 10
         img.src = imageSrc;
     });
 }
+
+/**
+ * Flips a base64 image horizontally.
+ * @param base64 The base64 string or data URL of the image.
+ * @returns A Promise that resolves with the flipped base64 string.
+ */
+export const flipImageHorizontal = async (base64: string): Promise<string> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(base64);
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(img, 0, 0);
+            try {
+                const flippedBase64 = canvas.toDataURL('image/jpeg', 0.95);
+                resolve(flippedBase64.split(',')[1]); // return just the raw base64 data
+            } catch (e) {
+                resolve(base64);
+            }
+        };
+        img.onerror = () => resolve(base64);
+        img.src = base64.startsWith('data:') || base64.startsWith('http') ? base64 : `data:image/jpeg;base64,${base64}`;
+    });
+};
