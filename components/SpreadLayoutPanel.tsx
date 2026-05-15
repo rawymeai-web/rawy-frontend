@@ -10,9 +10,15 @@ interface SpreadLayoutPanelProps {
     textOffsetX?: number;
     textOffsetY?: number;
     imageOffsetX?: number;
+    imageOffsetY?: number;
+    imageScale?: number;
     onTextOffsetXChange: (v: number) => void;
     onTextOffsetYChange: (v: number) => void;
     onImageOffsetXChange: (v: number) => void;
+    onImageOffsetYChange: (val: number) => void;
+    onImageScaleChange: (val: number) => void;
+    onGenerativeFill?: () => void;
+    isGeneratingFill?: boolean;
 }
 
 // Mirrors the PDF coordinate math in fileService.ts exactly
@@ -70,19 +76,39 @@ const SpreadLayoutPanel: React.FC<SpreadLayoutPanelProps> = ({
     textOffsetX,
     textOffsetY,
     imageOffsetX = 0,
+    imageOffsetY = 0,
+    imageScale = 100,
     onTextOffsetXChange,
     onTextOffsetYChange,
     onImageOffsetXChange,
+    onImageOffsetYChange,
+    onImageScaleChange,
+    onGenerativeFill,
+    isGeneratingFill,
 }) => {
+    const isCover = spreadIndex === 0;
+
     // Compute default text box position (mirrors fileService logic)
     const textOnLeft = textSide === 'left';
-    const defaultX = textOnLeft ? PDF_W * 0.05 : PDF_W * 0.55;
-    const TEXT_H_EST = TEXT_W * 0.6; // rough estimate
-    const defaultY = (PDF_H / 2) - (TEXT_H_EST / 2);
+    
+    // Default X: For cover, title is centered on the front or back cover half.
+    // For interior, it's pushed to the margins.
+    const defaultX = isCover 
+        ? (textOnLeft ? (PDF_W * 0.25) - (TEXT_W / 2) : (PDF_W * 0.75) - (TEXT_W / 2))
+        : (textOnLeft ? PDF_W * 0.05 : PDF_W * 0.55);
+
+    // Default Height: Cover title is ~ 1000x200 aspect ratio. Interior is estimated as 60% of width.
+    const TEXT_H_EST = isCover ? TEXT_W / (1000 / 200) : TEXT_W * 0.6;
+
+    // Default Y: Cover title is placed near the top. Interior is centered vertically.
+    const defaultY = isCover 
+        ? PDF_H * 0.08 
+        : (PDF_H / 2) - (TEXT_H_EST / 2);
 
     const activeX = textOffsetX !== undefined ? textOffsetX : defaultX;
     const activeY = textOffsetY !== undefined ? textOffsetY : defaultY;
     const activeImgOffset = imageOffsetX;
+    const activeImgOffsetY = imageOffsetY;
 
     // For the minimap: scale PDF mm to % of container
     const toPercX = (mm: number) => (mm / PDF_W) * 100;
@@ -111,12 +137,23 @@ const SpreadLayoutPanel: React.FC<SpreadLayoutPanelProps> = ({
                 className="relative w-full rounded-xl overflow-hidden border border-gray-200 shadow-inner bg-gray-100"
                 style={{ aspectRatio: '2 / 1' }}
             >
+                {/* Blurred background fill — visible only when zoomed out below 100% */}
+                {imgSrc && imageScale < 100 && (
+                    <img
+                        src={imgSrc}
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover opacity-60"
+                        style={{ filter: 'blur(18px)', transform: 'scale(1.1)' }}
+                        alt=""
+                    />
+                )}
+
                 {/* Illustration */}
                 {imgSrc ? (
                     <img
                         src={imgSrc}
                         className="absolute inset-0 w-full h-full object-cover opacity-75"
-                        style={{ transform: `translateX(${activeImgOffset}%)`, transition: 'transform 0.2s ease' }}
+                        style={{ transform: `scale(${imageScale / 100}) translate(${activeImgOffset}%, ${activeImgOffsetY}%)`, transition: 'transform 0.2s ease' }}
                         alt=""
                     />
                 ) : (
@@ -161,56 +198,45 @@ const SpreadLayoutPanel: React.FC<SpreadLayoutPanelProps> = ({
                     <div className="flex justify-between"><span className="text-gray-400">H ≈</span><span className="font-bold text-indigo-600">{TEXT_H_EST.toFixed(1)}</span></div>
                 </div>
                 <div className="bg-white/80 rounded-xl p-2.5 border border-indigo-100 space-y-1 font-mono text-[9px]">
-                    <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Image Pan</p>
-                    <div className="flex justify-between"><span className="text-gray-400">Offset X</span><span className="font-bold text-orange-500">{activeImgOffset > 0 ? '+' : ''}{activeImgOffset}%</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">Side</span><span className={`font-bold uppercase ${textSide === 'right' ? 'text-orange-500' : 'text-teal-500'}`}>{textSide}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">PDF W</span><span className="font-bold text-indigo-600">{PDF_W}mm</span></div>
+                    <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Image Pan & Zoom</p>
+                    <div className="flex justify-between"><span className="text-gray-400">Zoom</span><span className="font-bold text-green-500">{imageScale}%</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">Pan</span><span className="font-bold text-orange-500">X:{activeImgOffset}% Y:{activeImgOffsetY}%</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">PDF Res</span><span className="font-bold text-indigo-600">{PDF_W}×{PDF_H}</span></div>
                 </div>
             </div>
 
             {/* Controls */}
             <div className="space-y-3">
-                <SliderRow
-                    label="Text X (left edge)"
-                    unit="mm"
-                    value={Math.round(activeX * 10) / 10}
-                    min={0}
-                    max={PDF_W - TEXT_W}
-                    step={1}
-                    color="#6366f1"
-                    onChange={onTextOffsetXChange}
-                />
-                <SliderRow
-                    label="Text Y (top edge)"
-                    unit="mm"
-                    value={Math.round(activeY * 10) / 10}
-                    min={5}
-                    max={PDF_H - 40}
-                    step={1}
-                    color="#6366f1"
-                    onChange={onTextOffsetYChange}
-                />
-                <SliderRow
-                    label="Image Pan X"
-                    unit="%"
-                    value={activeImgOffset}
-                    min={-40}
-                    max={40}
-                    step={1}
-                    color="#f97316"
-                    onChange={onImageOffsetXChange}
-                />
+                <SliderRow label="Text X (left edge)" unit="mm" value={Math.round(activeX * 10) / 10} min={0} max={PDF_W - TEXT_W} step={1} color="#6366f1" onChange={onTextOffsetXChange} />
+                <SliderRow label="Text Y (top edge)" unit="mm" value={Math.round(activeY * 10) / 10} min={5} max={PDF_H - 40} step={1} color="#6366f1" onChange={onTextOffsetYChange} />
+                <SliderRow label="Image Zoom / Scale" unit="%" value={imageScale} min={10} max={200} step={1} color="#22c55e" onChange={onImageScaleChange} />
+                <SliderRow label="Image Pan X" unit="%" value={activeImgOffset} min={-40} max={40} step={1} color="#f97316" onChange={onImageOffsetXChange} />
+                <SliderRow label="Image Pan Y" unit="%" value={activeImgOffsetY} min={-40} max={40} step={1} color="#f97316" onChange={onImageOffsetYChange} />
+                
                 {/* Reset button */}
-                {(textOffsetX !== undefined || textOffsetY !== undefined || imageOffsetX !== 0) && (
+                {(textOffsetX !== undefined || textOffsetY !== undefined || imageOffsetX !== 0 || imageOffsetY !== 0 || imageScale !== 100) && (
                     <button
                         onClick={() => {
                             onTextOffsetXChange(defaultX);
                             onTextOffsetYChange(defaultY);
                             onImageOffsetXChange(0);
+                            onImageOffsetYChange(0);
+                            onImageScaleChange(100);
                         }}
-                        className="w-full text-[9px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors py-1"
+                        className="w-full text-[9px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors py-1 mt-2 block"
                     >
                         ↺ Reset to defaults
+                    </button>
+                )}
+
+                {/* Generative Fill Button */}
+                {imageScale < 100 && onGenerativeFill && (
+                    <button
+                        onClick={onGenerativeFill}
+                        disabled={isGeneratingFill}
+                        className={`w-full py-2 mt-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all shadow-md ${isGeneratingFill ? 'bg-indigo-300 cursor-not-allowed animate-pulse' : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 hover:scale-[1.02]'}`}
+                    >
+                        {isGeneratingFill ? '✨ Filling Empty Space...' : '✨ Generative Fill (Outpaint)'}
                     </button>
                 )}
             </div>

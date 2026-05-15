@@ -18,6 +18,33 @@ const getJsPDF = () => {
 import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 
+// SAFE RENDERING WORKAROUND for "SecurityError: Failed to read the 'cssRules' property"
+// This happens when html-to-image tries to scan cross-origin stylesheets (like Google Fonts).
+export async function safeToPng(node: HTMLElement, options: any = {}): Promise<string> {
+    const disabledSheets: CSSStyleSheet[] = [];
+    for (let i = 0; i < document.styleSheets.length; i++) {
+        try {
+            // If we can't read cssRules, it's a cross-origin sheet that will crash toPng
+            const rules = document.styleSheets[i].cssRules;
+        } catch (e) {
+            const sheet = document.styleSheets[i] as CSSStyleSheet;
+            sheet.disabled = true;
+            disabledSheets.push(sheet);
+        }
+    }
+
+    try {
+        return await toPng(node, {
+            pixelRatio: 2,
+            backgroundColor: null,
+            ...options
+        });
+    } finally {
+        // Always re-enable stylesheets
+        disabledSheets.forEach(s => s.disabled = false);
+    }
+}
+
 const blobBorderRadii = [
     '47% 53% 70% 30% / 30% 43% 57% 70%',
     '36% 64% 64% 36% / 64% 42% 58% 36%',
@@ -163,7 +190,7 @@ async function renderTextBlobToImage(
 
     document.body.appendChild(container);
     // Use html-to-image for native text shaping (fixes Arabic)
-    const dataUrl = await toPng(container, { pixelRatio: 3, backgroundColor: null });
+    const dataUrl = await safeToPng(container, { pixelRatio: 3 });
     const canvasObj = new Image();
     await new Promise(r => { canvasObj.onload = r; canvasObj.src = dataUrl; });
     document.body.removeChild(container);
@@ -210,13 +237,10 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         coverData = await normalizeImage(coverData);
     }
 
+    const coverEdits = storyData.spreads?.[0] || {};
+
     if (coverData && coverData.length > 50) {
         let cleanB64 = coverData.includes(',') ? coverData.split(',')[1] : coverData;
-
-        // ARABIC FIX: REMOVED.
-        // promptEngineer.ts now correctly generates the Hero on the Right (Back Cover) natively
-        // to ensure the Title on the Left (Front Cover) does not overlap.
-        // No horizontal flip is needed here.
 
         // Use dynamic dimensions to prevent stretching
         const imgDim = await getImageDimensions(cleanB64);
@@ -226,7 +250,21 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         const dataPrefix = isPng ? 'data:image/png;base64,' : 'data:image/jpeg;base64,';
 
         try {
-            pdf.addImage(`${dataPrefix}${cleanB64}`, imgFmt, dim.x, dim.y, dim.w, dim.h);
+            const scale = (coverEdits.imageScale ?? 100) / 100;
+            const scaledW = dim.w * scale;
+            const scaledH = dim.h * scale;
+            const centerShiftX = (scaledW - dim.w) / 2;
+            const centerShiftY = (scaledH - dim.h) / 2;
+            const imgShiftX = coverEdits.imageOffsetX ? (coverEdits.imageOffsetX / 100) * pdfW : 0;
+            const imgShiftY = coverEdits.imageOffsetY ? (coverEdits.imageOffsetY / 100) * pdfH : 0;
+
+            // Fill white background before drawing scaled down image
+            if (scale < 1) {
+                pdf.setFillColor(255, 255, 255);
+                pdf.rect(0, 0, pdfW, pdfH, 'F');
+            }
+
+            pdf.addImage(`${dataPrefix}${cleanB64}`, imgFmt, dim.x - centerShiftX + imgShiftX, dim.y - centerShiftY + imgShiftY, scaledW, scaledH);
         } catch (e) { console.warn("PDF Cover Add Failed", e); }
 
         // Add Title Overlay to Cover
@@ -260,7 +298,12 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         }
 
         const ty = pdfH * 0.08; // Moved UP from 0.15 to 0.08 to avoid covering Hero
-        pdf.addImage(titleB64, 'PNG', tx, ty, tw, th);
+        
+        // Apply manual layout overrides if they exist in the DB
+        const finalTx = coverEdits.textOffsetX !== undefined ? coverEdits.textOffsetX : tx;
+        const finalTy = coverEdits.textOffsetY !== undefined ? coverEdits.textOffsetY : ty;
+
+        pdf.addImage(titleB64, 'PNG', finalTx, finalTy, tw, th);
 
         // METADATA STRIP (COVER)
         if (orderNumber) {
@@ -275,7 +318,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
 
             const metaContainer = createMetadataStripElement(orderNumber, 0, stripPxW, stripPxH);
             document.body.appendChild(metaContainer);
-            const metaImg = await toPng(metaContainer, { pixelRatio: 2, backgroundColor: null });
+            const metaImg = await safeToPng(metaContainer);
             document.body.removeChild(metaContainer);
 
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
@@ -321,7 +364,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const bcPxH = 36;  // Proportionalish (actually just needs to be distinct)
             const bcEl = createBarcodeStripElement(orderNumber, bcPxW, bcPxH);
             document.body.appendChild(bcEl);
-            const bcImg = await toPng(bcEl, { pixelRatio: 2, backgroundColor: null });
+            const bcImg = await safeToPng(bcEl);
             document.body.removeChild(bcEl);
             pdf.addImage(bcImg, 'PNG', barcodeX, barcodeY, barcodeW, barcodeH);
 
@@ -330,7 +373,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const logoPxH = 200;
             const logoEl = await createRawyLogoElement(logoPxW, logoPxH);
             document.body.appendChild(logoEl);
-            const logoImg = await toPng(logoEl, { pixelRatio: 2, backgroundColor: null });
+            const logoImg = await safeToPng(logoEl);
             document.body.removeChild(logoEl);
             pdf.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH);
         }
@@ -361,10 +404,22 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
             const isPng = cleanB64.startsWith('iVBOR');
             const imgFmt = isPng ? 'PNG' : 'JPEG';
             const dataPrefix = isPng ? 'data:image/png;base64,' : 'data:image/jpeg;base64,';
-            // Apply horizontal pan offset (imageOffsetX is % of pdfW converted to mm)
+            // Apply scaling and offsets
+            const scale = (spread.imageScale ?? 100) / 100;
+            const scaledW = dim.w * scale;
+            const scaledH = dim.h * scale;
+            const centerShiftX = (scaledW - dim.w) / 2;
+            const centerShiftY = (scaledH - dim.h) / 2;
             const imgShiftX = spread.imageOffsetX ? (spread.imageOffsetX / 100) * pdfW : 0;
+            const imgShiftY = spread.imageOffsetY ? (spread.imageOffsetY / 100) * pdfH : 0;
+
             try {
-                pdf.addImage(`${dataPrefix}${cleanB64}`, imgFmt, dim.x + imgShiftX, dim.y, dim.w, dim.h);
+                // Fill white background before drawing scaled down image
+                if (scale < 1) {
+                    pdf.setFillColor(255, 255, 255);
+                    pdf.rect(0, 0, pdfW, pdfH, 'F');
+                }
+                pdf.addImage(`${dataPrefix}${cleanB64}`, imgFmt, dim.x - centerShiftX + imgShiftX, dim.y - centerShiftY + imgShiftY, scaledW, scaledH);
             } catch (e) { console.warn("PDF Spread Add Failed", e); }
         }
 
@@ -421,7 +476,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
 
             const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
             document.body.appendChild(metaContainer);
-            const metaImg = await toPng(metaContainer, { pixelRatio: 2, backgroundColor: null });
+            const metaImg = await safeToPng(metaContainer);
             document.body.removeChild(metaContainer);
 
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
@@ -508,7 +563,7 @@ export const generateStitchedPdf = async (
             // Strip
             const metaContainer = createMetadataStripElement(orderNumber, 0, stripPxW, stripPxH);
             document.body.appendChild(metaContainer);
-            const metaImg = await toPng(metaContainer, { pixelRatio: 2, backgroundColor: null });
+            const metaImg = await safeToPng(metaContainer);
             document.body.removeChild(metaContainer);
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
 
@@ -544,7 +599,7 @@ export const generateStitchedPdf = async (
             const bcPxH = 180; // Proportional for 15mm
             const bcEl = createBarcodeStripElement(orderNumber, bcPxW, bcPxH);
             document.body.appendChild(bcEl);
-            const bcImg = await toPng(bcEl, { pixelRatio: 2, backgroundColor: null });
+            const bcImg = await safeToPng(bcEl);
             document.body.removeChild(bcEl);
             pdf.addImage(bcImg, 'PNG', barcodeX, barcodeY, barcodeW, barcodeH);
 
@@ -553,7 +608,7 @@ export const generateStitchedPdf = async (
             const logoPxH = 200;
             const logoEl = await createRawyLogoElement(logoPxW, logoPxH); // ADDED AWAIT
             document.body.appendChild(logoEl);
-            const logoImg = await toPng(logoEl, { pixelRatio: 2, backgroundColor: null });
+            const logoImg = await safeToPng(logoEl);
             document.body.removeChild(logoEl);
             pdf.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH);
         }
@@ -630,7 +685,7 @@ export const generateStitchedPdf = async (
 
             const metaContainer = createMetadataStripElement(orderNumber, i + 1, stripPxW, stripPxH);
             document.body.appendChild(metaContainer);
-            const metaImg = await toPng(metaContainer, { pixelRatio: 2, backgroundColor: null });
+            const metaImg = await safeToPng(metaContainer);
             document.body.removeChild(metaContainer);
             pdf.addImage(metaImg, 'PNG', pdfW - stripWidthMm, 0, stripWidthMm, stripHeightMm);
         }
@@ -677,30 +732,10 @@ async function createCoverWithText(coverBase64: string, titleBase64: string, cov
     });
 }
 
-export const uploadOrderFiles = async (orderNumber: string, zipBlob: Blob): Promise<string | null> => {
-    try {
-        const { supabase } = await import('../utils/supabaseClient');
-        const filename = `${orderNumber}_Package.zip`;
-        const { data, error } = await supabase.storage
-            .from('order-files')
-            .upload(filename, zipBlob, {
-                cacheControl: '3600',
-                upsert: true
-            });
-
-        if (error) {
-            console.error("Supabase Storage Upload Error:", error);
-            // Fallback: try creating bucket if it doesn't exist? (Usually admin task, but good to know)
-            return null;
-        }
-
-        const { data: publicData } = supabase.storage.from('order-files').getPublicUrl(filename);
-        return publicData.publicUrl;
-    } catch (e) {
-        console.error("Upload failed exception:", e);
-        return null;
-    }
-};
+/**
+ * NOTE: uploadOrderFiles was removed from the frontend to enforce architectural separation.
+ * File uploads must now be handled via the Backend API (baryonic-solstice).
+ */
 
 export const generatePrintPackage = async (storyData: StoryData, shipping: ShippingDetails, language: Language, orderNumber: string) => {
     try {
@@ -1083,14 +1118,28 @@ export async function createTextImage(titleData: { title: string, subtitle?: str
     // Small delay to let browser layout & paint
     await new Promise(r => setTimeout(r, 100));
 
-    const dataUrl = await toPng(container, {
-        pixelRatio: 2,
-        backgroundColor: null,
-        fontEmbedCSS: undefined,
-    });
-    
-    document.body.removeChild(clipper);
-    return dataUrl;
+    // SAFE RENDERING WORKAROUND for "SecurityError: Failed to read the 'cssRules' property"
+    // This happens when html-to-image tries to scan cross-origin stylesheets (like Google Fonts).
+    const disabledSheets: CSSStyleSheet[] = [];
+    for (let i = 0; i < document.styleSheets.length; i++) {
+        try {
+            // If we can't read cssRules, it's a cross-origin sheet that will crash toPng
+            const rules = document.styleSheets[i].cssRules;
+        } catch (e) {
+            const sheet = document.styleSheets[i] as CSSStyleSheet;
+            sheet.disabled = true;
+            disabledSheets.push(sheet);
+        }
+    }
+
+    try {
+        const dataUrl = await safeToPng(container, {
+            fontEmbedCSS: undefined,
+        });
+        return dataUrl;
+    } finally {
+        document.body.removeChild(clipper);
+    }
 }
 
 export function createBarcodeHtmlElement(orderNumber: string, width: number, height: number): HTMLElement {
