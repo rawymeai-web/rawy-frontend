@@ -205,20 +205,24 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
                     try {
                         const rawPrompt = prompts[i];
                         const imagePrompt = typeof rawPrompt === 'string' ? rawPrompt : (rawPrompt?.imagePrompt || rawPrompt?.prompt);
-                        const mainDNA = storyData.mainCharacter?.imageDNA?.[0] || storyData.mainCharacter?.imageBases64?.[0];
-                        
+
+                        // DUAL-REFERENCE: raw photo = identity, DNA = style
+                        const heroRaw = storyData.mainCharacter?.imageRawUrl || storyData.mainCharacter?.imageBases64?.[0];
+                        const heroDNA = storyData.mainCharacter?.imageDNA?.[0] || heroRaw;
+
                         // DEBUG LOG
                         console.log(`Processing Scene ${i+1}:`, {
                             hasPrompt: !!imagePrompt,
                             promptLength: imagePrompt?.length,
-                            hasReference: !!mainDNA,
+                            hasHeroRaw: !!heroRaw,
+                            hasHeroDNA: !!heroDNA,
                             pageIndex
                         });
 
-                        if (!imagePrompt || !mainDNA) {
-                            console.warn(`Scene ${i+1} missing inputs. Prompt: ${!!imagePrompt}, DNA: ${!!mainDNA}`);
-                            // If we have DNA but no prompt, use a fallback
-                            if (mainDNA && !imagePrompt) {
+                        if (!imagePrompt || !heroRaw) {
+                            console.warn(`Scene ${i+1} missing inputs. Prompt: ${!!imagePrompt}, HeroRaw: ${!!heroRaw}`);
+                            // If we have raw photo but no prompt, use a fallback
+                            if (heroRaw && !imagePrompt) {
                                 console.log("Using fallback prompt for Scene", i+1);
                                 logMsg(`Missing formal AI Prompt for Scene ${i+1}. Using Fallback Prompt...`);
                                 const fallbackPrompt = `A beautiful painterly illustration of ${storyData.childName} in ${storyData.theme}, ${storyData.selectedStylePrompt}`;
@@ -227,7 +231,8 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
                                 const imgRes = await backendApi.generateImage({
                                     prompt: fallbackPrompt,
                                     stylePrompt: storyData.selectedStylePrompt,
-                                    referenceBase64: mainDNA,
+                                    heroRawBase64: heroRaw,
+                                    heroDNABase64: heroDNA,
                                     characterDescription: storyData.mainCharacter?.description,
                                     age: storyData.childAge || "5"
                                 }) as any;
@@ -248,13 +253,24 @@ export const LegacyProcessModal: React.FC<LegacyProcessModalProps> = ({ order, o
                         }
 
                         logMsg(`Sending exact AI Prompt to Image API for Scene ${i+1}. This paints the actual image and may take 45-60+ seconds...`);
+
+                        // Second hero dual references
+                        const secondHeroRaw = storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object'
+                            ? (storyData.secondCharacter?.imageRawUrl || storyData.secondCharacter?.imageBases64?.[0])
+                            : undefined;
+                        const secondHeroDNA = storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object'
+                            ? (storyData.secondCharacter?.imageDNA?.[0] || secondHeroRaw)
+                            : undefined;
+
                         const imgRes = await backendApi.generateImage({
                             prompt: imagePrompt,
                             stylePrompt: storyData.selectedStylePrompt,
-                            referenceBase64: mainDNA,
+                            heroRawBase64: heroRaw,
+                            heroDNABase64: heroDNA,
                             characterDescription: storyData.mainCharacter?.description,
                             age: storyData.childAge || "5",
-                            secondReferenceBase64: storyData.useSecondCharacter ? (storyData.secondCharacter?.imageDNA?.[0] || storyData.secondCharacter?.imageBases64?.[0]) : undefined
+                            secondRawBase64: secondHeroRaw,
+                            secondDNABase64: secondHeroDNA
                         }) as any;
                         
                         if (imgRes.imageBase64 || imgRes.data?.imageBase64) {

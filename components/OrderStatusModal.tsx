@@ -30,7 +30,7 @@ const OrderStatusModal: React.FC<OrderStatusModalProps> = ({ isOpen, onClose, la
 
     try {
       // Fetch all orders - optimization: move to specific API call later
-      const orders = await adminService.getOrders();
+      const { orders } = await adminService.getOrders();
 
       // Normalize helper
       const norm = (s: string) => s.trim().toLowerCase().replace(/\s/g, '');

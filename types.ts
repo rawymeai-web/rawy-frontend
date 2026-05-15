@@ -137,6 +137,7 @@ export interface ShippingDetails {
   city: string;
   phone: string;
   email: string;
+  region?: 'kuwait' | 'gcc' | 'row'; // NEW: For shipping matrix
 }
 
 export interface AdminOrder {
@@ -198,8 +199,24 @@ export interface StoryData {
   spreadPlan?: SpreadDesignPlan;
   finalPrompts?: string[];
   styleReferenceImageBase64?: string;
-  secondCharacterImageBase64?: string; // NEW: Hosted / Raw base64 for secondary character DNA
-  styleReferenceImageUrl?: string; // NEW: Hosted URL for the DNA image
+  secondCharacterImageBase64?: string; // Hosted / Raw base64 for secondary character DNA
+  styleReferenceImageUrl?: string;     // Hosted URL for the DNA image
+
+  // --- DNA Audit Trail (Customer Proof of Choice) ---
+  dnaAudit?: {
+    heroA: {
+      selectedPreviewIndex: number;       // Which of the 4 cards was clicked (0–3)
+      lockedImageBase64Prefix: string;    // First 100 chars of chosen base64 (fingerprint)
+      lockedAt: string;                   // ISO timestamp when customer locked
+    };
+    heroB?: {
+      selectedPreviewIndex: number;
+      lockedImageBase64Prefix: string;
+      validSecondImagePresent: boolean;   // false = fell back to Hero A image (bad)
+      lockedAt: string;
+    };
+  };
+
   // Added optional fields for debug and comparison
   coverDebugImages?: CoverDebugImages;
   selectedDebugMethods?: string[];
@@ -208,6 +225,13 @@ export interface StoryData {
   userId?: string;
   orderId?: string; // NEW: Track the backend order ID
   planType?: 'one_time' | 'monthly' | 'yearly'; // NEW: Track subscription choice
+  
+  // --- Physical Print Workflow ---
+  isPhysicalPrint?: boolean;
+  isPrintUpsell?: boolean; // NEW: For post-read physical re-orders
+  shippingRegion?: 'kuwait' | 'gcc' | 'row';
+  printStatus?: 'none' | 'ordered' | 'printed' | 'delivered';
+  isCustomTheme?: boolean; // NEW: Track if this book uses a special event/custom theme (+1 KD)
 }
 
 export interface WorkflowLog {
@@ -219,7 +243,7 @@ export interface WorkflowLog {
   durationMs: number;
 }
 
-export type OrderStatus = 'New Order' | 'Processing' | 'Shipping' | 'Completed' | 'draft' | 'pending_payment' | 'paid' | 'processing' | 'shipped' | 'cancelled' | 'failed' | 'paid_confirmed' | 'queued' | 'theme_assigned' | 'story_generating' | 'story_ready' | 'illustrations_generating' | 'illustrations_ready' | 'book_compiling' | 'softcopy_ready' | 'awaiting_preview_approval' | 'sent_to_print' | 'printing' | 'delivered' | 'on_hold';
+export type OrderStatus = 'New Order' | 'character_ready' | 'Processing' | 'Shipping' | 'Completed' | 'draft' | 'pending_payment' | 'paid' | 'processing' | 'shipped' | 'cancelled' | 'failed' | 'paid_confirmed' | 'queued' | 'theme_assigned' | 'story_generating' | 'story_ready' | 'illustrations_generating' | 'illustrations_ready' | 'book_compiling' | 'softcopy_ready' | 'awaiting_preview_approval' | 'sent_to_print' | 'printing' | 'delivered' | 'on_hold';
 
 export interface AdminCustomer {
   id: string;
@@ -306,6 +330,8 @@ export interface Spread {
   textOffsetX?: number;       // PDF mm — left edge of text box (overrides auto calculation)
   textOffsetY?: number;       // PDF mm — top edge of text box (overrides auto calculation)
   imageOffsetX?: number;      // % shift of illustration horizontally (-50 to +50, default 0)
+  imageOffsetY?: number;      // % shift of illustration vertically (-50 to +50, default 0)
+  imageScale?: number;        // scale of illustration (100 = default, 150 = 1.5x zoom)
 }
 
 

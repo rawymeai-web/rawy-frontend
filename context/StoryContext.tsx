@@ -65,9 +65,15 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const [language, setLanguage] = useState<Language>('en');
     const [currency, setCurrency] = useState<Currency>(currencies[0]);
 
-    // UI State
     // Default to 'welcome' as language is now handled on the welcome screen
-    const [screen, setScreen] = useState<Screen>('welcome');
+    const [screen, setScreen] = useState<Screen>(() => {
+        try {
+            const saved = localStorage.getItem('currentScreen');
+            return (saved as Screen) || 'welcome';
+        } catch (e) {
+            return 'welcome';
+        }
+    });
 
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [isOrderStatusModalOpen, setOrderStatusModalOpen] = useState(false);
@@ -80,6 +86,14 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             console.error("Failed to save story", e);
         }
     }, [storyData]);
+
+    React.useEffect(() => {
+        try {
+            localStorage.setItem('currentScreen', screen);
+        } catch (e) {
+            console.error("Failed to save screen", e);
+        }
+    }, [screen]);
 
     const updateStory = (updates: Partial<StoryData>) => {
         setStoryData(prev => ({ ...prev, ...updates }));

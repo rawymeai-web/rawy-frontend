@@ -36,58 +36,62 @@ const StyleCard: React.FC<{
         <button
             onClick={onClick}
             disabled={preview.status !== 'done'}
-            className={`relative p-3 text-center rounded-2xl transition-all duration-300 h-full flex flex-col items-center justify-start w-full group ${isSelected
-                ? 'bg-white shadow-2xl ring-4 ring-brand-coral scale-105 z-10'
-                : 'bg-white/60 backdrop-blur-md hover:bg-white hover:shadow-xl hover:scale-105 border border-white/50'
+            className={`relative p-4 rounded-[2rem] transition-all duration-500 flex flex-col items-center justify-start w-full group overflow-hidden ${isSelected
+                ? 'bg-brand-orange text-white shadow-2xl shadow-brand-orange/30 scale-[1.02] z-10'
+                : 'glass-panel bg-white/30 hover:bg-white/60 hover:shadow-xl hover:-translate-y-2'
                 } ${preview.status !== 'done' ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
             aria-pressed={isSelected}
         >
-            <div className="relative aspect-square w-full bg-gray-100/50 rounded-xl flex items-center justify-center mb-4 overflow-hidden shadow-inner">
+            <div className="relative aspect-square w-full bg-black/5 rounded-[1.5rem] flex items-center justify-center mb-4 overflow-hidden shadow-inner group-hover:shadow-none transition-all">
                 {preview.status === 'loading' && (
-                    <div className="flex flex-col items-center">
-                        <Spinner />
-                        <span className="text-xs text-gray-500 mt-2 font-medium animate-pulse">Rendering...</span>
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-12 h-12 rounded-full border-4 border-brand-orange/10 border-t-brand-orange animate-spin"></div>
+                        <span className="text-[10px] font-black text-brand-navy/30 uppercase tracking-widest animate-pulse">{t('جاري التلوين...', 'Painting...')}</span>
                     </div>
                 )}
+                
                 {preview.status === 'done' && (
                     <div className="w-full h-full p-2">
                         {displayType === 'primary' && preview.imageBase64 && (
                             <img
                                 src={`data:image/jpeg;base64,${preview.imageBase64}`}
                                 alt={preview.name}
-                                className="w-full h-full object-cover rounded-lg shadow-sm"
+                                className="w-full h-full object-cover rounded-[1rem] shadow-sm transition-transform duration-700 group-hover:scale-110"
                             />
                         )}
                         {displayType === 'secondary' && preview.secondImageBase64 && (
                             <img
                                 src={`data:image/jpeg;base64,${preview.secondImageBase64}`}
                                 alt="Second Hero"
-                                className="w-full h-full object-cover rounded-lg shadow-sm"
+                                className="w-full h-full object-cover rounded-[1rem] shadow-sm transition-transform duration-700 group-hover:scale-110"
                             />
                         )}
                     </div>
                 )}
+
                 {preview.status === 'error' && (
-                    <div className="flex flex-col items-center justify-center text-red-500 p-2 text-center h-full w-full absolute inset-0 bg-white/90 z-20">
-                        <svg className="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        <span className="text-[10px] font-bold">Failed</span>
-                        {/* Exposed Error Message for Debugging */}
-                        <span className="text-[9px] mt-1 break-words w-full px-1 leading-tight text-red-700 opacity-80 overflow-y-auto max-h-[80px]" title={preview.errorMessage || "Unknown Error"}>
-                            {preview.errorMessage || "Unknown Error"}
-                        </span>
+                    <div className="flex flex-col items-center justify-center text-red-500 p-6 text-center h-full w-full absolute inset-0 bg-white/95 z-20">
+                        <span className="material-symbols-outlined text-4xl mb-2">error</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{t('حدث خطأ', 'Failed')}</span>
+                        <p className="text-[9px] mt-2 leading-tight opacity-60 line-clamp-3">{preview.errorMessage}</p>
                     </div>
                 )}
+
                 {isSelected && (
-                    <div className="absolute inset-0 border-4 border-brand-coral flex items-start justify-end p-2">
-                        <div className="bg-white text-brand-coral rounded-full p-2 shadow-lg transform scale-125">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                        </div>
+                    <div className="absolute top-4 right-4 bg-white text-brand-orange rounded-full p-1.5 shadow-2xl z-30 animate-pop border-2 border-brand-orange/20">
+                        <span className="material-symbols-outlined text-xl font-black">check_circle</span>
                     </div>
                 )}
             </div>
-            <h4 className={`font-bold text-sm md:text-base transition-colors ${isSelected ? 'text-brand-coral' : 'text-brand-navy'}`}>
-                {t('معاينة', 'Preview')} {preview.id}
-            </h4>
+            
+            <div className="flex items-center justify-between w-full px-2">
+               <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isSelected ? 'text-white/60' : 'text-brand-navy/30'}`}>
+                 {t('معاينة', 'Preview')} {preview.id}
+               </span>
+               {!isSelected && preview.status === 'done' && (
+                 <span className="material-symbols-outlined text-brand-orange/40 text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+               )}
+            </div>
         </button>
     );
 };
@@ -96,7 +100,6 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
     const [isLocking, setIsLocking] = useState(false);
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-    // Generate 4 variations of the SELECTED style category
     const [previews, setPreviews] = useState<StylePreview[]>(
         [1, 2, 3, 4].map(i => ({
             id: i.toString(),
@@ -109,52 +112,25 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
     const [selectedSecondaryIndex, setSelectedSecondaryIndex] = useState<number | null>(null);
 
     const lastRequestKey = React.useRef<string>("");
-
     const [debugStatus, setDebugStatus] = useState<string>("Initializing...");
 
     useEffect(() => {
         let isMounted = true;
-
         const generateVariations = async () => {
-            // 1. Validation
             if (!storyData.mainCharacter.imageBases64 || storyData.mainCharacter.imageBases64.length === 0) {
                 if (isMounted) setDebugStatus("Waiting for Reference Image...");
                 return;
             }
-
-            // 2. Dedup Logic (Strict Mode Safe + Retry Safe)
             const currentKey = `${storyData.mainCharacter.name}-${storyData.selectedStylePrompt}-${storyData.childAge}`;
-
             if (lastRequestKey.current === currentKey) {
-                // SAFETY: Only skip if we are ACTUALLY working or done.
-                // If the key is locked but everything is 'pending', we are stuck. Break the lock.
                 const isWorking = previews.some(p => p.status === 'done' || p.status === 'loading');
                 if (isWorking) {
                     if (isMounted) setDebugStatus("Ready (Cached)");
                     return;
                 }
-                console.warn("Detected Stuck Cache Lock (No Progress). Forcing Reboot of Logic...");
             }
-
-            // Lock it immediately
             lastRequestKey.current = currentKey;
-
             if (isMounted) setDebugStatus("Starting Generation Engine...");
-            console.log("Starting Style Verification for:", currentKey);
-
-            // Safe Settings Fetch
-            let delay = 0;
-            try {
-                const settings = await adminService.getSettings();
-                delay = settings.generationDelay;
-            } catch (e) {
-                console.warn("Settings fetch failed, using default delay", e);
-            }
-
-            // 🚀 PARALLEL: Fire all 4 variation calls at the same time
-            // Each card shows its own spinner while its individual call is in-flight.
-            // Total wait = time of the SLOWEST single call (~15-20s), not 4x that.
-            if (isMounted) setDebugStatus("Generating all 4 variations in parallel...");
             setPreviews(prev => prev.map(p => ({ ...p, status: 'loading' })));
 
             const callPreview = async (index: number) => {
@@ -188,12 +164,8 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                     }
                 }
             };
-
-            // Fire all 4 in parallel — each resolves independently and updates its own card
             await Promise.all(previews.map((_, i) => callPreview(i)));
-
             if (isMounted) setDebugStatus("Generation Complete");
-
         };
         generateVariations();
         return () => { isMounted = false; };
@@ -201,23 +173,36 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
 
     const handleNext = async () => {
         if (selectedPrimaryIndex === null) return;
+
         const isSecondSubjectObject = storyData.secondCharacter?.type === 'object';
-        if (storyData.useSecondCharacter && !isSecondSubjectObject && selectedSecondaryIndex === null) return;
+        const isDualHero = storyData.useSecondCharacter && !isSecondSubjectObject;
+
+        if (isDualHero && selectedSecondaryIndex === null) return;
 
         const primaryChoice = previews[selectedPrimaryIndex];
-        const secondaryChoice = (storyData.useSecondCharacter && !isSecondSubjectObject) ? previews[selectedSecondaryIndex!] : null;
+        const secondaryChoice = isDualHero ? previews[selectedSecondaryIndex!] : null;
 
-        if (!primaryChoice.imageBase64) return;
-        if (storyData.useSecondCharacter && !isSecondSubjectObject && (!secondaryChoice || !secondaryChoice.secondImageBase64)) return;
+        if (!primaryChoice?.imageBase64) return;
+
+        // ─── GUARD: Block lock if Hero B card has no secondImageBase64 ─────────
+        if (isDualHero && !secondaryChoice?.secondImageBase64) {
+            alert(
+                t(
+                    'لم يتم تحميل صورة البطل الثاني بشكل صحيح. يرجى الضغط على "إعادة المحاولة" واختيار بطاقة أخرى.',
+                    'Hero B\'s preview didn\'t load correctly for this card. Please tap "Regenerate" and choose a different preview.'
+                )
+            );
+            return;
+        }
 
         setIsLocking(true);
+        const lockedAt = new Date().toISOString();
+
         try {
-            // Parallel: Get Style Guide AND Detailed Character Description (for consistency)
             const promises: Promise<any>[] = [
                 backendApi.generateStyleGuide({ imageBase64: primaryChoice.imageBase64, stylePrompt: primaryChoice.prompt }),
                 backendApi.describeSubject({ imageBase64: primaryChoice.imageBase64 })
             ];
-            
             if (isSecondSubjectObject && storyData.secondCharacter?.imageBases64?.[0]) {
                 promises.push(backendApi.describeSubject({ imageBase64: storyData.secondCharacter.imageBases64[0] }));
             }
@@ -225,18 +210,38 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
             const results = await Promise.all(promises);
             const { guide } = results[0];
             const { description: charDesc } = results[1];
-            
-            // Extract the actual description for the object if it was requested
-            const secondObjDesc = (isSecondSubjectObject && storyData.secondCharacter?.imageBases64?.[0] && results[2]) 
-                ? results[2].description 
+            const secondObjDesc = (isSecondSubjectObject && storyData.secondCharacter?.imageBases64?.[0] && results[2])
+                ? results[2].description
                 : storyData.secondCharacter?.description;
+
+            // ─── Hero B DNA: use secondImageBase64 ONLY — never fall back to Hero A ─
+            const heroBDNAImage = isSecondSubjectObject
+                ? storyData.secondCharacter?.imageBases64[0]
+                : secondaryChoice?.secondImageBase64; // undefined if no dual hero
+
+            // ─── DNA Audit Trail ─────────────────────────────────────────────────────
+            const dnaAudit: StoryData['dnaAudit'] = {
+                heroA: {
+                    selectedPreviewIndex: selectedPrimaryIndex,
+                    lockedImageBase64Prefix: primaryChoice.imageBase64.substring(0, 100),
+                    lockedAt,
+                },
+                ...(isDualHero && secondaryChoice ? {
+                    heroB: {
+                        selectedPreviewIndex: selectedSecondaryIndex!,
+                        lockedImageBase64Prefix: (secondaryChoice.secondImageBase64 || '').substring(0, 100),
+                        validSecondImagePresent: Boolean(secondaryChoice.secondImageBase64),
+                        lockedAt,
+                    }
+                } : {})
+            };
 
             onNext({
                 styleReferenceImageBase64: primaryChoice.imageBase64,
-                secondCharacterImageBase64: isSecondSubjectObject ? storyData.secondCharacter?.imageBases64[0] : (secondaryChoice ? secondaryChoice.secondImageBase64 : undefined),
+                secondCharacterImageBase64: heroBDNAImage,
                 technicalStyleGuide: guide,
                 styleSeed: Math.floor(Math.random() * 1000000),
-                // CRITICAL: Save the generated description and the ACTUAL chosen image to imageDNA
+                dnaAudit,
                 mainCharacter: {
                     ...storyData.mainCharacter,
                     description: charDesc,
@@ -245,22 +250,42 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                 secondCharacter: storyData.secondCharacter ? {
                     ...storyData.secondCharacter,
                     description: secondObjDesc,
-                    imageDNA: [isSecondSubjectObject ? storyData.secondCharacter.imageBases64[0] : (secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64)]
+                    imageDNA: heroBDNAImage ? [heroBDNAImage] : storyData.secondCharacter.imageDNA
                 } : undefined
             });
+
         } catch (e) {
             console.error("Locking failed:", e);
-            // Fallback: Proceed without description if it fails (better than blocking)
+            // Even on API error, still save the audit and whatever DNA we have
+            const heroBDNAImage = isSecondSubjectObject
+                ? storyData.secondCharacter?.imageBases64[0]
+                : secondaryChoice?.secondImageBase64;
+
             onNext({
                 styleReferenceImageBase64: primaryChoice.imageBase64,
-                secondCharacterImageBase64: isSecondSubjectObject ? storyData.secondCharacter?.imageBases64[0] : secondaryChoice?.secondImageBase64,
+                secondCharacterImageBase64: heroBDNAImage,
+                dnaAudit: {
+                    heroA: {
+                        selectedPreviewIndex: selectedPrimaryIndex,
+                        lockedImageBase64Prefix: primaryChoice.imageBase64.substring(0, 100),
+                        lockedAt,
+                    },
+                    ...(isDualHero && secondaryChoice ? {
+                        heroB: {
+                            selectedPreviewIndex: selectedSecondaryIndex!,
+                            lockedImageBase64Prefix: (secondaryChoice.secondImageBase64 || '').substring(0, 100),
+                            validSecondImagePresent: Boolean(secondaryChoice.secondImageBase64),
+                            lockedAt,
+                        }
+                    } : {})
+                },
                 mainCharacter: {
                     ...storyData.mainCharacter,
                     imageDNA: [primaryChoice.imageBase64]
                 },
                 secondCharacter: storyData.secondCharacter ? {
                     ...storyData.secondCharacter,
-                    imageDNA: [isSecondSubjectObject ? storyData.secondCharacter.imageBases64[0] : (secondaryChoice?.secondImageBase64 || primaryChoice.imageBase64)]
+                    imageDNA: heroBDNAImage ? [heroBDNAImage] : storyData.secondCharacter.imageDNA
                 } : undefined
             });
         } finally {
@@ -268,77 +293,107 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
         }
     };
 
+
     const handleRetry = () => {
-        lastRequestKey.current = ""; // Reset lock
+        lastRequestKey.current = ""; 
         setPreviews(prev => prev.map(p => ({ ...p, status: 'pending', imageBase64: undefined, errorMessage: undefined })));
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 pb-10">
-            <div className="text-center space-y-2">
-                <h2 className="text-4xl font-bold text-brand-navy drop-shadow-sm">{t('معاينة بطل القصة', 'Verify The Hero')}</h2>
-                <p className="text-lg text-brand-navy/80 max-w-2xl mx-auto">
-                    {t('شاهد طفلك داخل عالم القصة! اختر الصورة التي تمثل روحه بأفضل شكل.', 'Your child, entering the story world! Choose the version that best captures their spirit in this theme.')}
+        <div className="max-w-7xl mx-auto px-6 py-12 animate-enter-forward">
+            
+            <div className="text-center space-y-4 mb-16">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-orange/10 rounded-full mb-2">
+                   <span className="material-symbols-outlined text-brand-orange text-sm">face</span>
+                   <span className="text-xs font-bold text-brand-orange tracking-widest uppercase">{t('تأكيد المظهر', 'HERO PREVIEW')}</span>
+                </div>
+                <h2 className="text-4xl md:text-5xl font-black text-brand-navy leading-tight">
+                  {t('بطلنا في ', 'Our Hero in the ')}
+                  <span className="text-brand-orange">{t('عالم القصة', 'Story World')}</span>
+                </h2>
+                <p className="text-brand-navy/60 font-medium max-w-2xl mx-auto">
+                    {t('شاهد طفلك داخل عالم القصة! اختر الصورة التي تمثل روحه بأفضل شكل.', 'Your child, entering the story world! Choose the version that best captures their spirit.')}
                 </p>
             </div>
 
-            {/* Debug Status Monitor */}
-            <div className="text-center">
-                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${debugStatus.includes('Error') ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
-                    System Status: {debugStatus}
-                </span>
-            </div>
-
-            <div className="p-8 bg-white/40 backdrop-blur-xl rounded-3xl shadow-xl border border-white/40 space-y-8">
-                <div>
-                    <h3 className="text-xl font-bold text-brand-navy mb-4">
-                        {storyData.useSecondCharacter
-                            ? t(`البطل الأول: ${storyData.mainCharacter.name}`, `Hero 1: ${storyData.mainCharacter.name}`)
-                            : t('اختر نمط الرسم', 'Choose Art Style')}
-                    </h3>
+            <div className="space-y-12">
+                <div className="space-y-8">
+                    <div className="flex items-center justify-between border-b border-brand-navy/5 pb-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-brand-navy text-white flex items-center justify-center font-black">1</div>
+                            <h3 className="text-xl font-black text-brand-navy">
+                                {storyData.useSecondCharacter
+                                    ? t(`المظهر الأساسي: ${storyData.mainCharacter.name}`, `Primary Hero: ${storyData.mainCharacter.name}`)
+                                    : t('اختر نمط الرسم المفضل', 'Choose Your Favorite Look')}
+                            </h3>
+                        </div>
+                        <div className="hidden md:flex items-center gap-2 bg-brand-teal/5 px-4 py-2 rounded-full border border-brand-teal/10">
+                            <span className="w-2 h-2 rounded-full bg-brand-teal animate-pulse"></span>
+                            <span className="text-[10px] font-black text-brand-teal uppercase tracking-widest">{debugStatus}</span>
+                        </div>
+                    </div>
+                    
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {previews.map((p, i) => (
-                            <div key={`primary-${i}`} className="relative">
-                                <StyleCard preview={p} isSelected={selectedPrimaryIndex === i} onClick={() => setSelectedPrimaryIndex(i)} language={language} displayType="primary" />
-                                {p.status === 'error' && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-red-50/80 rounded-xl p-2 text-center">
-                                        <p className="text-xs text-red-600 font-bold">{t('فشل التوليد', 'Generation Failed')}</p>
-                                    </div>
-                                )}
-                            </div>
+                            <StyleCard key={`primary-${i}`} preview={p} isSelected={selectedPrimaryIndex === i} onClick={() => setSelectedPrimaryIndex(i)} language={language} displayType="primary" />
                         ))}
                     </div>
                 </div>
 
                 {storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object' && (
-                    <div className="pt-8 border-t border-brand-orange/20">
-                        <h3 className="text-xl font-bold text-brand-navy mb-4">
-                            {t(`البطل الثاني: ${storyData.secondCharacter?.name || ''}`, `Hero 2: ${storyData.secondCharacter?.name || ''}`)}
-                        </h3>
+                    <div className="space-y-8 pt-8 animate-enter-forward">
+                        <div className="flex items-center gap-4 border-b border-brand-navy/5 pb-4">
+                            <div className="w-10 h-10 rounded-xl bg-brand-teal text-white flex items-center justify-center font-black">2</div>
+                            <h3 className="text-xl font-black text-brand-navy">
+                                {t(`مظهر البطل الثاني: ${storyData.secondCharacter?.name || ''}`, `Secondary Hero: ${storyData.secondCharacter?.name || ''}`)}
+                            </h3>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                             {previews.map((p, i) => (
-                                <div key={`secondary-${i}`} className="relative">
-                                    <StyleCard preview={p} isSelected={selectedSecondaryIndex === i} onClick={() => setSelectedSecondaryIndex(i)} language={language} displayType="secondary" />
-                                    {p.status === 'error' && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-red-50/80 rounded-xl p-2 text-center">
-                                            <p className="text-xs text-red-600 font-bold">{t('فشل التوليد', 'Generation Failed')}</p>
-                                        </div>
-                                    )}
-                                </div>
+                                <StyleCard key={`secondary-${i}`} preview={p} isSelected={selectedSecondaryIndex === i} onClick={() => setSelectedSecondaryIndex(i)} language={language} displayType="secondary" />
                             ))}
                         </div>
                     </div>
                 )}
             </div>
 
-            <div className="text-center flex flex-col sm:flex-row justify-center items-center gap-6">
-                <Button onClick={onBack} variant="outline" className="text-xl px-12 py-4 rounded-2xl">{t('رجوع', 'Back')}</Button>
-                <Button onClick={handleRetry} variant="secondary" className="text-xl px-12 py-4 rounded-2xl shadow-sm text-brand-navy bg-white hover:bg-gray-50">
-                    {t('إعادة المحاولة', 'Regenerate All')}
-                </Button>
-                <Button onClick={handleNext} className="text-xl px-12 py-4 rounded-2xl shadow-xl" disabled={selectedPrimaryIndex === null || (storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object' && selectedSecondaryIndex === null) || isLocking}>
-                    {isLocking ? t('جاري القفل...', 'Locking DNA...') : t('اعتماد الأسلوب المختار', 'Lock Art Style')}
-                </Button>
+            {/* Navigation */}
+            <div className="flex flex-col md:flex-row items-center justify-center gap-6 mt-20 max-w-3xl mx-auto">
+                <button 
+                    onClick={onBack} 
+                    className="w-full md:w-1/3 glass-panel py-5 rounded-full font-bold text-brand-navy hover:bg-white/60 transition-all"
+                >
+                    {t('رجوع', 'Back')}
+                </button>
+                
+                <button 
+                    onClick={handleRetry} 
+                    className="w-full md:w-1/3 glass-panel py-5 rounded-full font-bold text-brand-navy hover:bg-white/60 transition-all flex items-center justify-center gap-2 group"
+                >
+                    <span className="material-symbols-outlined text-lg group-hover:rotate-180 transition-transform duration-700">refresh</span>
+                    {t('محاولة أخرى', 'Regenerate')}
+                </button>
+
+                <button 
+                    onClick={handleNext} 
+                    disabled={selectedPrimaryIndex === null || (storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object' && selectedSecondaryIndex === null) || isLocking}
+                    className={`w-full md:w-1/2 py-5 rounded-full font-black text-xl shadow-2xl transition-all hover:-translate-y-1 active:scale-95 group relative overflow-hidden ${isLocking || selectedPrimaryIndex === null ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-brand-orange text-white shadow-brand-orange/20 hover:shadow-brand-orange/40'}`}
+                >
+                    <span className="relative z-10 flex items-center justify-center gap-3">
+                        {isLocking ? (
+                            <>
+                                <span className="material-symbols-outlined animate-spin">fingerprint</span>
+                                {t('جاري القفل...', 'Locking DNA...')}
+                            </>
+                        ) : (
+                            <>
+                                {t('هذا رائع! اعتمد هذا', 'Lock This Look')}
+                                <span className="material-symbols-outlined">rocket_launch</span>
+                            </>
+                        )}
+                    </span>
+                    {!isLocking && selectedPrimaryIndex !== null && <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-full pointer-events-none"></div>}
+                </button>
             </div>
         </div>
     );

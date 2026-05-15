@@ -110,6 +110,12 @@ export const backendApi = {
             body: JSON.stringify(payload)
         }),
 
+    outpaintSpreadImage: (payload: { imageBase64: string; stylePrompt: string; childDNA?: string; secondDNA?: string }) =>
+        fetchBackend<{ imageBase64: string }>('/generate/outpaint', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }),
+
 
     generatePreview: (payload: { character: any, secondCharacter?: any, themeDescription: string, themeId?: string, stylePrompt: string, age: string }) => fetchBackend<{ imageBase64: string, prompt: string, secondImageBase64?: string, secondPrompt?: string }>('/generate/preview', {
         method: 'POST',
@@ -136,6 +142,11 @@ export const backendApi = {
         method: 'PUT',
         body: JSON.stringify(payload)
     }),
+
+    // Customer Tools
+    getCustomerDashboard: (userId: string) => fetchBackend<{ orders: any[], subscription: any }>(`/orders/customer/${userId}`),
+    
+    getOrderDetails: (orderId: string) => fetchBackend<any>(`/orders/${orderId}`),
 
     // Admin Tools
     triggerCron: () => fetchBackend<{ executedTasks: number; failedTasks: number }>('/cron', {

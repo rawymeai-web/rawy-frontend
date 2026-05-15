@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from './Button';
 import type { ShippingDetails, Language, StoryData } from '../types';
-import { getProductSizeById } from '../services/adminService';
 import { convertPrice, type Currency } from '../services/currencyService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface CheckoutScreenProps {
   onProceedToPayment: (details: ShippingDetails, planType: 'one_time' | 'monthly' | 'yearly', total: number) => void;
@@ -13,89 +13,22 @@ interface CheckoutScreenProps {
 }
 
 const CheckIcon = () => (
-  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+  <svg className="w-5 h-5 flex-shrink-0 text-brand-teal" viewBox="0 0 20 20" fill="currentColor">
     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
   </svg>
 );
 
-const CrossIcon = () => (
-  <svg className="w-4 h-4 flex-shrink-0 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-  </svg>
-);
+const SHIPPING_RATES = {
+  kuwait: 2.000,
+  gcc: 5.000,
+  row: 7.000
+};
 
-type PlanType = 'one_time' | 'monthly' | 'yearly';
-
-interface Plan {
-  id: PlanType;
-  badge?: string | { ar: string; en: string };
-  emoji: string;
-  name: { ar: string; en: string };
-  tagline: { ar: string; en: string };
-  priceMultiplier: number;
-  shipping: { ar: string; en: string };
-  perks: { label: { ar: string; en: string }; available: boolean }[];
-}
-
-const PLANS: Plan[] = [
-  {
-    id: 'one_time',
-    emoji: '📖',
-    name: { ar: 'شراء لمرة واحدة', en: 'One-Time Purchase' },
-    tagline: { ar: 'كتاب واحد مخصص (قصة واحدة)', en: 'Single Book (One-Time)' },
-    priceMultiplier: 18 / 17, // Anchor is 18 KD
-    shipping: { ar: '+ رسوم الشحن', en: '+ shipping (country dependent)' },
-    perks: [
-      { label: { ar: 'كتاب قصصي مخصص واحد', en: '1 personalized storybook' }, available: true },
-      { label: { ar: 'توليد ذكاء اصطناعي كامل', en: 'Full AI generation (story + illustrations)' }, available: true },
-      { label: { ar: 'نسخة رقمية (حمل PDF)', en: 'Soft copy (PDF download)' }, available: true },
-      { label: { ar: 'نسخة مطبوعة (عند الاختيار)', en: 'Printed copy (if selected)' }, available: true },
-    ]
-  },
-  {
-    id: 'monthly',
-    emoji: '🌙',
-    name: { ar: 'اشتراك شهري', en: 'Monthly Subscription' },
-    tagline: { ar: 'كتاب واحد كل شهر آلياً', en: '1 book per month (auto-generated)' },
-    priceMultiplier: 16 / 17, // 16 KD
-    shipping: { ar: 'شحن مجاني', en: 'Free Shipping' },
-    perks: [
-      { label: { ar: 'كتاب شهري (توليد آلي)', en: '1 book per month (auto-generated)' }, available: true },
-      { label: { ar: 'تجربة قصصية مستمرة', en: 'Continuous storytelling (evolving themes)' }, available: true },
-      { label: { ar: 'نسخة رقمية كل دورة', en: 'Soft copy every cycle' }, available: true },
-      { label: { ar: 'إمكانية طباعة اختيارية', en: 'Optional print add-on' }, available: true },
-      { label: { ar: 'تجربة مؤتمتة (بدون مجهود)', en: 'Automated experience (no effort)' }, available: true },
-      { label: { ar: 'تدوير المواضيع (بدون تكرار)', en: 'Theme rotation (no repeats)' }, available: true },
-      { label: { ar: 'أولوية في التنفيذ', en: 'Priority processing' }, available: true },
-      { label: { ar: 'تفضيلات ثابتة (شخصية وأسلوب)', en: 'Locked preferences (consistent style)' }, available: true },
-      { label: { ar: 'سعر أقل للكتاب', en: 'Lower cost per book' }, available: true },
-      { label: { ar: 'شحن مجاني', en: 'Free shipping' }, available: true },
-      { label: { ar: 'توليد بطلين مجاناً', en: 'Free 2 hero generation + special events' }, available: true },
-    ]
-  },
-  {
-    id: 'yearly',
-    emoji: '🌟',
-    badge: { ar: 'أفضل قيمة', en: 'BEST VALUE' },
-    name: { ar: 'اشتراك سنوي', en: 'Yearly Subscription' },
-    tagline: { ar: '12 كتاب مخصص موزعة', en: '12 books (monthly or scheduled)' },
-    priceMultiplier: 12.5 / 17,
-    shipping: { ar: 'شحن مجاني لكل كتاب', en: 'Free shipping per book' },
-    perks: [
-      { label: { ar: '12 كتاب مخصص', en: '12 books (monthly or scheduled)' }, available: true },
-      { label: { ar: 'معاينة قبل الطباعة', en: 'Preview before printing (Biggest Value)' }, available: true },
-      { label: { ar: 'نسخة رقمية ومطبوعة', en: 'Soft + printed versions' }, available: true },
-      { label: { ar: 'إعادة توليد مجانية واحدة', en: '1 regeneration per cycle' }, available: true },
-      { label: { ar: 'أعلى أولوية في التنفيذ', en: 'Highest status priority' }, available: true },
-      { label: { ar: 'أفضل سعر للكتاب (12.5 دينار)', en: 'Best pricing per book' }, available: true },
-      { label: { ar: 'تحكم كامل بالمخرجات', en: 'Full control over final output' }, available: true },
-      { label: { ar: 'تطور قصصي مستمر', en: 'Consistent story progression' }, available: true },
-      { label: { ar: 'وصول مبكر للمواضيع الجديدة', en: 'Early access to new themes' }, available: true },
-      { label: { ar: 'كل ميزات الباقة الشهرية', en: 'All Monthly perks included' }, available: true },
-    ]
-  }
-];
-
+const REGION_NAMES = {
+  kuwait: { ar: 'الكويت', en: 'Kuwait' },
+  gcc: { ar: 'دول الخليج', en: 'GCC Countries' },
+  row: { ar: 'بقية العالم', en: 'Rest of World' }
+};
 
 const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onBack, language, storyData, currency }) => {
   const [details, setDetails] = useState<ShippingDetails>({ 
@@ -103,219 +36,360 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     address: '', 
     city: '', 
     phone: '', 
-    email: storyData.parentEmail || '' 
+    email: storyData.parentEmail || '',
+    region: 'kuwait'
   });
-  const [planType, setPlanType] = useState<PlanType>('monthly');
-  const [basePrice, setBasePrice] = useState<number>(18.000); // New default base
-
-  const selectedPlan = PLANS.find(p => p.id === planType)!;
+  
+  const [planType, setPlanType] = useState<'one_time' | 'monthly' | 'yearly'>('monthly');
+  const [isPhysicalAddon, setIsPhysicalAddon] = useState(false);
 
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
-  const tObj = (obj: { ar: string; en: string }) => language === 'ar' ? obj.ar : obj.en;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setDetails({ ...details, [e.target.name]: e.target.value });
-  };
+  const pricing = useMemo(() => {
+    const digitalBase = 5.000;
+    const heroAddon = storyData.useSecondCharacter ? 2.000 : 0;
+    const themeAddon = storyData.isCustomTheme ? 1.000 : 0;
+    
+    const aLaCarteDigitalTotal = digitalBase + heroAddon + themeAddon;
+    
+    let subTotal = 0;
+    if (planType === 'monthly') subTotal = 4.500;
+    else if (planType === 'yearly') subTotal = 39.000;
+    else subTotal = aLaCarteDigitalTotal;
+
+    const finalDigital = storyData.isPrintUpsell ? 0 : subTotal;
+    const physicalPrice = isPhysicalAddon ? 21.000 : 0;
+    const shipping = isPhysicalAddon ? SHIPPING_RATES[details.region || 'kuwait'] : 0;
+    
+    return {
+      aLaCarteDigitalTotal,
+      currentDigital: finalDigital,
+      physical: physicalPrice,
+      shipping,
+      total: finalDigital + physicalPrice + shipping
+    };
+  }, [planType, isPhysicalAddon, details.region, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, currency]);
 
   React.useEffect(() => {
-    // Keep consistency if sizes exist, but now 18 is the baseline
-    getProductSizeById(storyData.size).then(productConfig => {
-      if (productConfig) setBasePrice(productConfig.price);
-      else setBasePrice(18.000);
-    });
-  }, [storyData.size]);
-
-  const premiumFeaturePrice = storyData.useSecondCharacter ? 5.000 : 0;
-  
-  let currentCyclePrice: number;
-  let chargeMultiplier: number = 1;
-
-  if (planType === 'monthly') {
-    currentCyclePrice = 16.000; // Fixed 16 KD, dual hero already included (free)
-    chargeMultiplier = 1;
-  } else if (planType === 'yearly') {
-    currentCyclePrice = 12.500; // 12.5 KD per book
-    chargeMultiplier = 12;      // Total billed for the year
-  } else {
-    currentCyclePrice = 18.000 + premiumFeaturePrice; // Original logic: 18 + dual hero
-    chargeMultiplier = 1;
-  }
-
-  const shippingPrice = (planType === 'one_time') ? 1.500 : 0;
-  const totalPrice = (currentCyclePrice * chargeMultiplier) + shippingPrice;
+    if (storyData.isPhysicalPrint) {
+      setIsPhysicalAddon(true);
+    }
+  }, [storyData.isPhysicalPrint]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onProceedToPayment(details, planType, totalPrice);
+    onProceedToPayment(details, planType, pricing.total);
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-10">
-      <div className="mb-2">
-        <Button onClick={onBack} variant="outline" className="px-4 py-1 text-sm bg-white/50 border-white hover:bg-white rounded-xl">
-          &larr; {t('العودة للمعاينة', 'Back to Preview')}
+    <div className="max-w-6xl mx-auto space-y-8 pb-20 px-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <Button onClick={onBack} variant="outline" className="rounded-2xl px-6">
+          &larr; {t('العودة', 'Back')}
         </Button>
+        <div className="text-right">
+          <h2 className="text-3xl font-black text-brand-navy">{t('إتمام الطلب', 'Checkout')}</h2>
+          <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">{t('خطوة واحدة لبدء السحر', 'One step from magic')}</p>
+        </div>
       </div>
 
-      <div className="text-center space-y-2">
-        <h2 className="text-4xl font-bold text-brand-navy drop-shadow-sm">{t('الخطوة الأخيرة: اختر باقتك', 'Final Step: Choose Your Plan')}</h2>
-        <p className="text-lg text-brand-navy/70">{t('اختر الباقة الأنسب لطفلك', 'Pick the plan that works best for your child')}</p>
-      </div>
-
-      {/* ── Plan Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto gap-8">
-        {PLANS.map((plan) => {
-          const isSelected = planType === plan.id;
-          
-          let displayPriceValue: number;
-          if (plan.id === 'monthly') {
-            displayPriceValue = (basePrice + premiumFeaturePrice) * (14 / 17); // ~14 KD
-          } else if (plan.id === 'yearly') {
-            displayPriceValue = (basePrice + premiumFeaturePrice) * (10.8 / 17); // ~10.8 KD
-          } else {
-            displayPriceValue = (basePrice + premiumFeaturePrice); // 17 KD
-          }
-
-          return (
-            <button
-              key={plan.id}
-              onClick={() => setPlanType(plan.id)}
-              className={`relative rounded-3xl p-6 text-left transition-all duration-300 flex flex-col gap-4
-                ${isSelected
-                  ? 'bg-brand-coral text-white shadow-xl ring-4 ring-brand-coral ring-offset-2 scale-[1.03]'
-                  : 'bg-white/80 border border-gray-100 hover:shadow-lg hover:scale-[1.01]'
-                }`}
-            >
-
-              {/* Best value badge */}
-              {plan.badge && (
-                <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md
-                  ${isSelected ? 'bg-white text-brand-coral border-2 border-brand-coral' : 'bg-brand-navy text-white'}`}>
-                  {typeof plan.badge === 'string' ? plan.badge : tObj(plan.badge)}
-                </span>
-              )}
-
-              {/* Header */}
-              <div>
-                <div className="text-3xl mb-2">{plan.emoji}</div>
-                <div className={`font-bold text-xl ${isSelected ? 'text-white' : 'text-brand-navy'}`}>
-                  {tObj(plan.name)}
-                </div>
-                <div className={`text-sm mt-1 ${isSelected ? 'text-white/75' : 'text-gray-500'}`}>
-                  {tObj(plan.tagline)}
-                </div>
-              </div>
-
-              {/* Price */}
-              <div className={`rounded-2xl p-4 ${isSelected ? 'bg-white/15' : 'bg-gray-50'}`}>
-                <>
-                  <span className={`text-3xl font-bold ${isSelected ? 'text-white' : 'text-brand-navy'}`}>
-                    {convertPrice(displayPriceValue, currency)}
-                  </span>
-                  <span className={`text-sm ml-1 ${isSelected ? 'text-white/70' : 'text-gray-400'}`}>
-                    {plan.id === 'one_time' ? t('مرة واحدة', 'one-time') : '/mo'}
-                  </span>
-                </>
-                <div className={`text-xs mt-2 font-medium ${isSelected ? 'text-white/80' : 'text-brand-coral'}`}>
-                  {tObj(plan.shipping)}
-                </div>
-              </div>
-
-              {/* Perks list */}
-              <ul className="space-y-2.5 flex-1">
-                {plan.perks.map((perk, i) => (
-                  <li key={i} className={`flex items-center gap-2.5 text-sm
-                    ${perk.available
-                      ? isSelected ? 'text-white' : 'text-gray-700'
-                      : isSelected ? 'text-white/35' : 'text-gray-300'
-                    }`}>
-                    <span className={perk.available ? (isSelected ? 'text-white' : 'text-green-500') : ''}>
-                      {perk.available ? <CheckIcon /> : <CrossIcon />}
-                    </span>
-                    {tObj(perk.label)}
-                  </li>
-                ))}
-              </ul>
-
-              {/* Select indicator */}
-              <div className={`text-center text-sm font-bold py-2 rounded-xl transition-all
-                ${isSelected
-                  ? 'bg-white/20 text-white'
-                  : 'bg-gray-100 text-gray-500'
-                }`}>
-                {isSelected ? t('✓ مختار', '✓ Selected') : t('اختر', 'Select')}
-              </div>
+      {/* Decoy Intercept Banner */}
+      {planType === 'one_time' && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-brand-orange to-brand-coral p-6 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group cursor-pointer"
+          onClick={() => setPlanType('monthly')}
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+            <span className="material-symbols-outlined text-8xl">auto_awesome</span>
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-1">
+              <h3 className="text-2xl font-black">{t('انتظر! وفّر أكثر من 40%', 'Wait! Save over 40%')}</h3>
+              <p className="text-white/90 font-medium">
+                {t(
+                  `احصل على هذا الكتاب + كتاب إضافي كل شهر مقابل ${convertPrice(4.500, currency)} فقط!`,
+                  `Get this exact book + a SECOND book every month for only ${convertPrice(4.500, currency)}!`
+                )}
+              </p>
+            </div>
+            <button className="bg-white text-brand-coral px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-lg">
+              {t('اشترك ووفر الآن', 'Subscribe & Save Now')}
             </button>
-          );
-        })}
-      </div>
+          </div>
+        </motion.div>
+      )}
 
-      {/* ── Bottom section: Shipping form + Summary ── */}
-      <div className="grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
-          <form onSubmit={handleSubmit} id="shipping-form" className="p-8 bg-white/70 backdrop-blur-md rounded-3xl shadow-xl border border-white/50 space-y-6">
-            <h3 className="text-2xl font-bold text-brand-coral flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              {t('تفاصيل الشحن', 'Shipping Details')}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-1">{t('الاسم الكامل', 'Full Name')}</label>
-                <input type="text" name="name" id="name" required onChange={handleChange} className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-coral focus:border-transparent" />
-              </div>
-              <div>
-                <label htmlFor="email" className="block text-sm font-bold text-gray-700 mb-1">{t('البريد الإلكتروني', 'Email')}</label>
-                <input type="email" name="email" id="email" required onChange={handleChange} className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-coral focus:border-transparent" />
-              </div>
-              <div>
-                <label htmlFor="city" className="block text-sm font-bold text-gray-700 mb-1">{t('المدينة/المنطقة', 'City/Area')}</label>
-                <input type="text" name="city" id="city" required onChange={handleChange} className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-coral focus:border-transparent" />
-              </div>
-              <div>
-                <label htmlFor="phone" className="block text-sm font-bold text-gray-700 mb-1">{t('رقم الهاتف', 'Phone Number')}</label>
-                <input type="tel" name="phone" id="phone" required onChange={handleChange} className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-coral focus:border-transparent" />
-              </div>
-              <div className="col-span-full">
-                <label htmlFor="address" className="block text-sm font-bold text-gray-700 mb-1">{t('العنوان', 'Address')}</label>
-                <textarea name="address" id="address" rows={3} required onChange={handleChange} className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-coral focus:border-transparent"></textarea>
+      <div className="grid lg:grid-cols-3 gap-10">
+        {/* Left: Plan Selection & Add-ons */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* Plan Selector - Hidden if Print Upsell */}
+          {!storyData.isPrintUpsell && (
+            <div className="bg-white/50 backdrop-blur-xl p-8 rounded-[3rem] border border-white shadow-xl space-y-6">
+              <h3 className="text-xl font-black text-brand-navy flex items-center gap-3">
+                <span className="material-symbols-outlined text-brand-coral">style</span>
+                {t('اختر باقتك الرقمية', 'Choose Your Digital Plan')}
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { id: 'one_time', name: t('شراء لمرة واحدة', 'A La Carte'), price: pricing.aLaCarteDigitalTotal, sub: t('كتاب واحد', 'Single Book') },
+                  { id: 'monthly', name: t('الباقة الشهرية', 'Monthly'), price: 4.500, sub: t('كتابين/شهر', '2 Books/mo'), badge: t('الأكثر شعبية', 'POPULAR') },
+                  { id: 'yearly', name: t('الباقة السنوية', 'Yearly'), price: 39.000, sub: t('24 كتاب/سنة', '24 Books/yr'), badge: t('أفضل قيمة', 'BEST VALUE') }
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setPlanType(p.id as any)}
+                    className={`relative p-6 rounded-3xl text-left transition-all border-2 flex flex-col gap-2 ${
+                      planType === p.id 
+                      ? 'border-brand-coral bg-white shadow-xl shadow-brand-coral/5 scale-[1.02]' 
+                      : 'border-gray-100 bg-white/50 hover:border-gray-200'
+                    }`}
+                  >
+                    {p.badge && (
+                      <span className="absolute -top-3 left-4 bg-brand-navy text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                        {p.badge}
+                      </span>
+                    )}
+                    <span className={`text-xs font-black uppercase tracking-widest ${planType === p.id ? 'text-brand-coral' : 'text-gray-400'}`}>
+                      {p.name}
+                    </span>
+                    <span className="text-2xl font-black text-brand-navy">{convertPrice(p.price, currency)}</span>
+                    <span className="text-[10px] font-bold text-gray-400">{p.sub}</span>
+                  </button>
+                ))}
               </div>
             </div>
-          </form>
+          )}
+
+          {/* Print Upsell Title for re-orders */}
+          {storyData.isPrintUpsell && (
+            <div className="bg-white/50 backdrop-blur-xl p-8 rounded-[3rem] border border-white shadow-xl">
+               <h3 className="text-xl font-black text-brand-navy flex items-center gap-3">
+                <span className="material-symbols-outlined text-brand-coral">print</span>
+                {t('طلب نسخة مطبوعة لـ', 'Order Print for')} "{storyData.title}"
+              </h3>
+            </div>
+          )}
+
+          {/* Physical Upsell */}
+          <div className={`p-8 rounded-[3rem] border-2 transition-all space-y-6 ${
+            isPhysicalAddon ? 'border-brand-teal bg-brand-teal/5' : 'border-dashed border-gray-200 bg-white/30'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${isPhysicalAddon ? 'bg-brand-teal text-white' : 'bg-gray-100 text-gray-400'}`}>
+                  <span className="material-symbols-outlined text-3xl">auto_stories</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-brand-navy">{t('أضف نسخة مطبوعة فاخرة', 'Add Premium HD Hardcover')}</h3>
+                  <p className="text-sm text-gray-500 font-medium">{t('طباعة احترافية بـ 12 لوناً HD', 'Professional 12-Color HD Print')}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-black text-brand-teal">+{convertPrice(21.000, currency)}</div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('+ الشحن', '+ Shipping')}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 bg-white/50 p-4 rounded-2xl border border-white/60">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={isPhysicalAddon}
+                  onChange={(e) => setIsPhysicalAddon(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-teal"></div>
+              </label>
+              <span className="text-sm font-black text-brand-navy uppercase tracking-widest">
+                {isPhysicalAddon ? t('تمت الإضافة 🎉', 'Added to Order 🎉') : t('أضف للطلب', 'Add to Order')}
+              </span>
+            </div>
+
+            <AnimatePresence>
+              {isPhysicalAddon && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-6 border-t border-brand-teal/10 space-y-4">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest">{t('اختر منطقة الشحن', 'Select Shipping Region')}</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {(['kuwait', 'gcc', 'row'] as const).map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => setDetails({ ...details, region: r })}
+                          className={`p-4 rounded-2xl border-2 text-center transition-all ${
+                            details.region === r 
+                            ? 'border-brand-teal bg-white text-brand-teal shadow-lg' 
+                            : 'border-gray-100 bg-white/50 text-gray-400'
+                          }`}
+                        >
+                          <div className="font-black text-sm uppercase tracking-tighter">{t(REGION_NAMES[r].ar, REGION_NAMES[r].en)}</div>
+                          <div className="text-[10px] font-bold">+{convertPrice(SHIPPING_RATES[r], currency)}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Shipping Form */}
+          <div className="bg-white/50 backdrop-blur-xl p-8 rounded-[3rem] border border-white shadow-xl space-y-8">
+            <h3 className="text-xl font-black text-brand-navy flex items-center gap-3">
+              <span className="material-symbols-outlined text-brand-coral">location_on</span>
+              {t('بيانات التوصيل والاتصال', 'Delivery & Contact Details')}
+            </h3>
+            
+            <form id="checkout-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الاسم الكامل', 'Full Name')}</label>
+                <input 
+                  required
+                  type="text"
+                  value={details.name}
+                  onChange={(e) => setDetails({ ...details, name: e.target.value })}
+                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('البريد الإلكتروني', 'Email Address')}</label>
+                <input 
+                  required
+                  type="email"
+                  value={details.email}
+                  onChange={(e) => setDetails({ ...details, email: e.target.value })}
+                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('رقم الهاتف', 'Phone Number')}</label>
+                <input 
+                  required
+                  type="tel"
+                  value={details.phone}
+                  onChange={(e) => setDetails({ ...details, phone: e.target.value })}
+                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المدينة', 'City')}</label>
+                <input 
+                  required
+                  type="text"
+                  value={details.city}
+                  onChange={(e) => setDetails({ ...details, city: e.target.value })}
+                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy"
+                />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('العنوان بالتفصيل', 'Full Address')}</label>
+                <textarea 
+                  required
+                  rows={3}
+                  value={details.address}
+                  onChange={(e) => setDetails({ ...details, address: e.target.value })}
+                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy resize-none"
+                />
+              </div>
+            </form>
+          </div>
         </div>
 
-        {/* Order Summary */}
-        <div className="md:col-span-1">
-          <div className="p-8 bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-white/60 space-y-6 sticky top-24">
-            <h3 className="text-xl font-bold text-brand-navy flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-brand-coral" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-              {t('ملخص الطلب', 'Order Summary')}
-            </h3>
+        {/* Right: Summary */}
+        <div className="lg:col-span-1">
+          <div className="bg-brand-navy p-10 rounded-[3.5rem] text-white shadow-2xl sticky top-8 space-y-8 relative overflow-hidden">
+             {/* Decorative Background */}
+             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+             
+             <h3 className="text-2xl font-black uppercase tracking-tighter relative z-10">{t('ملخص الطلب', 'Order Summary')}</h3>
+             
+             <div className="space-y-4 relative z-10">
+               <div className="flex justify-between items-center text-sm">
+                 <span className="text-white/60 font-bold uppercase tracking-widest text-[10px]">{t('المنتج الرقمي', 'Digital Product')}</span>
+                 <span className="font-black">{convertPrice(pricing.currentDigital, currency)}</span>
+               </div>
 
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                <span className="text-gray-600">{tObj(selectedPlan.name)}</span>
-                <span className="font-semibold text-brand-navy">{convertPrice(currentCyclePrice, currency)}</span>
-              </div>
-              <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                <span className="text-gray-600">{t('الشحن', 'Shipping')}</span>
-                <span className={`font-semibold ${shippingPrice === 0 ? 'text-green-600' : 'text-brand-navy'}`}>
-                  {shippingPrice === 0 ? t('مجاني 🎉', 'Free 🎉') : convertPrice(shippingPrice, currency)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pt-2 font-bold text-xl text-brand-coral">
-                <span>{t('المجموع', 'Total')}</span>
-                <span>{convertPrice(totalPrice, currency)}</span>
-              </div>
-            </div>
+               {planType === 'one_time' && (
+                 <div className="pl-4 space-y-2 border-l border-white/10 ml-2 py-1">
+                   {storyData.useSecondCharacter && (
+                     <div className="flex justify-between items-center text-[9px] text-white/40">
+                       <span className="font-bold uppercase tracking-widest">{t('شخصية إضافية', 'Extra Character')}</span>
+                       <span>+{convertPrice(2.000, currency)}</span>
+                     </div>
+                   )}
+                   {storyData.isCustomTheme && (
+                     <div className="flex justify-between items-center text-[9px] text-white/40">
+                       <span className="font-bold uppercase tracking-widest">{t('سمة مخصصة', 'Custom Theme')}</span>
+                       <span>+{convertPrice(1.000, currency)}</span>
+                     </div>
+                   )}
+                 </div>
+               )}
+               
+               {isPhysicalAddon && (
+                 <>
+                   <div className="flex justify-between items-center text-sm">
+                     <span className="text-white/60 font-bold uppercase tracking-widest text-[10px]">{t('نسخة مطبوعة HD', 'HD Physical Print')}</span>
+                     <span className="font-black">{convertPrice(pricing.physical, currency)}</span>
+                   </div>
+                   <div className="flex justify-between items-center text-sm">
+                     <span className="text-white/60 font-bold uppercase tracking-widest text-[10px]">{t('الشحن الدولي', 'Shipping')}</span>
+                     <span className="font-black">{convertPrice(pricing.shipping, currency)}</span>
+                   </div>
+                 </>
+               )}
 
-            <Button type="submit" form="shipping-form" className="w-full text-lg py-4 rounded-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all">
-              {t('الانتقال إلى الدفع', 'Proceed to Payment')}
-            </Button>
+               <div className="pt-6 border-t border-white/10 mt-6">
+                 <div className="flex justify-between items-end">
+                   <div>
+                     <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">{t('المجموع النهائي', 'Grand Total')}</div>
+                     <div className="text-4xl font-black text-brand-coral">{convertPrice(pricing.total, currency)}</div>
+                   </div>
+                   <div className="text-[9px] font-black text-white/30 uppercase text-right leading-tight">
+                     {t('جميع الضرائب', 'All taxes')}<br/>{t('مشمولة', 'included')}
+                   </div>
+                 </div>
+               </div>
+             </div>
 
-            <div className="text-xs text-center text-gray-400 flex items-center justify-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-              {t('دفع آمن ومشفّر', 'Secure Encrypted Payment')}
-            </div>
+             <div className="space-y-4 relative z-10 pt-4">
+                <Button 
+                  type="submit" 
+                  form="checkout-form"
+                  className="w-full bg-brand-coral text-white py-6 rounded-3xl font-black uppercase tracking-[0.2em] text-lg hover:bg-white hover:text-brand-coral transition-all shadow-xl shadow-brand-coral/20"
+                >
+                  {t('ادفع الآن', 'Pay Now')}
+                </Button>
+                
+                <div className="flex items-center justify-center gap-4 text-white/30">
+                  <span className="material-symbols-outlined text-lg">verified_user</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest">{t('دفع آمن 100%', '100% Secure Payment')}</span>
+                </div>
+             </div>
+
+             {/* Plan Benefits */}
+             <div className="pt-8 space-y-3 relative z-10">
+               {[
+                 t('تسليم رقمي فوري', 'Instant Digital Delivery'),
+                 t('تنسيق PDF عالي الجودة', 'High-Res PDF Format'),
+                 t('لوحة تحكم تفاعلية', 'Interactive Dashboard'),
+                 planType !== 'one_time' ? t('أولوية في التنفيذ', 'Priority Processing') : null
+               ].filter(Boolean).map((benefit, i) => (
+                 <div key={i} className="flex items-center gap-3 text-[10px] font-bold text-white/50 uppercase tracking-widest">
+                   <span className="w-1.5 h-1.5 rounded-full bg-brand-coral" />
+                   {benefit}
+                 </div>
+               ))}
+             </div>
           </div>
         </div>
       </div>

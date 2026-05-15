@@ -1,37 +1,36 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import * as adminService from '../services/adminService';
 import * as fileService from '../services/fileService';
 import { compressBase64Image } from '../utils/imageUtils';
 import { convertPrice, type Currency, currencies } from '../services/currencyService';
 import { backendApi } from '../services/backendApi';
-import LanguageScreen from './LanguageScreen'; // Keep import but unused for now
 import WelcomeScreen from './WelcomeScreen';
 import PersonalizationScreen from './PersonalizationScreen';
 import StyleChoiceScreen from './StyleChoiceScreen';
 import ThemeScreen from './ThemeScreen';
-import GeneratingScreen from './GeneratingScreen';
 import { UnifiedGenerationScreen } from './UnifiedGenerationScreen';
-import EditorScreen from './EditorScreen'; // NEW
 import PreviewScreen from './PreviewScreen';
 import CheckoutScreen from './CheckoutScreen';
 import ConfirmationScreen from './ConfirmationScreen';
-import AdminScreen from './AdminScreen';
 import Header from './Header';
 import Footer from './Footer';
 import PageDecorations from './PageDecorations';
 import PaymentModal from './PaymentModal';
 import OrderStatusModal from './OrderStatusModal';
 import { CustomerDashboard } from './CustomerDashboard';
+import { AuthScreen } from './AuthScreen';
 import StyleSelectionScreen from './StyleSelectionScreen';
 import SizeScreen from './SizeScreen';
 import { useStory } from '../context/StoryContext';
 import { useWorkflow } from '../context/WorkflowContext';
 import { type StoryData } from '../types';
+import { RegionalDiscoveryModal } from './RegionalDiscoveryModal';
 
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from './PageTransition';
 import { useStoryGeneration } from '../hooks/useStoryGeneration';
+
+import { supabase } from '../utils/supabaseClient';
 
 const MainLayout: React.FC = () => {
     const {
@@ -45,9 +44,49 @@ const MainLayout: React.FC = () => {
     } = useStory();
 
     const [currentPrice, setCurrentPrice] = useState(17.0);
-    const [paymentAmount, setPaymentAmount] = useState(18.5); // Default for Standard One-Time
+    const [paymentAmount, setPaymentAmount] = useState(18.5); 
+    const [user, setUser] = useState<any>(null);
+
+    // Auth Initialization & Listener
     useEffect(() => {
-        adminService.getProductSizeById(storyData.size).then(p => { if (p) setCurrentPrice(p.price); });
+        // 1. Initial Session Check
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+                console.log("Auth: Found existing session on mount", session.user.email);
+                setUser(session.user);
+            }
+        });
+
+        // 2. Auth State Listener (Handles Magic Link redirects, login, logout)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log("Auth Event:", event);
+            if (session?.user) {
+                setUser(session.user);
+                
+                // AUTO-ADVANCE: If user is on 'auth' screen, they likely just finished a magic link or provider flow
+                // We want to push them to the next logical step.
+                setScreen(prev => {
+                    if (prev === 'auth') {
+                        // If they have story data (theme selected), go to checkout
+                        // Otherwise (they just wanted to see orders), go to dashboard
+                        return (storyData.theme) ? 'checkout' : 'customerDashboard';
+                    }
+                    return prev;
+                });
+            } else {
+                setUser(null);
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        backendApi.getCatalog().then((res: any) => {
+            const sizes = res.data?.sizes || [];
+            const p = sizes.find((s: any) => s.id === storyData.size);
+            if (p) setCurrentPrice(p.price);
+        });
     }, [storyData.size]);
 
     const {
@@ -57,7 +96,7 @@ const MainLayout: React.FC = () => {
         nextStage,
         prevStage,
         startWorkflow,
-        isLoading: isWorkflowBusy // Alias for local usage merge
+        isLoading: isWorkflowBusy 
     } = useWorkflow();
 
     // Generation Hook
@@ -72,6 +111,7 @@ const MainLayout: React.FC = () => {
 
     const [orderNumber, setOrderNumber] = useState('');
     const [isLegacyMode, setIsLegacyMode] = useState(false);
+    const [isResumeMode, setIsResumeMode] = useState(false);
 
     useEffect(() => {
         document.documentElement.lang = language;
@@ -260,43 +300,28 @@ const MainLayout: React.FC = () => {
                     };
                     updateStory(updatedStory);
 
-                    // Route to checkout to select subscription & shipping
-                    setScreen('checkout');
-
+                    // Route to checkout but ONLY IF LOGGED IN
+                    if (user) {
+                      setScreen('checkout');
+                    } else {
+                      setScreen('auth');
+                    }
                 }} onBack={() => setScreen('theme')} storyData={storyData} language={language} />;
                 break;
             case 'editor':
-                content = <EditorScreen
-                    storyData={storyData}
-                    language={language}
-                    onUpdateStory={updateStory}
-                    onFinalize={async (finalizedStoryData) => {
-                        console.log("Editor Finalized! Args:", { title: finalizedStoryData?.title });
-                        let blob;
-                        try {
-                            // CRITICAL FIX: The editor now passes the completely constructed, latest storyData.
-                            // We use it directly to avoid stale-closure issues with React state updates.
-                            const freshStoryData = finalizedStoryData || storyData;
-                            
-                            console.log("[Finalize] Using title:", freshStoryData.title);
-                            blob = await fileService.generatePrintPackage(freshStoryData, shippingDetails || {} as any, language, freshStoryData.orderId || 'RWY-UNKNOWN');
-                            const link = document.createElement('a');
-                            link.href = URL.createObjectURL(blob);
-                            link.download = `Order_${freshStoryData.orderId || 'RWY'}_Package.zip`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            setScreen('preview');
-                        } catch (e: any) {
-                            console.error("Auto-download failed:", e);
-                            throw new Error(e.message || 'Unknown packaging error');
-                        }
-                    }}
-                    isLegacy={isLegacyMode}
-                    shippingDetails={shippingDetails}
-                    isGenerating={isGenerating}
-                    onBack={() => setScreen('admin')}
-                    total={paymentAmount}
+                content = <PreviewScreen 
+                    storyData={storyData} 
+                    onOrder={() => setScreen('confirmation')} 
+                    onDownloadPreview={() => { }} 
+                    onRestart={() => { resetStory(); }} 
+                    onTitleChange={(t) => updateStory({ title: t })} 
+                    onRegenerate={() => { 
+                        // Customers can't regenerate directly anymore, they restart or contact support
+                        setScreen('unified-generation'); 
+                        startWorkflow(); 
+                    }} 
+                    language={language} 
+                    onBack={() => setScreen('welcome')} 
                 />;
                 break;
             case 'unified-generation':
@@ -312,8 +337,15 @@ const MainLayout: React.FC = () => {
                 content = <CheckoutScreen
                     onProceedToPayment={async (details, planType, totalAmount) => {
                         setShippingDetails(details);
-                        // CRITICAL: Explicitly inject the selected language into storyData
-                        const updatedStory = { ...storyData, planType, language };
+                        // CRITICAL: Prioritize the specific Book Language (storyData.language) if set, fallback to UI language
+                        const updatedStory: StoryData = { 
+                            ...storyData, 
+                            planType, 
+                            language: storyData.language || language,
+                            isPhysicalPrint: totalAmount > 5.0, // Simplistic check or pass it from Checkout
+                            shippingRegion: details.region,
+                            printStatus: (totalAmount > 5.0) ? 'ordered' : 'none'
+                        };
                         updateStory(updatedStory);
 
                         try {
@@ -350,55 +382,36 @@ const MainLayout: React.FC = () => {
                 />;
                 break;
             case 'confirmation':
-                content = <ConfirmationScreen orderNumber={storyData.orderId || 'RWY-UNKNOWN'} onRestart={() => { resetStory(); }} language={language} shippingDetails={shippingDetails} storyData={storyData} currency={currency} />;
-                break;
-            case 'admin':
-                content = <AdminScreen
-                    onExit={() => setScreen('welcome')}
-                    onEditOrder={(order, isLegacy, isRestart) => {
-                        console.log("MainLayout onEditOrder triggered with:", order.orderNumber, "isLegacy:", isLegacy, "isRestart:", isRestart);
-                        // Explicitly wipe intermediate states to prevent context bleed from previous orders
-                        updateStory({ 
-                            coverImageUrl: '', 
-                            spreads: [], 
-                            script: [], 
-                            blueprint: undefined, 
-                            finalPrompts: [], 
-                            ...order.storyData, 
-                            orderId: order.orderNumber 
-                        });
-                        
-                        // CRITICAL: Sync UI Language to match the Customer's chosen Book Language!
-                        if (order.storyData.language) {
-                            setLanguage(order.storyData.language);
-                        }
-
-                        if (order.shippingDetails) setShippingDetails(order.shippingDetails);
-                        setPaymentAmount(order.total);
-                        setIsLegacyMode(!!isLegacy);
-                        
-                        // If it's a hard restart, we wipe the data
-                        if (isRestart) {
-                           updateStory({ 
-                               coverImageUrl: '', 
-                               spreads: [], 
-                               script: [], 
-                               blueprint: undefined, 
-                               finalPrompts: [], 
-                               // We deliberately DO NOT wipe mainCharacter.imageDNA or description here!
-                               // The user selected this DNA during Checkout on the frontend, and it is the only copy.
-                               orderId: order.orderNumber 
-                           });
-                        }
-
-                        setScreen('editor');
-                    }}
-                    language={language}
-                />;
+                content = <ConfirmationScreen orderNumber={storyData.orderId || 'RWY-UNKNOWN'} onRestart={() => { resetStory(); }} language={language} shippingDetails={shippingDetails} storyData={storyData} currency={currency} totalPrice={paymentAmount} />;
                 break;
             case 'customerDashboard':
-                content = <CustomerDashboard language={language} onLogout={() => setScreen('welcome')} onEditPreferences={() => {}} />;
+                if (!user) {
+                    content = <AuthScreen language={language} onBack={() => setScreen('welcome')} onSuccess={setUser} />;
+                } else {
+                    content = <CustomerDashboard 
+                        language={language} 
+                        onLogout={async () => {
+                            // Backend-only auth Logout would happen here
+                            setUser(null);
+                            setScreen('welcome');
+                        }} 
+                        onEditPreferences={() => {}} 
+                        onViewBook={(order) => {
+                            updateStory(order.storyData);
+                            setScreen('preview');
+                        }}
+                        onOrderPrint={(order) => {
+                            updateStory({ ...order.storyData, isPrintUpsell: true, isPhysicalPrint: true });
+                            setShippingDetails(order.shippingDetails || {} as any);
+                            setScreen('checkout');
+                        }}
+                    />;
+                }
                 break;
+            case 'auth':
+                content = <AuthScreen language={language} onBack={() => setScreen('welcome')} onSuccess={setUser} />;
+                break;
+;
             default:
                 content = <WelcomeScreen onStart={() => setScreen('personalization')} onBack={() => { }} language={language} setLanguage={setLanguage} />;
         }
@@ -416,7 +429,7 @@ const MainLayout: React.FC = () => {
         <div className={`app-container font-sans bg-gray-50 text-gray-800 min-h-screen flex flex-col ${language === 'ar' ? 'rtl' : 'ltr'}`}>
             <Header
                 onAdminLoginClick={() => setScreen('admin')}
-                onMyOrdersClick={() => setScreen('customerDashboard')}
+                onMyOrdersClick={() => setScreen(user ? 'customerDashboard' : 'auth')}
                 language={language}
                 setLanguage={setLanguage}
                 currency={currency}
@@ -429,6 +442,14 @@ const MainLayout: React.FC = () => {
             <Footer language={language} onCheckOrderStatus={() => setScreen('customerDashboard')} />
             <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(paymentAmount, currency)} language={language} />
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
+            <RegionalDiscoveryModal 
+                currentLanguage={language} 
+                onLanguageChange={(lang) => {
+                    setLanguage(lang);
+                    updateStory({ language: lang }); // Synchronize book language default
+                }} 
+                onCurrencyChange={(c) => setCurrency(currencies.find(x => x.code === c) || currencies[0])} 
+            />
         </div>
     );
 };

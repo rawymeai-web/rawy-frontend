@@ -1,8 +1,6 @@
 
 import React from 'react';
 import type { Language } from '../types';
-import { getPrompts, fetchPrompts } from '../services/promptService';
-
 interface FooterProps {
     language: Language;
     onCheckOrderStatus: () => void;
@@ -10,7 +8,6 @@ interface FooterProps {
 
 const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus }) => {
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
-    const prompts = getPrompts();
 
     const links = [
         { href: '#', ar: 'اتصل بنا', en: 'Contact Us', isExternal: true },
@@ -63,8 +60,6 @@ const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus }) => {
                     <p>&copy; {new Date().getFullYear()} Rawy. {t('جميع الحقوق محفوظة.', 'All rights reserved.')}</p>
                     <div className="flex items-center gap-4">
                         <p className="font-bold opacity-80">Powered by Albumii</p>
-                        <span className="opacity-30">|</span>
-                        <p className="font-mono opacity-50">v{prompts.coverSuperPrompt.version}</p>
                     </div>
                 </div>
             </div>

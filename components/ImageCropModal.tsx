@@ -154,16 +154,27 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
         const sourceWidth = cropBox.width * scaleX;
         const sourceHeight = cropBox.height * scaleY;
 
+        // Calculate final dimensions to preserve aspect ratio (max 1024px)
+        const maxDim = 1024;
+        let finalWidth, finalHeight;
+        if (sourceWidth > sourceHeight) {
+            finalWidth = maxDim;
+            finalHeight = (sourceHeight / sourceWidth) * maxDim;
+        } else {
+            finalHeight = maxDim;
+            finalWidth = (sourceWidth / sourceHeight) * maxDim;
+        }
+
         const canvas = document.createElement('canvas');
-        canvas.width = 1024;
-        canvas.height = 1024;
+        canvas.width = finalWidth;
+        canvas.height = finalHeight;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, 1024, 1024);
+        ctx.fillRect(0, 0, finalWidth, finalHeight);
         // Draw cropped portion
-        ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, 1024, 1024);
+        ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, finalWidth, finalHeight);
 
         const base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
         canvas.toBlob((blob: Blob | null) => { if (blob) onCropComplete(base64, blob); }, 'image/jpeg', 0.9);

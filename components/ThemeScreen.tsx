@@ -42,25 +42,32 @@ interface ThemeCardProps {
 const ThemeCard: React.FC<ThemeCardProps> = ({ emoji, title, description, isSelected, onClick }) => (
   <button
     onClick={onClick}
-    className={`relative p-5 text-center rounded-2xl transition-all duration-300 h-full flex flex-col items-center justify-start group ${isSelected
-      ? 'bg-brand-coral text-white shadow-xl ring-4 ring-brand-coral ring-offset-2 scale-[1.04]'
-      : 'bg-white/80 hover:bg-white hover:shadow-lg hover:translate-y-[-2px] border border-gray-100 hover:border-brand-baby-blue/30'
+    className={`relative p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col items-center justify-center group overflow-hidden ${isSelected
+      ? 'bg-brand-orange text-white shadow-2xl shadow-brand-orange/30 scale-[1.02] z-10'
+      : 'glass-panel bg-white/30 hover:bg-white/60 hover:shadow-xl hover:-translate-y-2'
       }`}
     aria-pressed={isSelected}
   >
-    <div className={`text-5xl mb-4 transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} role="img">{emoji}</div>
-    <h4 className={`font-bold text-lg leading-tight mb-2 transition-colors ${isSelected ? 'text-white' : 'text-brand-navy group-hover:text-brand-coral'}`}>{title}</h4>
-    <p className={`text-sm leading-snug opacity-90 hidden sm:block ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>{description}</p>
-
+    {/* Selection Glow */}
     {isSelected && (
-      <div className="absolute top-3 right-3 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow">
-        <svg className="w-4 h-4 text-brand-coral" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"></path></svg>
+      <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
+    )}
+    
+    <div className={`text-6xl mb-6 transition-all duration-500 ${isSelected ? 'scale-110 rotate-3' : 'group-hover:scale-110 group-hover:-rotate-3'}`} role="img">{emoji}</div>
+    <h4 className={`font-black text-xl leading-tight mb-3 transition-colors ${isSelected ? 'text-white' : 'text-brand-navy'}`}>{title}</h4>
+    <p className={`text-xs font-medium leading-relaxed opacity-80 max-w-[150px] mx-auto ${isSelected ? 'text-white/90' : 'text-brand-navy/60'}`}>{description}</p>
+
+    {isSelected ? (
+      <div className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
+        <span className="material-symbols-outlined text-white text-lg">check_circle</span>
+      </div>
+    ) : (
+      <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+         <span className="material-symbols-outlined text-brand-orange text-lg">arrow_forward</span>
       </div>
     )}
   </button>
 );
-
-
 
 const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, language }) => {
   const [themes, setThemes] = useState<StoryTheme[]>([]);
@@ -73,8 +80,6 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const [customStoryText, setCustomStoryText] = useState(storyData.customStoryText || '');
   const [customIllustrationNotes, setCustomIllustrationNotes] = useState(storyData.customIllustrationNotes || '');
   const [customStylePrompt, setCustomStylePrompt] = useState(storyData.selectedStylePrompt || '');
-
-  // New: Second Hero Name for Teamwork/Siblings theme
   const [secondHeroName, setSecondHeroName] = useState((storyData.secondCharacter as any)?.name || '');
 
   useEffect(() => {
@@ -102,23 +107,18 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const handleThemeClick = (themeOption: StoryTheme) => {
     setSelectedThemeId(themeOption.id);
     setCustomTitle(getTranslation(themeOption.title, language));
-
-    // ALWAYS overwrite details from the library — never let stale order data linger
     const components = getGuidelineComponentsForTheme(themeOption.id);
     if (components) {
       setCustomGoal(components.goal);
       setCustomChallenge(components.challenge);
       setCustomIllustrationNotes(components.illustrationNotes);
     } else if (themeOption.skeleton) {
-      // Use backend skeleton if available
       const cores = themeOption.skeleton.storyCores || [];
       const challenges = themeOption.skeleton.limiters || themeOption.skeleton.catalysts || [];
-      
       setCustomGoal(cores.length ? cores[Math.floor(Math.random() * cores.length)] : '');
       setCustomChallenge(challenges.length ? challenges[Math.floor(Math.random() * challenges.length)] : '');
       setCustomIllustrationNotes(themeOption.visualDNA || '');
     } else {
-      // Fallback: clear the fields so old order data doesn't show
       setCustomGoal('');
       setCustomChallenge('');
       setCustomIllustrationNotes('');
@@ -131,26 +131,24 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
     const selectedPredefinedTheme = themes.find(t => t.id === selectedThemeId);
     const finalThemeDescription = selectedPredefinedTheme
       ? getTranslation(selectedPredefinedTheme.description, language)
-      : `A story where the hero wants to '\${customGoal}', but faces the challenge of '\${customChallenge}'.`;
+      : `A story where the hero wants to '${customGoal}', but faces the challenge of '${customChallenge}'.`;
 
     let finalStylePrompt = storyData.selectedStylePrompt;
     if (isAdvancedMode && !selectedThemeId && customStylePrompt) {
       finalStylePrompt = customStylePrompt;
     }
 
-    // Extract Visual DNA string from skeleton
-    const thematicVisualDNA = selectedPredefinedTheme?.visualDNA || "";
-
     onNext({
       title: customTitle,
       theme: finalThemeDescription,
       themeId: selectedPredefinedTheme?.id,
-      themeVisualDNA: thematicVisualDNA, // NEW: Pass the actual visual instructions
+      themeVisualDNA: selectedPredefinedTheme?.visualDNA || "",
       customGoal,
       customChallenge,
       customStoryText,
       customIllustrationNotes,
       selectedStylePrompt: finalStylePrompt,
+      isCustomTheme: isCustomMode || !!customGoal || !!customChallenge,
       ...(selectedThemeId === 'val-teamwork' && secondHeroName ? {
         secondCharacter: {
           name: secondHeroName,
@@ -163,18 +161,20 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
     });
   };
 
-  const t = (arText: string, enText: string) => {
-    if (language === 'ar') return arText;
-    return enText; // Default to English for UI labels not in the theme object
-  };
+  const t = (arText: string, enText: string) => language === 'ar' ? arText : enText;
 
-  const ThemeGrid = ({ themes, categoryTitle, icon }: { themes: StoryTheme[], categoryTitle: string, icon: React.ReactNode }) => (
-    <div className="mb-10">
-      <div className="flex items-center mb-6 px-2">
-        <div className="text-brand-coral bg-brand-coral/10 p-2 rounded-lg">{icon}</div>
-        <h3 className="text-2xl font-bold text-brand-navy mx-3">{categoryTitle}</h3>
+  const ThemeGrid = ({ themes, categoryTitle, icon }: { themes: StoryTheme[], categoryTitle: string, icon: string }) => (
+    <div className="mb-16">
+      <div className="flex items-center gap-4 mb-8 px-4">
+        <div className="w-12 h-12 rounded-2xl bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+           <span className="material-symbols-outlined text-3xl">{icon}</span>
+        </div>
+        <div>
+           <h3 className="text-2xl font-black text-brand-navy">{categoryTitle}</h3>
+           <p className="text-[10px] font-black text-brand-navy/30 uppercase tracking-[0.2em]">{t('اختر عالم مغامرتك', 'CHOOSE YOUR WORLD')}</p>
+        </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 px-2">
         {themes.map((themeOption) => (
           <ThemeCard
             key={themeOption.id}
@@ -201,72 +201,140 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
 
   if (isLoadingCatalog) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-coral"></div>
-        <p className="text-brand-navy font-medium">{t('جاري تحميل المواضيع...', 'Loading Themes...')}</p>
+      <div className="flex flex-col items-center justify-center min-h-[600px] space-y-6 animate-pulse">
+        <div className="w-20 h-20 rounded-full border-4 border-brand-orange/20 border-t-brand-orange animate-spin"></div>
+        <p className="text-brand-navy font-black tracking-widest uppercase text-xs">{t('جاري تحميل المواضيع...', 'Unlocking Magic Worlds...')}</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-10">
-      <h2 className="text-4xl font-bold text-brand-navy text-center mb-8 drop-shadow-sm">{t('الخطوة الخامسة: موضوع القصة', 'Step 5: Story Theme')}</h2>
-      <div className="p-8 bg-white/70 backdrop-blur-md rounded-3xl shadow-xl border border-white/50">
-        {valueThemes.length > 0 && <ThemeGrid themes={valueThemes} categoryTitle={t('قيم أخلاقية', 'Values')} icon={<ValuesCategoryIcon />} />}
-        {adventureThemes.length > 0 && <ThemeGrid themes={adventureThemes} categoryTitle={t('مغامرات شيقة', 'Exciting Adventures')} icon={<AdventuresCategoryIcon />} />}
+    <div className="max-w-7xl mx-auto px-6 py-12 animate-enter-forward">
+      
+      <div className="text-center space-y-4 mb-16">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-teal/10 rounded-full mb-2">
+           <span className="material-symbols-outlined text-brand-teal text-sm">auto_stories</span>
+           <span className="text-xs font-bold text-brand-teal tracking-widest uppercase">{t('المواضيع والقصص', 'STORY THEMES')}</span>
+        </div>
+        <h2 className="text-4xl md:text-5xl font-black text-brand-navy leading-tight">
+          {t('اختر ', 'Pick a ')}
+          <span className="text-brand-orange">{t('مغامرتك', 'Theme')}</span>
+          {t(' المفضلة', ' for your story')}
+        </h2>
+      </div>
+
+      <div className="space-y-4">
+        {valueThemes.length > 0 && <ThemeGrid themes={valueThemes} categoryTitle={t('قيم وأخلاق', 'Life Values')} icon="favorite" />}
+        {adventureThemes.length > 0 && <ThemeGrid themes={adventureThemes} categoryTitle={t('مغامرات سحرية', 'Magical Adventures')} icon="explore" />}
+        
         {isTeamworkSelected && (
-          <div className="mt-8 mb-8 p-6 bg-brand-baby-blue/10 rounded-2xl border-2 border-brand-baby-blue/30 animate-fade-in">
-            <h3 className="text-xl font-bold text-brand-navy mb-4">{t('من هو البطل الثاني؟', 'Who is the Second Hero?')}</h3>
-            <label htmlFor="secondHero" className="block text-sm font-medium text-gray-700 mb-1">{t('اسم الأخ/الأخت/الصديق', 'Sibling/Friend Name')}</label>
-            <input
-              type="text"
-              id="secondHero"
-              value={secondHeroName}
-              onChange={(e) => setSecondHeroName(e.target.value)}
-              className="mt-1 block w-full md:w-1/2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-brand-coral"
-              placeholder={t('مثال: علي', 'Example: Ali')}
-            />
+          <div className="glass-panel p-8 rounded-[2.5rem] border-2 border-brand-teal/20 animate-enter-forward max-w-2xl mx-auto mb-12">
+            <div className="flex items-center gap-4 mb-6">
+               <div className="w-12 h-12 rounded-full bg-brand-teal/10 flex items-center justify-center text-brand-teal">
+                  <span className="material-symbols-outlined">diversity_3</span>
+               </div>
+               <h3 className="text-xl font-bold text-brand-navy">{t('من هو البطل الثاني؟', 'Who is the Second Hero?')}</h3>
+            </div>
+            <div>
+              <label htmlFor="secondHero" className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('اسم الأخ/الأخت/الصديق', 'Sibling/Friend Name')}</label>
+              <input
+                type="text"
+                id="secondHero"
+                value={secondHeroName}
+                onChange={(e) => setSecondHeroName(e.target.value)}
+                className="w-full px-6 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-teal/50 focus:bg-white outline-none text-brand-navy font-bold text-lg"
+                placeholder={t('مثال: علي', 'Example: Ali')}
+              />
+            </div>
           </div>
         )}
 
-        <div className="text-center border-t border-gray-200/60 pt-8 mt-4">
-          <Button variant="outline" onClick={() => setIsAdvancedMode(prev => !prev)} className="rounded-full px-8">
-            {isAdvancedMode ? t('إخفاء الخيارات المتقدمة', 'Hide Details') : t('عرض تفاصيل القصة (متقدم)', 'show Details (Advanced)')}
-          </Button>
+        <div className="text-center pt-8 mb-12">
+          <button 
+            onClick={() => setIsAdvancedMode(prev => !prev)} 
+            className={`px-8 py-3 rounded-full font-bold transition-all flex items-center gap-2 mx-auto ${isAdvancedMode ? 'bg-brand-navy text-white' : 'glass-panel text-brand-navy/60 hover:text-brand-navy'}`}
+          >
+            <span className="material-symbols-outlined text-sm">{isAdvancedMode ? 'visibility_off' : 'settings'}</span>
+            {isAdvancedMode ? t('إخفاء التفاصيل', 'Hide Advanced Options') : t('عرض التفاصيل المتقدمة', 'Show Advanced Options')}
+          </button>
         </div>
 
         {isAdvancedMode && (
-          <div className="animate-fade-in mt-8">
-            <h3 className="text-xl font-bold text-brand-navy mb-4 flex items-center"><LightbulbIcon />{t('تفاصيل القصة', 'Story Details')}</h3>
-            <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-inner space-y-6">
+          <div className="animate-enter-forward glass-panel p-10 rounded-[3rem] space-y-8 max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 border-b border-brand-navy/5 pb-6">
+               <span className="material-symbols-outlined text-brand-orange">psychology</span>
+               <h3 className="text-2xl font-black text-brand-navy">{t('تفاصيل القصة المخصصة', 'Story Blueprints')}</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-8">
               <div>
-                <label htmlFor="storyTitle" className="block text-sm font-medium text-gray-700 mb-1">{t('عنوان القصة', 'Story Title')}</label>
-                <input type="text" id="storyTitle" value={customTitle} onChange={(e) => { setCustomTitle(e.target.value); handleCustomChange(); }} className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900" placeholder={t('مثال: مغامرة سارة الشجاعة', 'Example: Sarah\'s Brave Adventure')} required />
+                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('عنوان القصة', 'Story Title')}</label>
+                <input 
+                  type="text" 
+                  value={customTitle} 
+                  onChange={(e) => { setCustomTitle(e.target.value); handleCustomChange(); }} 
+                  className="w-full px-6 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold text-lg" 
+                  placeholder={t('مثال: مغامرة سارة الشجاعة', 'Sarah\'s Brave Adventure')} 
+                />
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label htmlFor="customGoal" className="block text-sm font-medium text-gray-700 mb-1">{t('الهدف من القصة', 'The Goal of the Story')}</label>
-                  <textarea id="customGoal" rows={3} value={customGoal} onChange={(e) => { setCustomGoal(e.target.value); handleCustomChange(); }} className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900" placeholder={t('ماذا يريد البطل أن يفعل أو يجد؟', 'What does the hero want to do or find?')} required></textarea>
+                  <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('الهدف من القصة', 'The Goal')}</label>
+                  <textarea 
+                    rows={3} 
+                    value={customGoal} 
+                    onChange={(e) => { setCustomGoal(e.target.value); handleCustomChange(); }} 
+                    className="w-full px-6 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold" 
+                    placeholder={t('ماذا يريد البطل أن يفعل؟', 'What does the hero want to do?')}
+                  ></textarea>
                 </div>
                 <div>
-                  <label htmlFor="customChallenge" className="block text-sm font-medium text-gray-700 mb-1">{t('التحدي الرئيسي', 'The Main Challenge')}</label>
-                  <textarea id="customChallenge" rows={3} value={customChallenge} onChange={(e) => { setCustomChallenge(e.target.value); handleCustomChange(); }} className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900" placeholder={t('ما هي العقبة التي تجعل القصة مثيرة؟', 'What obstacle makes the story exciting?')} required></textarea>
+                  <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('التحدي الرئيسي', 'The Obstacle')}</label>
+                  <textarea 
+                    rows={3} 
+                    value={customChallenge} 
+                    onChange={(e) => { setCustomChallenge(e.target.value); handleCustomChange(); }} 
+                    className="w-full px-6 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold" 
+                    placeholder={t('ما هي العقبة؟', 'What is the challenge?')}
+                  ></textarea>
                 </div>
               </div>
+
               <div>
-                <label htmlFor="customStoryText" className="block text-sm font-medium text-gray-700 mb-1">{t('أنشودة أو نص مخصص (اختياري)', 'Custom Story Text / Poem (Optional)')}</label>
-                <textarea id="customStoryText" rows={5} value={customStoryText} onChange={(e) => { setCustomStoryText(e.target.value); handleCustomChange(); }} className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-mono text-sm leading-relaxed" placeholder={t('إذا كان لديك نص معين أو أنشودة تريد استخدامها، ضعها هنا...', 'If you have a specific poem or text you want the AI to use, paste it here...')}></textarea>
-                <p className="text-xs text-gray-500 mt-2">{t('ملاحظة: سيقوم الذكاء الاصطناعي بتكييف هذا النص وتوزيعه ليناسب صفحات القصة.', 'Note: The AI will adapt and distribute this text across the story spreads.')}</p>
+                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('نص مخصص (اختياري)', 'Custom Content (Optional)')}</label>
+                <textarea 
+                  rows={4} 
+                  value={customStoryText} 
+                  onChange={(e) => { setCustomStoryText(e.target.value); handleCustomChange(); }} 
+                  className="w-full px-6 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy/80 font-medium text-sm leading-relaxed" 
+                  placeholder={t('إذا كان لديك نص معين أو أنشودة...', 'Paste specific text or poems here...')}
+                ></textarea>
               </div>
             </div>
           </div>
         )}
       </div>
-      <div className="text-center flex flex-col sm:flex-row justify-center items-center gap-4">
-        <Button onClick={onBack} variant="outline" className="text-xl px-12 py-4 rounded-xl">{t('رجوع', 'Back')}</Button>
-        <Button onClick={handleNextClick} className="text-xl px-12 py-4 rounded-xl shadow-lg hover:shadow-xl" disabled={isNextDisabled}>
-          {t('ابدأ صناعة القصة!', 'Create the Story Now!')}
-        </Button>
+
+      {/* Navigation */}
+      <div className="flex items-center justify-center gap-6 mt-16 max-w-2xl mx-auto">
+        <button 
+          onClick={onBack} 
+          className="flex-1 glass-panel py-5 rounded-full font-bold text-brand-navy hover:bg-white/60 transition-all active:scale-95"
+        >
+          {t('رجوع', 'Back')}
+        </button>
+        <button 
+          onClick={handleNextClick} 
+          disabled={isNextDisabled}
+          className={`flex-[2] py-5 rounded-full font-black text-xl shadow-2xl transition-all hover:-translate-y-1 active:translate-y-0 active:scale-95 group relative overflow-hidden ${isNextDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-50' : 'bg-brand-orange text-white shadow-brand-orange/20 hover:shadow-brand-orange/40'}`}
+        >
+           <span className="relative z-10 flex items-center justify-center gap-3">
+             {t('ابدأ صناعة القصة!', 'Create My Story!')}
+             <span className="material-symbols-outlined">rocket_launch</span>
+           </span>
+           {!isNextDisabled && <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-full pointer-events-none"></div>}
+        </button>
       </div>
     </div>
   );

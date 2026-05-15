@@ -11,48 +11,48 @@ interface ConfirmationScreenProps {
   shippingDetails: ShippingDetails | null;
   storyData: StoryData;
   currency: Currency;
+  totalPrice: number;
 }
 
-const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, onRestart, language, shippingDetails, storyData, currency }) => {
+const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, onRestart, language, shippingDetails, storyData, currency, totalPrice }) => {
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
   const handleSendEmail = async () => {
     if (!shippingDetails || !storyData) return;
 
-    const productConfig = await getProductSizeById(storyData.size);
-    const basePrice = productConfig ? productConfig.price : 29.900;
-    const shippingPrice = 1.500; // Updated shipping price
-    const premiumFeaturePrice = storyData.useSecondCharacter ? 5.000 : 0;
-    const totalPrice = basePrice + shippingPrice + premiumFeaturePrice;
-    const bookTitle = t('كتاب أطفال مخصص', 'Custom Children\'s Book') + ` (${storyData.size})`;
+    const planLabel = {
+      one_time: t('شراء لمرة واحدة', 'A La Carte'),
+      monthly: t('الباقة الشهرية', 'Monthly Subscription'),
+      yearly: t('الباقة السنوية', 'Yearly Subscription')
+    }[storyData.planType || 'one_time'];
 
     const subject = t(`فاتورة وتأكيد طلب Rawy رقم ${orderNumber}`, `Invoice & Confirmation for Rawy Order #${orderNumber}`);
 
     const body = `
 ${t('شكراً لطلبك من Rawy!', 'Thank you for your order from Rawy!')}
 
-${t('هذا ملخص لطلبك وفاتورتك.', 'Here is a summary of your order and invoice.')}
+${t('هذا ملخص لطلبك وفاتورك.', 'Here is a summary of your order and invoice.')}
 
 ----------------------------------------
 ${t('تفاصيل الطلب', 'ORDER DETAILS')}
 ----------------------------------------
 ${t('رقم الطلب:', 'Order Number:')} ${orderNumber}
+${t('الخطة:', 'Plan:')} ${planLabel}
 ${t('تاريخ الطلب:', 'Order Date:')} ${new Date().toLocaleDateString(language === 'ar' ? 'ar-KW' : 'en-US')}
 
+${storyData.isPhysicalPrint ? `
 ----------------------------------------
 ${t('بيانات الشحن', 'SHIPPING TO')}
 ----------------------------------------
 ${shippingDetails.name}
 ${shippingDetails.address}, ${shippingDetails.city}
 ${shippingDetails.phone}
+` : ''}
 
 ----------------------------------------
 ${t('الفاتورة', 'INVOICE')}
 ----------------------------------------
-- ${bookTitle}: ${convertPrice(basePrice, currency)}
-- ${t('الشحن:', 'Shipping:')} ${convertPrice(shippingPrice, currency)}
-${storyData.useSecondCharacter ? `- ${t('شخصية إضافية:', 'Secondary Character Add-on:')} ${convertPrice(premiumFeaturePrice, currency)}\n` : ''}
-${t('الإجمالي:', 'Total:')} ${convertPrice(totalPrice, currency)}
+- ${planLabel}: ${convertPrice(totalPrice, currency)}
 ----------------------------------------
 
 ${t('نتمنى أن تستمتعوا بالقصة!', 'We hope you enjoy the story!')}

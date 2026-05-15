@@ -27,7 +27,6 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
   const normalizeName = (name: string): string => {
     return name.trim().split(' ').map(word => {
       if (!word) return '';
-      // Only normalize if it contains English characters
       if (/[a-zA-Z]/.test(word)) {
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
       }
@@ -37,333 +36,281 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const normalizedChildName = normalizeName(localData.childName);
+    const normalizedChildName = normalizeName(localData.childName).split(' ')[0];
     const normalizedParentName = normalizeName(localData.parentName || '');
-    const normalizedMainCharName = normalizeName(localData.mainCharacter.name);
-    const normalizedSecondCharName = localData.secondCharacter
-      ? normalizeName(localData.secondCharacter.name)
-      : '';
-
+    const normalizedMainCharName = normalizedChildName || 'Auto';
+    const normalizedSecondCharName = localData.useSecondCharacter ? (normalizeName(localData.secondCharacter.name) || 'Auto') : '';
     const { childAge, parentEmail, mainCharacter, useSecondCharacter, secondCharacter } = localData;
 
-    if (!normalizedParentName.trim()) {
-      alert(language === 'ar' ? 'الرجاء إدخال اسم الوالد/الأم.' : "Please enter the parent's full name.");
-      return;
-    }
-    if (!parentEmail?.trim() || !parentEmail.includes('@')) {
-      alert(language === 'ar' ? 'الرجاء إدخال بريد إلكتروني صحيح.' : "Please enter a valid email address.");
-      return;
-    }
-    if (!normalizedChildName.trim()) {
-      alert(language === 'ar' ? 'الرجاء إدخال اسم الطفل.' : "Please enter the child's name.");
-      return;
-    }
-    if (!childAge.trim()) {
-      alert(language === 'ar' ? 'الرجاء إدخال عمر الطفل.' : "Please enter the child's age.");
-      return;
-    }
-
-    // NEW: Validation for gender if age >= 6
+    if (!normalizedParentName.trim()) { alert(language === 'ar' ? 'الرجاء إدخال اسم الوالد/الأم.' : "Please enter the parent's full name."); return; }
+    if (!parentEmail?.trim() || !parentEmail.includes('@')) { alert(language === 'ar' ? 'الرجاء إدخال بريد إلكتروني صحيح.' : "Please enter a valid email address."); return; }
+    if (!normalizedChildName.trim()) { alert(language === 'ar' ? 'الرجاء إدخال اسم الطفل.' : "Please enter the child's name."); return; }
+    if (!childAge.trim()) { alert(language === 'ar' ? 'الرجاء إدخال عمر الطفل.' : "Please enter the child's age."); return; }
     const numericAge = parseInt(childAge, 10);
-    if (!isNaN(numericAge) && numericAge >= 6 && !localData.childGender) {
-      alert(language === 'ar' ? 'الرجاء تحديد ما إذا كان البطل ولداً أم بنتاً للاستمرار.' : "Please select if the hero is a boy or a girl to continue.");
-      return;
-    }
-
-    if (!normalizedMainCharName.trim()) {
-      alert(language === 'ar' ? 'الرجاء إدخال اسم الشخصية الرئيسية.' : "Please enter the main character's name.");
-      return;
-    }
-    if (mainCharacter.images.length === 0) {
-      alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الرئيسية.' : 'Please upload an image for the main character.');
-      return;
-    }
-
+    if (!isNaN(numericAge) && numericAge >= 6 && !localData.childGender) { alert(language === 'ar' ? 'الرجاء تحديد ما إذا كان البطل ولداً أم بنتاً للاستمرار.' : "Please select if the hero is a boy or a girl to continue."); return; }
+    
+    if (mainCharacter.images.length === 0) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الرئيسية.' : 'Please upload an image for the main character.'); return; }
     if (useSecondCharacter) {
-      if (!normalizedSecondCharName.trim()) {
-        alert(language === 'ar' ? 'الرجاء إدخال اسم الشخصية الثانوية.' : "Please enter the second character's name.");
-        return;
-      }
-      if (secondCharacter && secondCharacter.images.length === 0) {
-        alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الثانوية.' : "Please upload an image for the second character.");
-        return;
-      }
+      if (secondCharacter && secondCharacter.images.length === 0) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الثانوية.' : "Please upload an image for the second character."); return; }
     }
 
     onNext({
       ...localData,
       childName: normalizedChildName,
+      parentName: normalizedParentName,
       mainCharacter: { ...localData.mainCharacter, name: normalizedMainCharName },
-      secondCharacter: localData.secondCharacter ? { ...localData.secondCharacter, name: normalizedSecondCharName } : undefined
+      secondCharacter: localData.secondCharacter ? { ...localData.secondCharacter, name: normalizedSecondCharName } : undefined,
+      isCustomTheme: !!localData.occasion?.trim()
     });
-  }
-
-  const handleSecondCharacterChange = (updatedChar: Partial<Character>) => {
-    setLocalData(prev => ({
-      ...prev,
-      secondCharacter: { ...prev.secondCharacter!, ...updatedChar }
-    }));
   };
 
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
   return (
-    <form onSubmit={handleNext} className="w-full max-w-6xl mx-auto space-y-4 pb-4 px-2" noValidate>
-      <div className="text-center space-y-1 mb-2">
-        <h2 className="text-3xl font-bold text-brand-navy drop-shadow-sm">{t('الخطوة الأولى: التخصيص', 'Step 1: Personalization')}</h2>
-        <p className="text-base text-brand-navy/80 font-medium">
-          {t('أخبرنا قليلاً عن بطل القصة.', 'Tell us a little about the hero of the story.')}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left Column: Customer & Child Info */}
-        <div className="space-y-4">
-          {/* Customer Information Section */}
-          <div className="p-5 bg-brand-navy/5 backdrop-blur-md rounded-2xl shadow-md border border-brand-navy/10 space-y-4">
-        <h3 className="text-2xl font-bold text-brand-navy flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-          {t('معلومات العميل', "Customer Information")}
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="parentName" className="block text-sm font-bold text-gray-700 mb-1">{t('اسم الوالد/الأم الكامل', "Parent's Full Name")}</label>
-            <input
-              type="text"
-              id="parentName"
-              value={localData.parentName || ''}
-              onChange={(e) => setLocalData({ ...localData, parentName: e.target.value })}
-              className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900 placeholder-gray-400"
-              placeholder={t('مثال: شادي أيمن', 'Example: Shady Ayman')}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="parentEmail" className="block text-sm font-bold text-gray-700 mb-1">{t('البريد الإلكتروني', "Email Address")}</label>
-            <input
-              type="email"
-              id="parentEmail"
-              value={localData.parentEmail || ''}
-              onChange={(e) => setLocalData({ ...localData, parentEmail: e.target.value })}
-              className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900 placeholder-gray-400"
-              placeholder={t('مثال: name@example.com', 'Example: name@example.com')}
-              required
-            />
-          </div>
+    <div className="w-full max-w-7xl mx-auto px-6 py-12 animate-enter-forward">
+      <div className="text-center space-y-4 mb-12">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-orange/10 rounded-full mb-2">
+           <span className="material-symbols-outlined text-brand-orange text-sm">edit_note</span>
+           <span className="text-xs font-bold text-brand-orange tracking-widest uppercase">{t('تخصيص بطل القصة', 'PERSONALIZE YOUR HERO')}</span>
         </div>
-        <p className="text-xs text-brand-navy/60">
-          {t('* سنستخدم هذا البريد لإرسال رابط القصة وتفاصيل الطلب.', '* We will use this email to send the story link and order details.')}
+        <h2 className="text-4xl font-black text-brand-navy leading-tight">
+          {t('أخبرنا عن ', 'Tell us about ')}
+          <span className="text-brand-teal">{t('بطل القصة', 'the hero')}</span>
+        </h2>
+        <p className="text-brand-navy/60 max-w-xl mx-auto">
+          {t('كل تفصيل هنا يساعدنا في صنع تجربة سحرية فريدة لطفلك.', 'Every detail helps us craft a unique magical experience for your child.')}
         </p>
       </div>
 
+      <form onSubmit={handleNext} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" noValidate>
+        
+        {/* Left Column: Form Info */}
+        <div className="lg:col-span-5 space-y-6">
+          
+          {/* Customer Panel */}
+          <div className="glass-panel p-8 rounded-[2rem] space-y-6">
+            <div className="flex items-center gap-3 border-b border-brand-navy/5 pb-4">
+              <span className="material-symbols-outlined text-brand-orange">person</span>
+              <h3 className="text-xl font-bold text-brand-navy">{t('معلومات التواصل', 'Contact Info')}</h3>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('اسم الوالد/الأم', "Parent's Name")}</label>
+                <input 
+                  type="text" 
+                  value={localData.parentName || ''} 
+                  onChange={(e) => setLocalData({ ...localData, parentName: e.target.value })} 
+                  className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold" 
+                  placeholder={t('شادي أيمن', 'Shady Ayman')} 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('البريد الإلكتروني', "Email")}</label>
+                <input 
+                  type="email" 
+                  value={localData.parentEmail || ''} 
+                  onChange={(e) => setLocalData({ ...localData, parentEmail: e.target.value })} 
+                  className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold" 
+                  placeholder="name@example.com" 
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Child Information Section */}
-          <div className="p-5 bg-white/70 backdrop-blur-md rounded-2xl shadow-md border border-white/50 space-y-4">
-            <h3 className="text-xl font-bold text-brand-coral flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-              {t('معلومات الطفل', "Child's Information")}
-            </h3>
+          {/* Child Panel */}
+          <div className="glass-panel p-8 rounded-[2rem] space-y-6">
+            <div className="flex items-center gap-3 border-b border-brand-navy/5 pb-4">
+              <span className="material-symbols-outlined text-brand-teal">child_care</span>
+              <h3 className="text-xl font-bold text-brand-navy">{t('معلومات الطفل', "Child's Info")}</h3>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="childName" className="block text-sm font-bold text-gray-700 mb-1">{t('اسم الطفل الكامل', "Child's Full Name")}</label>
-            <input
-              type="text"
-              id="childName"
-              value={localData.childName}
-              onChange={(e) => setLocalData({ ...localData, childName: e.target.value })}
-              className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900 placeholder-gray-400"
-              placeholder={t('مثال: سارة أحمد', 'Example: Sarah Ahmed')}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="childAge" className="block text-sm font-bold text-gray-700 mb-1">{t('عمر الطفل', "Child's Age")}</label>
-            <input
-              type="number"
-              id="childAge"
-              value={localData.childAge}
-              onChange={(e) => setLocalData({ ...localData, childAge: e.target.value })}
-              className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900 placeholder-gray-400"
-              placeholder={t('مثال: 5', 'Example: 5')}
-              min="1"
-              max="12"
-              required
-            />
-          </div>
-        </div>
-
-        {/* NEW: Conditional Gender Dropdown for Age >= 6 */}
-        {parseInt(localData.childAge, 10) >= 6 && (
-          <div className="animate-fade-in">
-            <label htmlFor="childGender" className="block text-sm font-bold text-gray-700 mb-1">
-              {t('جنس البطل (مهم لدقة القصة)', "Hero's Gender (Important for story accuracy)")}
-            </label>
-            <select
-              id="childGender"
-              value={localData.childGender || ''}
-              onChange={(e) => setLocalData({ ...localData, childGender: e.target.value as 'boy' | 'girl' })}
-              className="block w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900"
-              required
-            >
-              <option value="" disabled>{t('اختر ولد أو بنت...', 'Select boy or girl...')}</option>
-              <option value="boy">{t('ولد', 'Boy (He/Him)')}</option>
-              <option value="girl">{t('بنت', 'Girl (She/Her)')}</option>
-            </select>
-          </div>
-        )}
-      </div>
-
-      {/* Occasion Section moved here to save space */}
-          <div className="p-5 bg-white/70 backdrop-blur-md rounded-2xl shadow-md border border-white/50 space-y-3">
-            <h3 className="text-xl font-bold text-brand-coral flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
-              {t('مناسبة خاصة (اختياري)', 'Special Occasion')}
-            </h3>
-            <input
-              type="text"
-              id="occasion"
-              value={localData.occasion || ''}
-              onChange={(e) => setLocalData({ ...localData, occasion: e.target.value })}
-              className="block w-full px-4 py-2 bg-white/80 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900 placeholder-gray-400 text-sm"
-              placeholder={t('مثال: عيد ميلاد تيكو السابع', "Example: Tiko's 7th Birthday")}
-            />
-          </div>
-        </div>
-
-        {/* Right Column: Characters */}
-        <div className="space-y-4">
-          <div className="p-5 bg-white/70 backdrop-blur-md rounded-2xl shadow-md border border-white/50 space-y-4">
-            <h3 className="text-xl font-bold text-brand-coral flex items-center gap-2 mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              {t('الشخصيات', 'Characters')}
-            </h3>
-
-        <CharacterInput
-          label={t('الشخصية الرئيسية', 'Main Character')}
-          character={localData.mainCharacter}
-          onCharacterChange={(char) => setLocalData({ ...localData, mainCharacter: char })}
-          isMain={true}
-          onManualEdit={() => setIsCharacterNameManuallyEdited(true)}
-          language={language}
-        />
-
-        <div className="flex items-center p-4 bg-brand-baby-blue/10 rounded-xl border border-brand-baby-blue/20">
-          <input
-            id="add-second-character"
-            type="checkbox"
-            checked={localData.useSecondCharacter}
-            onChange={(e) => {
-              const isChecked = e.target.checked;
-              setLocalData(prev => ({
-                ...prev,
-                useSecondCharacter: isChecked,
-                secondCharacter: isChecked && !prev.secondCharacter ? {
-                  name: '',
-                  type: 'person',
-                  images: [],
-                  imageBases64: [],
-                  description: '',
-                  relationship: ''
-                } : prev.secondCharacter
-              }));
-            }}
-            className="h-5 w-5 text-brand-coral border-gray-300 rounded focus:ring-brand-coral transition-colors"
-          />
-          <label htmlFor="add-second-character" className="mx-3 block text-base font-medium text-brand-navy cursor-pointer">
-            {t('إضافة شخصية ثانوية (صديق، أخ، أو حتى لعبة مفضلة!)', 'Add a second character (friend, sibling, or even a favorite toy!)')}
-          </label>
-        </div>
-
-        {localData.useSecondCharacter && localData.secondCharacter && (
-          <div className="animate-enter-forward p-6 border border-gray-200/50 rounded-2xl bg-white/40 space-y-4">
-            <div>
-              <span className="block text-sm font-bold text-gray-700 mb-2">{t('ما هي طبيعة الشخصية الثانوية؟', 'What is the second character?')}</span>
-              <div className="flex gap-4">
-                <label className="flex items-center cursor-pointer bg-white px-4 py-2 rounded-lg border border-gray-200 hover:border-brand-coral transition-colors">
-                  <input type="radio" name="char-type" value="person" checked={localData.secondCharacter.type === 'person'} onChange={() => handleSecondCharacterChange({ type: 'person' })} className="h-4 w-4 text-brand-coral border-gray-300 focus:ring-brand-coral" />
-                  <span className="mx-2 text-sm font-medium">{t('شخص', 'Person')}</span>
-                </label>
-                <label className="flex items-center cursor-pointer bg-white px-4 py-2 rounded-lg border border-gray-200 hover:border-brand-coral transition-colors">
-                  <input type="radio" name="char-type" value="object" checked={localData.secondCharacter.type === 'object'} onChange={() => handleSecondCharacterChange({ type: 'object' })} className="h-4 w-4 text-brand-coral border-gray-300 focus:ring-brand-coral" />
-                  <span className="mx-2 text-sm font-medium">{t('شيء (لعبة، حيوان أليف..)', 'Object (toy, pet..)')}</span>
-                </label>
+              <div>
+                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('الاسم الأول', "First Name")}</label>
+                <input 
+                  type="text" 
+                  value={localData.childName} 
+                  onChange={(e) => setLocalData({ ...localData, childName: e.target.value })} 
+                  className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold text-lg" 
+                  placeholder={t('سارة', 'Sarah')} 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('العمر', "Age")}</label>
+                <input 
+                  type="number" 
+                  value={localData.childAge} 
+                  onChange={(e) => setLocalData({ ...localData, childAge: e.target.value })} 
+                  className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold text-lg text-center" 
+                  min="1" max="12" 
+                />
               </div>
             </div>
 
-            {localData.secondCharacter.type === 'person' && (
-              <div className="animate-fade-in space-y-4">
-                <div>
-                  <label htmlFor="secondCharacterRelationship" className="block text-sm font-medium text-gray-700 mb-1">{t('صلة القرابة (اختياري)', "Relationship (Optional)")}</label>
-                  <select
-                    id="secondCharacterRelationship"
-                    value={localData.secondCharacter.relationship || ''}
-                    onChange={(e) => handleSecondCharacterChange({ relationship: e.target.value })}
-                    className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900"
-                  >
-                    <option value="">{t('اختر صلة القرابة...', 'Select relationship...')}</option>
-                    <option value="Sibling">{t('أخ / أخت', 'Brother / Sister')}</option>
-                    <option value="Best Friend">{t('صديق مفضل', 'Best Friend')}</option>
-                    <option value="Cousin">{t('قريب / ابن عم', 'Cousin')}</option>
-                    <option value="Neighbor">{t('جار', 'Neighbor')}</option>
-                    <option value="Classmate">{t('زميل دراسة', 'Classmate')}</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="secondCharacterAge" className="block text-sm font-medium text-gray-700 mb-1">{t('عمر الشخصية الثانوية (اختياري)', "Second Character's Age (optional)")}</label>
-                  <input
-                    type="number"
-                    id="secondCharacterAge"
-                    value={localData.secondCharacter.age}
-                    onChange={(e) => handleSecondCharacterChange({ age: e.target.value })}
-                    className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900"
-                    placeholder={t('مثال: 7', 'Example: 7')}
-                    min="0"
-                    max="99"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="secondCharacterGender" className="block text-sm font-medium text-gray-700 mb-1">{t('جنس الشخصية (اختياري)', "Character's Gender (Optional)")}</label>
-                  <select
-                    id="secondCharacterGender"
-                    value={localData.secondCharacter.gender || ''}
-                    onChange={(e) => handleSecondCharacterChange({ gender: e.target.value as 'boy' | 'girl' })}
-                    className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-coral focus:border-transparent text-gray-900"
-                  >
-                    <option value="">{t('اختر ولد أو بنت...', 'Select boy or girl...')}</option>
-                    <option value="boy">{t('ولد', 'Boy (He/Him)')}</option>
-                    <option value="girl">{t('بنت', 'Girl (She/Her)')}</option>
-                  </select>
+            {parseInt(localData.childAge, 10) >= 6 && (
+              <div className="animate-enter-forward">
+                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('جنس البطل', "Hero's Gender")}</label>
+                <div className="flex gap-3">
+                  {['boy', 'girl'].map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setLocalData({ ...localData, childGender: g as any })}
+                      className={`flex-1 py-3 rounded-2xl font-bold border-2 transition-all ${localData.childGender === g ? 'bg-brand-orange border-brand-orange text-white' : 'bg-white/50 border-brand-navy/5 text-brand-navy/60 hover:border-brand-orange/30'}`}
+                    >
+                      {g === 'boy' ? t('ولد', 'Boy') : t('بنت', 'Girl')}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
-            <CharacterInput
-              label={t('الشخصية الثانوية', 'Second Character')}
-              character={localData.secondCharacter}
-              onCharacterChange={(char) => setLocalData({ ...localData, secondCharacter: char })}
-              isMain={false}
-              language={language}
-            />
           </div>
-        )}
-      </div>
-    </div>
 
-      {/* Action Buttons */}
-      <div className="text-center flex justify-center items-center gap-4 pt-2 pb-6">
-        <Button type="button" onClick={onBack} variant="outline" className="text-lg px-8 py-3 rounded-xl border-2">
-          {t('رجوع', 'Back')}
-        </Button>
-        <Button type="submit" className="text-lg px-10 py-3 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
-          {t('التالي', 'Next')} &rarr;
-        </Button>
-      </div>
-    </form>
+          <div className="glass-panel p-6 rounded-[2rem] flex items-center justify-between">
+             <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-brand-teal">celebration</span>
+                <span className="text-sm font-bold text-brand-navy/80">{t('مناسبة خاصة؟', 'Special Occasion?')}</span>
+             </div>
+             <input 
+                type="text" 
+                value={localData.occasion || ''} 
+                onChange={(e) => setLocalData({ ...localData, occasion: e.target.value })} 
+                className="bg-transparent border-b-2 border-brand-navy/5 focus:border-brand-orange outline-none px-2 py-1 text-sm font-bold text-brand-navy placeholder:text-brand-navy/20"
+                placeholder={t('مثال: عيد ميلاد', 'e.g. Birthday')}
+             />
+          </div>
+        </div>
+
+        {/* Right Column: Character Visuals */}
+        <div className="lg:col-span-7 space-y-6">
+          <CharacterInput
+            label={t('الشخصية الرئيسية (بطل القصة)', 'Main Character (The Hero)')}
+            character={localData.mainCharacter}
+            onCharacterChange={(char) => setLocalData({ ...localData, mainCharacter: char })}
+            isMain={true}
+            onManualEdit={() => setIsCharacterNameManuallyEdited(true)}
+            language={language}
+          />
+
+          <div className="p-1 glass-panel rounded-[2rem]">
+            <button 
+              type="button" 
+              onClick={() => {
+                const isChecked = !localData.useSecondCharacter;
+                setLocalData(prev => ({
+                  ...prev,
+                  useSecondCharacter: isChecked,
+                  secondCharacter: isChecked && !prev.secondCharacter ? { name: '', type: 'person', images: [], imageBases64: [], description: '', relationship: '' } : prev.secondCharacter
+                }));
+              }}
+              className={`w-full flex items-center justify-between p-5 rounded-[1.8rem] transition-all ${localData.useSecondCharacter ? 'bg-brand-teal text-white shadow-lg' : 'bg-white/40 text-brand-navy hover:bg-white/60'}`}
+            >
+              <div className="flex items-center gap-4">
+                 <span className="material-symbols-outlined">{localData.useSecondCharacter ? 'group_add' : 'person_add'}</span>
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm">{t('إضافة شخصية ثانية؟', 'Add a second character?')}</p>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${localData.useSecondCharacter ? 'bg-white text-brand-teal' : 'bg-brand-teal/10 text-brand-teal'}`}>
+                        + 2.000 KWD
+                      </span>
+                    </div>
+                    <p className={`text-[10px] ${localData.useSecondCharacter ? 'text-white/80' : 'text-brand-navy/40'}`}>
+                      {t('صديق، أخ، أو حتى لعبة مفضلة!', 'A friend, sibling, or favorite toy!')}
+                    </p>
+                  </div>
+              </div>
+              <span className="material-symbols-outlined">{localData.useSecondCharacter ? 'check_circle' : 'add_circle'}</span>
+            </button>
+          </div>
+
+          {localData.useSecondCharacter && localData.secondCharacter && (
+            <div className="animate-enter-forward space-y-6">
+               <div className="glass-panel p-6 rounded-[2rem] flex items-center gap-6">
+                  <span className="text-sm font-bold text-brand-navy/60">{t('طبيعة الشخصية:', 'Character Type:')}</span>
+                  <div className="flex gap-4">
+                    {['person', 'object'].map((type) => (
+                      <button 
+                        key={type}
+                        type="button"
+                        onClick={() => setLocalData(prev => ({ ...prev, secondCharacter: { ...prev.secondCharacter!, type: type as any }}))}
+                        className={`px-6 py-2 rounded-full text-xs font-bold border-2 transition-all ${localData.secondCharacter?.type === type ? 'bg-brand-navy border-brand-navy text-white' : 'bg-white/50 border-brand-navy/10 text-brand-navy/60'}`}
+                      >
+                        {type === 'person' ? t('إنسان', 'Person') : t('شيء / حيوان', 'Object / Pet')}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+               <CharacterInput
+                label={t('الشخصية الثانوية', 'Second Character')}
+                character={localData.secondCharacter}
+                onCharacterChange={(char) => setLocalData({ ...localData, secondCharacter: char })}
+                isMain={false}
+                language={language}
+              />
+            </div>
+          )}
+
+          {/* Story Language Override */}
+          <div className="glass-panel p-8 rounded-[2.5rem] space-y-6">
+             <div className="flex items-center gap-3 border-b border-brand-navy/5 pb-4">
+                <span className="material-symbols-outlined text-brand-orange">translate</span>
+                <h3 className="text-xl font-bold text-brand-navy">{t('لغة القصة', 'Story Language')}</h3>
+             </div>
+             
+             <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">
+                {t('بأي لغة تريد كتابة قصتك؟', 'Which language should we write your story in?')}
+             </p>
+
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {[
+                    { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+                    { code: 'en', label: 'English', flag: '🇺🇸' },
+                    { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+                    { code: 'es', label: 'Español', flag: '🇪🇸' },
+                    { code: 'fr', label: 'Français', flag: '🇫🇷' },
+                    { code: 'it', label: 'Italiano', flag: '🇮🇹' },
+                    { code: 'pt', label: 'Português', flag: '🇵🇹' },
+                    { code: 'ru', label: 'Русский', flag: '🇷🇺' },
+                    { code: 'ja', label: '日本語', flag: '🇯🇵' },
+                    { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
+                ].map((langOption) => (
+                    <button
+                        key={langOption.code}
+                        type="button"
+                        onClick={() => setLocalData({ ...localData, language: langOption.code as Language })}
+                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all group ${localData.language === langOption.code ? 'bg-brand-orange border-brand-orange text-white shadow-lg shadow-brand-orange/20' : 'bg-white/50 border-brand-navy/5 text-brand-navy/60 hover:border-brand-orange/30'}`}
+                    >
+                        <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">{langOption.flag}</span>
+                        <span className="text-[10px] font-black uppercase tracking-tighter">{langOption.label}</span>
+                    </button>
+                ))}
+             </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center gap-4 pt-4">
+            <button 
+              type="button" 
+              onClick={onBack} 
+              className="flex-1 glass-panel py-5 rounded-full font-bold text-brand-navy hover:bg-white/60 transition-all active:scale-95"
+            >
+              {t('رجوع', 'Back')}
+            </button>
+            <button 
+              type="submit" 
+              className="flex-[2] bg-brand-orange text-white py-5 rounded-full font-black text-lg shadow-xl shadow-brand-orange/20 hover:shadow-brand-orange/40 transition-all hover:-translate-y-1 active:translate-y-0 active:scale-95 group relative overflow-hidden"
+            >
+               <span className="relative z-10 flex items-center justify-center gap-2">
+                 {t('متابعة المغامرة', 'Continue Adventure')}
+                 <span className="material-symbols-outlined">arrow_forward</span>
+               </span>
+               <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-full pointer-events-none"></div>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
   );
 };
 

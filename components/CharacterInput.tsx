@@ -82,50 +82,77 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({ character, onCha
       {isCropperOpen && imageToCrop && (
         <ImageCropModal imageSrc={imageToCrop.dataUrl} onCropComplete={handleCropComplete} onClose={() => { setIsCropperOpen(false); setImageToCrop(null); }} language={language} />
       )}
-      <div className="space-y-6 p-6 border border-brand-navy/10 rounded-3xl bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-          <h3 className="text-xl font-bold text-brand-navy flex items-center gap-2">
-            <div className="w-1.5 h-6 bg-brand-orange rounded-full"></div>
-            {label}
-          </h3>
+      <div className="glass-panel p-6 rounded-[2rem] space-y-6 animate-enter-forward overflow-hidden relative">
+        <div className="flex items-center justify-between border-b border-brand-navy/5 pb-4">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+                <span className="material-symbols-outlined">{isMain ? 'face' : 'toys'}</span>
+             </div>
+             <h3 className="text-xl font-bold text-brand-navy">{label}</h3>
+          </div>
           {isMain && character.images.length > 0 && (
-            <span className="text-[10px] font-black text-brand-orange uppercase bg-brand-orange/10 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-black text-brand-teal uppercase bg-brand-teal/10 px-3 py-1 rounded-full">
               {character.images.length}/3 {t('صور', 'Photos')}
             </span>
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
-            <label htmlFor={`characterName-${label}`} className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">{nameLabel}</label>
-            <input type="text" id={`characterName-${label}`} value={character.name} onChange={handleNameChange} className="block w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-orange focus:bg-white transition-all outline-none text-brand-navy font-bold" placeholder={t('أدخل الاسم هنا...', 'Enter name here...')} required />
+            <label htmlFor={`characterName-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{nameLabel}</label>
+            <input 
+              type="text" 
+              id={`characterName-${label}`} 
+              value={character.name} 
+              onChange={handleNameChange} 
+              className="block w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-lg" 
+              placeholder={t('أدخل الاسم هنا...', 'Enter name here...')} 
+              required 
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('صورة الشخصية', "Character's Image")}</label>
+            <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-3">{t('صورة الشخصية', "Character's Image")}</label>
+            
             <div className="grid grid-cols-3 gap-3 mb-4">
               {character.imageBases64.map((base64, index) => (
                 <div key={index} className="relative aspect-square group cursor-pointer" onClick={() => handleRecropImage(index)}>
-                  <img src={`data:image/jpeg;base64,${base64}`} alt={`Preview ${index + 1}`} className="w-full h-full rounded-2xl object-cover border-2 border-white shadow-md group-hover:ring-2 group-hover:ring-brand-orange transition-all" />
-                  <div className="absolute inset-0 bg-brand-navy/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                  </div>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); handleClearImage(index); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg hover:bg-red-600 transition-colors z-10">&times;</button>
+                  <div className="absolute inset-0 bg-brand-orange/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <img src={`data:image/jpeg;base64,${base64}`} alt={`Preview ${index + 1}`} className="w-full h-full rounded-2xl object-cover border-2 border-white shadow-lg group-hover:scale-[1.02] transition-all relative z-10" />
+                  <button 
+                    type="button" 
+                    onClick={(e) => { e.stopPropagation(); handleClearImage(index); }} 
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg hover:bg-red-600 transition-colors z-20"
+                  >
+                    &times;
+                  </button>
                 </div>
               ))}
               {(isMain ? character.images.length < 3 : character.images.length < 1) && (
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50 hover:bg-white hover:border-brand-orange hover:text-brand-orange transition-all group">
-                  <svg className="w-8 h-8 text-gray-300 group-hover:text-brand-orange transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-brand-navy/10 rounded-2xl bg-white/30 hover:bg-white hover:border-brand-orange hover:text-brand-orange transition-all group overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-brand-orange/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <span className="material-symbols-outlined text-3xl text-brand-navy/20 group-hover:text-brand-orange transition-colors">add_a_photo</span>
                   <span className="text-[10px] font-black uppercase mt-2 opacity-50 group-hover:opacity-100">{t('إضافة', 'Add')}</span>
                 </button>
               )}
             </div>
+
             {character.images.length === 0 && (
-              <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-brand-navy/5 border-dashed rounded-2xl cursor-pointer hover:bg-brand-navy/[0.02] hover:border-brand-orange/30 transition-all group" onClick={() => fileInputRef.current?.click()}>
-                <div className="w-14 h-14 bg-brand-navy/5 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <svg className="w-7 h-7 text-brand-navy/40 group-hover:text-brand-orange" stroke="currentColor" fill="none" viewBox="0 0 48 48"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <div 
+                className="flex flex-col items-center justify-center text-center p-10 border-2 border-brand-navy/5 border-dashed rounded-[2rem] cursor-pointer bg-white/20 hover:bg-white/40 hover:border-brand-orange/30 transition-all group" 
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                   <span className="material-symbols-outlined text-3xl text-brand-orange">upload</span>
                 </div>
-                <p className="text-sm font-bold text-brand-navy/60 group-hover:text-brand-navy transition-colors">{uploadText}</p>
+                <p className="text-sm font-bold text-brand-navy/80 group-hover:text-brand-orange transition-colors">{uploadText}</p>
+                <p className="text-[11px] font-medium text-brand-navy/40 mt-2 max-w-[80%] leading-relaxed">
+                  {t('يرجى التأكد من رفع صورة أمامية واضحة للوجه لضمان أفضل جودة.', 'Please ensure you upload a clear, front-facing photo for the best quality.')}
+                </p>
               </div>
             )}
           </div>
