@@ -101,8 +101,10 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const resetStory = () => {
         setStoryData(initialStoryData);
+        setShippingDetails(null);
         setScreen('welcome');
         localStorage.removeItem('storyData');
+        localStorage.removeItem('currentScreen');
     };
 
     return (

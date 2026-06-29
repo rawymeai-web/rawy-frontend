@@ -47,7 +47,7 @@ export const DNAManagerModal: React.FC<DNAManagerModalProps> = ({ storyData, onC
                 mainCharacter: storyData.mainCharacter,
                 secondCharacter: storyData.secondCharacter,
                 theme: storyData.theme,
-                style: storyData.selectedStylePrompt || "high quality illustration",
+                style: storyData.selectedStyleNames?.[0] || storyData.selectedStylePrompt || "high quality illustration",
                 age: storyData.childAge
             });
 

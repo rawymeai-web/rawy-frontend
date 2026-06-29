@@ -19,7 +19,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
   }, []);
 
   return (
-    <div className="bg-[#FFF9F0] text-[#243A61] font-sans overflow-x-hidden min-h-screen flex flex-col relative">
+    <div className="text-[#243A61] font-sans overflow-x-hidden flex flex-col relative w-full">
       
       {/* Background Blobs */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" id="container_hero_bg">
@@ -28,38 +28,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
         <div className="absolute bottom-[-20%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-3xl opacity-60" style={{ background: 'radial-gradient(circle, rgba(236,193,86,0.3) 0%, rgba(236,193,86,0) 70%)' }}></div>
       </div>
 
-      {/* Minimal Header */}
-      <header className="sticky top-0 w-full px-8 py-4 flex justify-between items-center z-50 bg-white/45 backdrop-blur-xl border-b border-white/20">
-        <div className="text-2xl font-bold tracking-tight cursor-pointer" id="logo_main">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-[#F78F50]">Rawy</span>
-            <img alt="Rawy Logo Mark" className="h-8 w-auto" src="https://lh3.googleusercontent.com/aida/ADBb0uiU37jKUtd9D-SXxdy4sLzW228B-NSd_3jCVN5NoN5enUEcv9IBnCa9FZJKIJiGteMjGWFSr67qvi8-zXxw_a4CJkKfhOBieiOHmU0HRMNZ-dtg35rdVliBPPM4p1kXl4apYcqMzYcYErhTY8jxDQRDEA8EG_8Z62tU7MtYY7dVqVIusQJsGf6j--RVk2OJQlsbkXfVyUoACQ0dKE2TS9ALarMNrhD7xA1K67PdpcspMwTpmyOZ2YFtAe7R0Mp_9vrSiXZgPzTdKQ" />
-          </div>
-        </div>
-        
-        {/* Utility Area */}
-        <div className="flex items-center gap-6 text-[#243A61]">
-          <div className="relative flex items-center gap-1 cursor-pointer group" id="dropdown_header_lang">
-            <span className="material-symbols-outlined text-[20px]">language</span>
-            <span className="font-bold text-xs uppercase tracking-wider">EN</span>
-            <span className="material-symbols-outlined text-[18px]">expand_more</span>
-          </div>
-          <div className="relative flex items-center gap-1 cursor-pointer group" id="dropdown_header_currency">
-            <span className="font-bold text-xs uppercase tracking-wider">USD</span>
-            <span className="material-symbols-outlined text-[18px]">expand_more</span>
-          </div>
-          <a className="font-bold text-xs uppercase tracking-wider hover:text-[#994709] transition-colors flex items-center gap-2" href="#" id="btn_nav_my_orders">
-            <span className="material-symbols-outlined text-[20px]">account_circle</span>
-            <span>My Stories</span>
-          </a>
-          <a className="opacity-30 hover:opacity-100 transition-opacity flex items-center" href="#" id="btn_admin_entry" title="Admin Dashboard">
-            <span className="material-symbols-outlined text-[18px]">settings</span>
-          </a>
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="flex-grow flex flex-col items-center justify-center relative z-10 px-6 py-12 md:py-24">
+      <main className="flex-grow flex flex-col items-center justify-center relative z-10 px-6 py-6 md:py-12">
         <div className="w-full max-w-[1200px] mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-24">
           
           {/* Text Content */}
@@ -94,11 +64,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
                 {/* Slide 1 */}
                 <div className={`transition-all duration-700 ease-in-out absolute inset-0 ${currentSlide === 0 ? 'opacity-100 relative z-10 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                   <div className="relative aspect-square w-full bg-white rounded-r-2xl shadow-2xl overflow-hidden border-l-8 border-[#994709]">
-                    <img alt="The Brave Explorer Book Cover" className="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/ADBb0uijLCk6JFyniMpH4kIzIcei32lJWEv1_PAKsoL0ow7IyuUrQrFr_ghCdsf8abIwYu-9PspnJdzDT7CNyvHkV0aDPNce3MbTjJuBKhNyqjIzSKgGE1ywltyBoKGAqmzttzLGTwYsEUgPODRtbBQfGc9xgCNDlUP0XeYBiV6imQD8XpTc8reW2zT2mrp8r9bYGWitcT_xr-bmSVmf8K7JNJqoS_vs3bCWITCKCn0YnBOL38GpOe4Z-vby_V_lD5fzElsytTT5xEu9cA" />
+                    <img alt="The Lost City of Ubar Book Cover" className="absolute inset-0 w-full h-full object-cover" src="/covers/cover1.png" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20"></div>
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-12 px-6 text-center text-white">
-                      <h2 className="text-4xl font-extrabold mb-2 drop-shadow-lg">The Brave Explorer</h2>
-                      <p className="text-xl italic opacity-90 drop-shadow-md">A Magical Journey</p>
+                      <h2 className="text-4xl font-extrabold mb-2 drop-shadow-lg">The Lost City of Ubar</h2>
+                      <p className="text-xl italic opacity-90 drop-shadow-md">A Desert Treasure Hunt</p>
                     </div>
                     <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-r from-black/20 to-transparent"></div>
                   </div>
@@ -107,11 +77,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
                 {/* Slide 2 */}
                 <div className={`transition-all duration-700 ease-in-out absolute inset-0 ${currentSlide === 1 ? 'opacity-100 relative z-10 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                   <div className="relative aspect-square w-full bg-white rounded-r-2xl shadow-2xl overflow-hidden border-l-8 border-[#193056]">
-                    <img alt="Galactic Odyssey Book Cover" className="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrRq8W8BUoD5QUtwwV4vsA5qbx6tZRZuAxJ9B79d34slamnvsX6fmAeuEGB_z-vUr-F9qD_yF2iLchJHjbqbH6M_WCNzMXKB-2ZNRgY2OM7g8VNdaXxcbPUak0Y2onLxV1oZnmmzyIoYp5q8L6013FJVe9R7uMNKxYPV41y7YMglGqK5U6P3LAU8MV7LaGdEeViN7lYtApQrqlfiLhofJcqlAJTvkTZPfMR5HYijR1rpTkikGqOK2ax1KcZxknALKvDsRIbLHtc_Gp" />
+                    <img alt="The Hope Probe Mission Book Cover" className="absolute inset-0 w-full h-full object-cover" src="/covers/cover2.png" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20"></div>
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-12 px-6 text-center text-white">
-                      <h2 className="text-4xl font-extrabold mb-2 drop-shadow-lg">Galactic Odyssey</h2>
-                      <p className="text-xl italic opacity-90 drop-shadow-md">Beyond the Stars</p>
+                      <h2 className="text-4xl font-extrabold mb-2 drop-shadow-lg">The Hope Probe Mission</h2>
+                      <p className="text-xl italic opacity-90 drop-shadow-md">Beyond the Stars to Mars</p>
                     </div>
                     <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-r from-black/20 to-transparent"></div>
                   </div>
@@ -120,11 +90,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
                 {/* Slide 3 */}
                 <div className={`transition-all duration-700 ease-in-out absolute inset-0 ${currentSlide === 2 ? 'opacity-100 relative z-10 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                   <div className="relative aspect-square w-full bg-white rounded-r-2xl shadow-2xl overflow-hidden border-l-8 border-[#006b5d]">
-                    <img alt="The Secret Garden Book Cover" className="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxeU3IgQw3FRNjyzBeQPuQ2TPrfLQB7Gj2uMBf6O-0Q5O-bwxFO4S-A153WQB8RvEoJJozxZO4bRAfRGhQVrG73Vxp19a1_gZswSRwKuhFB0N9YW2fJd5gM753DYg3Gljck9MrU0D84a0EdEBApWaLC0wEY--Rgf0P_e93zY9ZzRQ0qr1zVaalmm9WMjj-3IAtMO4d3YIfgtMlhRHCemJxjjV4O9GlcM6VoKFAlId2jHgxMenOT79FT7JHN1094swDfg0K-WT0wQQ1" />
+                    <img alt="1001 Nights Magic Book Cover" className="absolute inset-0 w-full h-full object-cover" src="/covers/cover3.png" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20"></div>
                     <div className="absolute inset-0 flex flex-col items-center justify-end pb-12 px-6 text-center text-white">
-                      <h2 className="text-4xl font-extrabold mb-2 drop-shadow-lg">The Secret Garden</h2>
-                      <p className="text-xl italic opacity-90 drop-shadow-md">Nature's Whisper</p>
+                      <h2 className="text-4xl font-extrabold mb-2 drop-shadow-lg">1001 Nights Magic</h2>
+                      <p className="text-xl italic opacity-90 drop-shadow-md">The Flying Carpet Adventure</p>
                     </div>
                     <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-r from-black/20 to-transparent"></div>
                   </div>
@@ -152,34 +122,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="w-full py-8 border-t border-slate-200/50 bg-[#FFF9F0]/80 backdrop-blur-md z-10 relative mt-auto px-8">
-        <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="relative">
-            <select 
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as Language)}
-              className="appearance-none bg-white/45 backdrop-blur-xl border-[1.5px] border-white/40 rounded-full py-2 pl-4 pr-10 font-medium text-[#001a40] focus:outline-none focus:ring-2 focus:ring-[#f78f50] shadow-sm cursor-pointer" 
-            >
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="fr">Français</option>
-              <option value="ar">العربية</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#554339]">
-              <span className="material-symbols-outlined">expand_more</span>
-            </div>
-          </div>
-          <div className="font-bold text-xs uppercase tracking-wider text-[#554339] flex gap-6">
-            <a className="hover:text-[#f78f50] transition-colors" href="#">Terms</a>
-            <a className="hover:text-[#f78f50] transition-colors" href="#">Privacy</a>
-          </div>
-          <div className="font-bold text-xs uppercase tracking-wider text-[#554339]">
-            © 2024 Rawy Storyweaver. Magical moments crafted with AI.
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

@@ -47,6 +47,9 @@ const MainLayout: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState(18.5); 
     const [user, setUser] = useState<any>(null);
 
+    const storyDataRef = React.useRef(storyData);
+    storyDataRef.current = storyData;
+
     // Auth Initialization & Listener
     useEffect(() => {
         // 1. Initial Session Check
@@ -69,7 +72,7 @@ const MainLayout: React.FC = () => {
                     if (prev === 'auth') {
                         // If they have story data (theme selected), go to checkout
                         // Otherwise (they just wanted to see orders), go to dashboard
-                        return (storyData.theme) ? 'checkout' : 'customerDashboard';
+                        return (storyDataRef.current.theme) ? 'checkout' : 'customerDashboard';
                     }
                     return prev;
                 });
@@ -175,6 +178,8 @@ const MainLayout: React.FC = () => {
                 // TODO: Handle no-order scenario gracefully
             }
 
+            localStorage.removeItem('storyData');
+            localStorage.removeItem('currentScreen');
             setPaymentModalOpen(false);
             setScreen('confirmation'); // NEW: Skip generation entirely
 
@@ -277,7 +282,7 @@ const MainLayout: React.FC = () => {
         switch (screen) {
             case 'welcome':
             case 'language': // Fallback mapping language to welcome
-                content = <WelcomeScreen onStart={() => setScreen('personalization')} onBack={() => { }} language={language} setLanguage={setLanguage} />;
+                content = <WelcomeScreen onStart={() => { resetStory(); setScreen('personalization'); }} onBack={() => { }} language={language} setLanguage={setLanguage} />;
                 break;
             case 'personalization':
                 content = <PersonalizationScreen onNext={(data) => { updateStory(data); setScreen('styleChoice'); }} onBack={() => setScreen('welcome')} storyData={storyData} language={language} />;
@@ -391,8 +396,13 @@ const MainLayout: React.FC = () => {
                     content = <CustomerDashboard 
                         language={language} 
                         onLogout={async () => {
-                            // Backend-only auth Logout would happen here
+                            try {
+                                await supabase.auth.signOut();
+                            } catch (e) {
+                                console.error("Sign out error:", e);
+                            }
                             setUser(null);
+                            resetStory();
                             setScreen('welcome');
                         }} 
                         onEditPreferences={() => {}} 

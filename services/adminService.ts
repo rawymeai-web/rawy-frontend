@@ -99,7 +99,7 @@ export async function getSettings(): Promise<AppSettings> {
       unitProductionCost: 13.250,
       unitAiCost: 0.600,
       unitShippingCost: 1.500,
-      targetModel: 'gemini-1.5-flash'
+      targetModel: 'gemini-2.5-flash'
     };
   }
   return {
@@ -171,15 +171,55 @@ export async function saveOrder(orderNumber: string, storyData: StoryData, shipp
   const settings = await getSettings();
   const totalPrice = total || 18.000;
 
-  // Stripping large base64s for DB storage safety (if not using bucket storage in frontend)
+  // Helper to securely upload Base64 images to Bucket and insert to DB
+  const uploadAndLogDNA = async (base64Array: string[] | undefined, heroLabel: string, imageType: string) => {
+    if (!base64Array || !base64Array[0]) return;
+    try {
+      const base64Str = base64Array[0].includes('base64,') ? base64Array[0].split('base64,')[1] : base64Array[0];
+      const binaryString = atob(base64Str);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'image/jpeg' });
+      
+      const filename = `${orderNumber}/${heroLabel.replace(' ', '_')}_${imageType.replace(' ', '_')}_${Date.now()}.jpg`;
+      
+      const { data, error } = await supabase.storage.from('dna-images').upload(filename, blob, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+      
+      if (!error) {
+        const { data: publicData } = supabase.storage.from('dna-images').getPublicUrl(filename);
+        await supabase.from('order_dna').insert({
+          order_id: orderNumber,
+          hero_label: heroLabel,
+          image_type: imageType,
+          image_url: publicData.publicUrl
+        });
+      }
+    } catch (err) {
+      console.error(`Failed to upload ${imageType} for ${heroLabel}:`, err);
+    }
+  };
+
+  // Upload to new architecture
+  await uploadAndLogDNA(storyData.mainCharacter?.imageBases64, 'Hero A', 'Original Photo');
+  await uploadAndLogDNA(storyData.mainCharacter?.imageDNA, 'Hero A', 'Stylized DNA');
+  await uploadAndLogDNA(storyData.secondCharacter?.imageBases64, 'Hero B', 'Original Photo');
+  await uploadAndLogDNA(storyData.secondCharacter?.imageDNA, 'Hero B', 'Stylized DNA');
+
+  // Stripping ALL massive base64s since they are now in bucket
   const cleanStoryData = JSON.parse(JSON.stringify(storyData));
   if (cleanStoryData.mainCharacter) {
     cleanStoryData.mainCharacter.imageBases64 = [];
-    cleanStoryData.mainCharacter.imageDNA = storyData.mainCharacter.imageDNA || [];
+    cleanStoryData.mainCharacter.imageDNA = [];
   }
   if (cleanStoryData.secondCharacter) {
     cleanStoryData.secondCharacter.imageBases64 = [];
-    cleanStoryData.secondCharacter.imageDNA = storyData.secondCharacter.imageDNA || [];
+    cleanStoryData.secondCharacter.imageDNA = [];
   }
 
   const customerId = shippingDetails.email.toLowerCase();

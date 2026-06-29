@@ -1,8 +1,12 @@
 
-import type { StoryData, ShippingDetails, Language, ProductSize, Page } from '../types';
+import type { StoryData, ShippingDetails, Language, ProductSize, Page, Spread } from '../types';
 import { getProductSizeById } from './adminService';
-import * as imageStore from './imageStore';
 import QRCode from 'qrcode';
+
+export interface OrderImages {
+    cover: File;
+    spreads: File[];
+}
 
 // Access globals lazily to avoid "undefined" errors on early module execution
 const getJsPDF = () => {
@@ -197,7 +201,7 @@ async function renderTextBlobToImage(
     return { dataUrl, width: canvasObj.naturalWidth, height: canvasObj.naturalHeight };
 }
 
-export const generatePreviewPdf = async (storyData: StoryData, language: Language, highResImages?: imageStore.OrderImages, orderNumber?: string): Promise<Blob> => {
+export const generatePreviewPdf = async (storyData: StoryData, language: Language, highResImages?: OrderImages, orderNumber?: string): Promise<Blob> => {
     const jsPDF = getJsPDF();
     if (!jsPDF) throw new Error("jsPDF not loaded");
 
@@ -237,7 +241,7 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         coverData = await normalizeImage(coverData);
     }
 
-    const coverEdits = storyData.spreads?.[0] || {};
+    const coverEdits: Partial<Spread> = storyData.spreads?.[0] || {};
 
     if (coverData && coverData.length > 50) {
         let cleanB64 = coverData.includes(',') ? coverData.split(',')[1] : coverData;

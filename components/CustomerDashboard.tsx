@@ -23,7 +23,7 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({ language, onLogout
         const initDashboard = async () => {
             try {
                 setIsLoading(true);
-                const currentUser = await authService.getCurrentUser();
+                const currentUser = await authService.getUser();
                 setUser(currentUser);
                 
                 if (currentUser) {

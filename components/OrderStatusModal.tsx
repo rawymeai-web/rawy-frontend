@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
-import * as adminService from '../services/adminService';
 import type { Language, AdminOrder } from '../types';
 
 interface OrderStatusModalProps {
@@ -29,19 +28,16 @@ const OrderStatusModal: React.FC<OrderStatusModalProps> = ({ isOpen, onClose, la
     setFoundOrder(null);
 
     try {
-      // Fetch all orders - optimization: move to specific API call later
-      const { orders } = await adminService.getOrders();
+      const res = await fetch(`/api/orders/lookup?orderNumber=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(phone)}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || t('لم يتم العثور على طلب مطابق. يرجى التحقق من المعلومات والمحاولة مرة أخرى.', 'No matching order found. Please check your information and try again.'));
+        return;
+      }
 
-      // Normalize helper
-      const norm = (s: string) => s.trim().toLowerCase().replace(/\s/g, '');
-
-      const order = orders.find(o =>
-        norm(o.orderNumber) === norm(orderNumber) &&
-        norm(o.shippingDetails.phone) === norm(phone)
-      );
-
-      if (order) {
-        setFoundOrder(order);
+      const data = await res.json();
+      if (data.success && data.order) {
+        setFoundOrder(data.order);
       } else {
         setError(t('لم يتم العثور على طلب مطابق. يرجى التحقق من المعلومات والمحاولة مرة أخرى.', 'No matching order found. Please check your information and try again.'));
       }
