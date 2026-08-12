@@ -17,6 +17,19 @@ interface ConfirmationScreenProps {
 const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, onRestart, language, shippingDetails, storyData, currency, totalPrice }) => {
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
+  React.useEffect(() => {
+    // Track Purchase event on mount
+    import('../utils/analytics').then(({ trackPixelEvent }) => {
+      trackPixelEvent('Purchase', {
+        value: totalPrice,
+        currency: currency,
+        content_name: storyData?.title || 'Storybook',
+        content_ids: [orderNumber],
+        content_type: 'product'
+      });
+    });
+  }, [orderNumber, totalPrice, currency, storyData]);
+
   const handleSendEmail = async () => {
     if (!shippingDetails || !storyData) return;
 

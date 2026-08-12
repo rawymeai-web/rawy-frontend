@@ -45,6 +45,18 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
+  React.useEffect(() => {
+    // Track InitiateCheckout event on mount
+    import('../utils/analytics').then(({ trackPixelEvent }) => {
+      trackPixelEvent('InitiateCheckout', {
+        content_name: storyData?.title || 'Storybook',
+        content_category: storyData?.themeId || 'checkout',
+        content_ids: [storyData?.themeId || ''],
+        content_type: 'product'
+      });
+    });
+  }, [storyData]);
+
   const pricing = useMemo(() => {
     const digitalBase = 5.000;
     const heroAddon = storyData.useSecondCharacter ? 2.000 : 0;
