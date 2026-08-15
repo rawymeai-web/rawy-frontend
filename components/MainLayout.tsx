@@ -45,6 +45,7 @@ const MainLayout: React.FC = () => {
 
     const [currentPrice, setCurrentPrice] = useState(17.0);
     const [paymentAmount, setPaymentAmount] = useState(18.5); 
+    const [isManualPayment, setIsManualPayment] = useState(false);
     const [user, setUser] = useState<any>(null);
 
     const storyDataRef = React.useRef(storyData);
@@ -164,13 +165,17 @@ const MainLayout: React.FC = () => {
         return generationStatus || "Wrapping up your gift...";
     })();
 
-    const handlePaymentSuccess = useCallback(async (isBypass: boolean = false) => {
+    const handlePaymentSuccess = useCallback(async (isManualLink: boolean = false) => {
         try {
+            if (isManualLink) {
+                setIsManualPayment(true);
+            }
             if (storyData.orderId) {
-                console.log("Marking Order as Paid Confirmed:", storyData.orderId);
+                const targetStatus = isManualLink ? 'pending_payment' : 'paid_confirmed';
+                console.log(`Marking Order ${storyData.orderId} as ${targetStatus}`);
                 await backendApi.updateDraftOrder({
                     orderId: storyData.orderId,
-                    status: 'paid_confirmed',
+                    status: targetStatus,
                     shippingDetails
                 });
             } else {
@@ -387,7 +392,7 @@ const MainLayout: React.FC = () => {
                 />;
                 break;
             case 'confirmation':
-                content = <ConfirmationScreen orderNumber={storyData.orderId || 'RWY-UNKNOWN'} onRestart={() => { resetStory(); }} language={language} shippingDetails={shippingDetails} storyData={storyData} currency={currency} totalPrice={paymentAmount} />;
+                content = <ConfirmationScreen orderNumber={storyData.orderId || 'RWY-UNKNOWN'} onRestart={() => { resetStory(); setIsManualPayment(false); }} language={language} shippingDetails={shippingDetails} storyData={storyData} currency={currency} totalPrice={paymentAmount} isManualPayment={isManualPayment} />;
                 break;
             case 'customerDashboard':
                 if (!user) {
@@ -450,7 +455,7 @@ const MainLayout: React.FC = () => {
                 <div className={`relative w-full h-full p-4 sm:p-8 flex flex-col justify-center ${(screen === 'unified-generation' || screen === 'editor') ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
             </main>
             <Footer language={language} onCheckOrderStatus={() => setScreen('customerDashboard')} />
-            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(paymentAmount, currency)} language={language} />
+            <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(paymentAmount, currency)} orderId={storyData.orderId || ''} language={language} />
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
             <RegionalDiscoveryModal 
                 currentLanguage={language} 
