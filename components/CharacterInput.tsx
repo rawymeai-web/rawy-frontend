@@ -12,9 +12,24 @@ interface CharacterInputProps {
   isMain: boolean;
   onManualEdit?: () => void;
   language: Language;
+  childAge?: string;
+  onAgeChange?: (age: string) => void;
+  childGender?: 'boy' | 'girl';
+  onGenderChange?: (gender: 'boy' | 'girl') => void;
 }
 
-export const CharacterInput: React.FC<CharacterInputProps> = ({ character, onCharacterChange, label, isMain, onManualEdit, language }) => {
+export const CharacterInput: React.FC<CharacterInputProps> = ({ 
+  character, 
+  onCharacterChange, 
+  label, 
+  isMain, 
+  onManualEdit, 
+  language,
+  childAge,
+  onAgeChange,
+  childGender,
+  onGenderChange
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<{ dataUrl: string; originalName: string; index?: number } | null>(null);
@@ -82,10 +97,16 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({ character, onCha
       {isCropperOpen && imageToCrop && (
         <ImageCropModal imageSrc={imageToCrop.dataUrl} onCropComplete={handleCropComplete} onClose={() => { setIsCropperOpen(false); setImageToCrop(null); }} language={language} />
       )}
-      <div className="glass-panel p-6 rounded-[2rem] space-y-6 animate-enter-forward overflow-hidden relative">
+      <div className={`glass-panel p-6 rounded-[2rem] space-y-6 animate-enter-forward overflow-hidden relative ${
+        isMain 
+          ? 'bg-gradient-to-b from-brand-teal/[0.04] via-white/50 to-white/50 border-brand-teal/10 shadow-xl shadow-brand-teal/[0.01]' 
+          : 'bg-gradient-to-b from-brand-orange/[0.03] via-white/50 to-white/50 border-brand-orange/10 shadow-xl shadow-brand-orange/[0.01]'
+      }`}>
         <div className="flex items-center justify-between border-b border-brand-navy/5 pb-4">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+               isMain ? 'bg-brand-teal/10 text-brand-teal' : 'bg-brand-orange/10 text-brand-orange'
+             }`}>
                 <span className="material-symbols-outlined">{isMain ? 'face' : 'toys'}</span>
              </div>
              <h3 className="text-xl font-bold text-brand-navy">{label}</h3>
@@ -98,18 +119,57 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({ character, onCha
         </div>
 
         <div className="space-y-5">
-          <div>
-            <label htmlFor={`characterName-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{nameLabel}</label>
-            <input 
-              type="text" 
-              id={`characterName-${label}`} 
-              value={character.name} 
-              onChange={handleNameChange} 
-              className="block w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-lg" 
-              placeholder={t('أدخل الاسم هنا...', 'Enter name here...')} 
-              required 
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <label htmlFor={`characterName-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{nameLabel}</label>
+              <input 
+                type="text" 
+                id={`characterName-${label}`} 
+                value={character.name} 
+                onChange={handleNameChange} 
+                className="block w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-lg" 
+                placeholder={t('أدخل الاسم هنا...', 'Enter name here...')} 
+                required 
+              />
+            </div>
+
+            {isMain && onAgeChange && (
+              <div>
+                <label htmlFor={`childAge-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{t('العمر', 'Age')}</label>
+                <input 
+                  type="number" 
+                  id={`childAge-${label}`} 
+                  value={childAge || ''} 
+                  onChange={(e) => onAgeChange(e.target.value)} 
+                  className="block w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-lg text-center" 
+                  min="1" max="12" 
+                  required
+                />
+              </div>
+            )}
           </div>
+
+          {isMain && childAge && parseInt(childAge, 10) >= 6 && onGenderChange && (
+            <div className="animate-enter-forward">
+              <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{t('جنس البطل', "Hero's Gender")}</label>
+              <div className="flex gap-3">
+                {['boy', 'girl'].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => onGenderChange(g as any)}
+                    className={`flex-1 py-3 rounded-2xl font-bold border-2 transition-all ${
+                      childGender === g 
+                        ? 'bg-brand-orange border-brand-orange text-white shadow-lg shadow-brand-orange/20' 
+                        : 'bg-white/50 border-brand-navy/5 text-brand-navy/60 hover:border-brand-orange/30'
+                    }`}
+                  >
+                    {g === 'boy' ? t('ولد', 'Boy') : t('بنت', 'Girl')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-3">{t('صورة الشخصية', "Character's Image")}</label>

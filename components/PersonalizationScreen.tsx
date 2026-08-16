@@ -15,18 +15,7 @@ interface PersonalizationScreenProps {
 const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, onBack, storyData, language }) => {
   const { currency } = useStory();
   const [localData, setLocalData] = useState(storyData);
-  const [isCharacterNameManuallyEdited, setIsCharacterNameManuallyEdited] = useState(false);
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
-
-  useEffect(() => {
-    if (!isCharacterNameManuallyEdited) {
-      const firstName = localData.childName.split(' ')[0];
-      setLocalData(prev => ({
-        ...prev,
-        mainCharacter: { ...prev.mainCharacter, name: firstName },
-      }));
-    }
-  }, [localData.childName, isCharacterNameManuallyEdited]);
 
   const normalizeName = (name: string): string => {
     return name.trim().split(' ').map(word => {
@@ -40,7 +29,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    const normalizedChildName = normalizeName(localData.childName).split(' ')[0];
+    const normalizedChildName = normalizeName(localData.mainCharacter.name).split(' ')[0];
     const normalizedMainCharName = normalizedChildName || 'Auto';
     const normalizedSecondCharName = localData.useSecondCharacter ? (normalizeName(localData.secondCharacter.name) || 'Auto') : '';
     const { childAge, mainCharacter, useSecondCharacter, secondCharacter } = localData;
@@ -84,71 +73,23 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
 
       <form onSubmit={handleNext} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" noValidate>
         
-        {/* Left Column: Form Info */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* Child Panel */}
-          <div className="glass-panel p-8 rounded-[2rem] space-y-6">
-            <div className="flex items-center gap-3 border-b border-brand-navy/5 pb-4">
-              <span className="material-symbols-outlined text-brand-teal">child_care</span>
-              <h3 className="text-xl font-bold text-brand-navy">{t('معلومات الطفل', "Child's Info")}</h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('الاسم الأول', "First Name")}</label>
-                <input 
-                  type="text" 
-                  value={localData.childName} 
-                  onChange={(e) => setLocalData({ ...localData, childName: e.target.value })} 
-                  className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold text-lg" 
-                  placeholder={t('سارة', 'Sarah')} 
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('العمر', "Age")}</label>
-                <input 
-                  type="number" 
-                  value={localData.childAge} 
-                  onChange={(e) => setLocalData({ ...localData, childAge: e.target.value })} 
-                  className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold text-lg text-center" 
-                  min="1" max="12" 
-                />
-              </div>
-            </div>
-
-            {parseInt(localData.childAge, 10) >= 6 && (
-              <div className="animate-enter-forward">
-                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('جنس البطل', "Hero's Gender")}</label>
-                <div className="flex gap-3">
-                  {['boy', 'girl'].map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => setLocalData({ ...localData, childGender: g as any })}
-                      className={`flex-1 py-3 rounded-2xl font-bold border-2 transition-all ${localData.childGender === g ? 'bg-brand-orange border-brand-orange text-white' : 'bg-white/50 border-brand-navy/5 text-brand-navy/60 hover:border-brand-orange/30'}`}
-                    >
-                      {g === 'boy' ? t('ولد', 'Boy') : t('بنت', 'Girl')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* End of Left Column */}
-        </div>
-
-        {/* Right Column: Character Visuals */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Left Column: Hero Details */}
+        <div className="lg:col-span-6 space-y-6">
           <CharacterInput
             label={t('الشخصية الرئيسية (بطل القصة)', 'Main Character (The Hero)')}
             character={localData.mainCharacter}
             onCharacterChange={(char) => setLocalData({ ...localData, mainCharacter: char })}
             isMain={true}
-            onManualEdit={() => setIsCharacterNameManuallyEdited(true)}
             language={language}
+            childAge={localData.childAge}
+            onAgeChange={(age) => setLocalData({ ...localData, childAge: age })}
+            childGender={localData.childGender}
+            onGenderChange={(gender) => setLocalData({ ...localData, childGender: gender })}
           />
+        </div>
+
+        {/* Right Column: Addons and Settings */}
+        <div className="lg:col-span-6 space-y-6">
 
           <div className="p-1 glass-panel rounded-[2rem]">
             <button 
