@@ -16,6 +16,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
   const { currency } = useStory();
   const [localData, setLocalData] = useState(storyData);
   const [isCharacterNameManuallyEdited, setIsCharacterNameManuallyEdited] = useState(false);
+  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
 
   useEffect(() => {
     if (!isCharacterNameManuallyEdited) {
@@ -40,13 +41,10 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedChildName = normalizeName(localData.childName).split(' ')[0];
-    const normalizedParentName = normalizeName(localData.parentName || '');
     const normalizedMainCharName = normalizedChildName || 'Auto';
     const normalizedSecondCharName = localData.useSecondCharacter ? (normalizeName(localData.secondCharacter.name) || 'Auto') : '';
-    const { childAge, parentEmail, mainCharacter, useSecondCharacter, secondCharacter } = localData;
+    const { childAge, mainCharacter, useSecondCharacter, secondCharacter } = localData;
 
-    if (!normalizedParentName.trim()) { alert(language === 'ar' ? 'الرجاء إدخال اسم الوالد/الأم.' : "Please enter the parent's full name."); return; }
-    if (!parentEmail?.trim() || !parentEmail.includes('@')) { alert(language === 'ar' ? 'الرجاء إدخال بريد إلكتروني صحيح.' : "Please enter a valid email address."); return; }
     if (!normalizedChildName.trim()) { alert(language === 'ar' ? 'الرجاء إدخال اسم الطفل.' : "Please enter the child's name."); return; }
     if (!childAge.trim()) { alert(language === 'ar' ? 'الرجاء إدخال عمر الطفل.' : "Please enter the child's age."); return; }
     const numericAge = parseInt(childAge, 10);
@@ -60,7 +58,6 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
     onNext({
       ...localData,
       childName: normalizedChildName,
-      parentName: normalizedParentName,
       mainCharacter: { ...localData.mainCharacter, name: normalizedMainCharName },
       secondCharacter: localData.secondCharacter ? { ...localData.secondCharacter, name: normalizedSecondCharName } : undefined,
       isCustomTheme: !!localData.occasion?.trim()
@@ -90,36 +87,6 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
         {/* Left Column: Form Info */}
         <div className="lg:col-span-5 space-y-6">
           
-          {/* Customer Panel */}
-          <div className="glass-panel p-8 rounded-[2rem] space-y-6">
-            <div className="flex items-center gap-3 border-b border-brand-navy/5 pb-4">
-              <span className="material-symbols-outlined text-brand-orange">person</span>
-              <h3 className="text-xl font-bold text-brand-navy">{t('معلومات التواصل', 'Contact Info')}</h3>
-            </div>
-            
-            <div className="space-y-5">
-              <div>
-                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('اسم الوالد/الأم', "Parent's Name")}</label>
-                <input 
-                  type="text" 
-                  value={localData.parentName || ''} 
-                  onChange={(e) => setLocalData({ ...localData, parentName: e.target.value })} 
-                  className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold" 
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-widest mb-2">{t('البريد الإلكتروني', "Email")}</label>
-                <input 
-                  type="email" 
-                  value={localData.parentEmail || ''} 
-                  onChange={(e) => setLocalData({ ...localData, parentEmail: e.target.value })} 
-                  className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold" 
-                  placeholder="name@example.com" 
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Child Panel */}
           <div className="glass-panel p-8 rounded-[2rem] space-y-6">
             <div className="flex items-center gap-3 border-b border-brand-navy/5 pb-4">
@@ -272,40 +239,104 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
           )}
 
           {/* Story Language Override */}
-          <div className="glass-panel p-8 rounded-[2.5rem] space-y-6">
-             <div className="flex items-center gap-3 border-b border-brand-navy/5 pb-4">
-                <span className="material-symbols-outlined text-brand-orange">translate</span>
-                <h3 className="text-xl font-bold text-brand-navy">{t('لغة القصة', 'Story Language')}</h3>
+          <div className="glass-panel p-6 rounded-[2rem] space-y-4">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                   <span className="material-symbols-outlined text-brand-orange">translate</span>
+                   <div className="text-start">
+                     <span className="text-sm font-bold text-brand-navy/80">{t('لغة القصة', 'Story Language')}</span>
+                     <p className="text-[10px] text-brand-navy/40">
+                       {t('بأي لغة تريد كتابة قصتك؟', 'Which language should we write your story in?')}
+                     </p>
+                   </div>
+                </div>
+                
+                {!isChangingLanguage && (
+                  <button
+                    type="button"
+                    onClick={() => setIsChangingLanguage(true)}
+                    className="px-4 py-1.5 bg-brand-orange/10 text-brand-orange border border-brand-orange/20 rounded-full text-xs font-black uppercase tracking-wider hover:bg-brand-orange hover:text-white transition-all duration-150 active:scale-95"
+                  >
+                    {t('تغيير', 'Change')}
+                  </button>
+                )}
              </div>
-             
-             <p className="text-[10px] font-bold text-brand-navy/40 uppercase tracking-widest">
-                {t('بأي لغة تريد كتابة قصتك؟', 'Which language should we write your story in?')}
-             </p>
 
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                {[
-                    { code: 'ar', label: 'العربية', flag: '🇸🇦' },
-                    { code: 'en', label: 'English', flag: '🇺🇸' },
-                    { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-                    { code: 'es', label: 'Español', flag: '🇪🇸' },
-                    { code: 'fr', label: 'Français', flag: '🇫🇷' },
-                    { code: 'it', label: 'Italiano', flag: '🇮🇹' },
-                    { code: 'pt', label: 'Português', flag: '🇵🇹' },
-                    { code: 'ru', label: 'Русский', flag: '🇷🇺' },
-                    { code: 'ja', label: '日本語', flag: '🇯🇵' },
-                    { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
-                ].map((langOption) => (
-                    <button
-                        key={langOption.code}
-                        type="button"
-                        onClick={() => setLocalData({ ...localData, language: langOption.code as Language })}
-                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all group ${localData.language === langOption.code ? 'bg-brand-orange border-brand-orange text-white shadow-lg shadow-brand-orange/20' : 'bg-white/50 border-brand-navy/5 text-brand-navy/60 hover:border-brand-orange/30'}`}
-                    >
-                        <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">{langOption.flag}</span>
-                        <span className="text-[10px] font-black uppercase tracking-tighter">{langOption.label}</span>
-                    </button>
-                ))}
-             </div>
+             {!isChangingLanguage ? (
+               <div className="flex items-center gap-3 bg-white/40 p-4 rounded-2xl border border-white/60">
+                 <span className="text-2xl">{[
+                     { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+                     { code: 'en', label: 'English', flag: '🇺🇸' },
+                     { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+                     { code: 'es', label: 'Español', flag: '🇪🇸' },
+                     { code: 'fr', label: 'Français', flag: '🇫🇷' },
+                     { code: 'it', label: 'Italiano', flag: '🇮🇹' },
+                     { code: 'pt', label: 'Português', flag: '🇵🇹' },
+                     { code: 'ru', label: 'Русский', flag: '🇷🇺' },
+                     { code: 'ja', label: '日本語', flag: '🇯🇵' },
+                     { code: 'tr', label: 'Türkçe', flag: '🇹🇷' }
+                 ].find(l => l.code === localData.language)?.flag || '🇺🇸'}</span>
+                 <div className="text-start">
+                   <p className="text-sm font-bold text-brand-navy">
+                     {[
+                         { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+                         { code: 'en', label: 'English', flag: '🇺🇸' },
+                         { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+                         { code: 'es', label: 'Español', flag: '🇪🇸' },
+                         { code: 'fr', label: 'Français', flag: '🇫🇷' },
+                         { code: 'it', label: 'Italiano', flag: '🇮🇹' },
+                         { code: 'pt', label: 'Português', flag: '🇵🇹' },
+                         { code: 'ru', label: 'Русский', flag: '🇷🇺' },
+                         { code: 'ja', label: '日本語', flag: '🇯🇵' },
+                         { code: 'tr', label: 'Türkçe', flag: '🇹🇷' }
+                     ].find(l => l.code === localData.language)?.label || 'English'}
+                   </p>
+                   <p className="text-[10px] text-brand-navy/50">
+                     {t('اللغة المختارة للقصة', 'Selected story language')}
+                   </p>
+                 </div>
+               </div>
+             ) : (
+               <div className="animate-enter-forward space-y-4 pt-2">
+                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                   {[
+                       { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+                       { code: 'en', label: 'English', flag: '🇺🇸' },
+                       { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+                       { code: 'es', label: 'Español', flag: '🇪🇸' },
+                       { code: 'fr', label: 'Français', flag: '🇫🇷' },
+                       { code: 'it', label: 'Italiano', flag: '🇮🇹' },
+                       { code: 'pt', label: 'Português', flag: '🇵🇹' },
+                       { code: 'ru', label: 'Русский', flag: '🇷🇺' },
+                       { code: 'ja', label: '日本語', flag: '🇯🇵' },
+                       { code: 'tr', label: 'Türkçe', flag: '🇹🇷' }
+                   ].map((langOption) => (
+                     <button
+                       key={langOption.code}
+                       type="button"
+                       onClick={() => {
+                         setLocalData({ ...localData, language: langOption.code as Language });
+                         setIsChangingLanguage(false);
+                       }}
+                       className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all group ${localData.language === langOption.code ? 'bg-brand-orange border-brand-orange text-white shadow-lg shadow-brand-orange/20' : 'bg-white/50 border-brand-navy/5 text-brand-navy/60 hover:border-brand-orange/30'}`}
+                     >
+                       <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">{langOption.flag}</span>
+                       <span className="text-[10px] font-black uppercase tracking-tighter">{langOption.label}</span>
+                     </button>
+                   ))}
+                 </div>
+                 
+                 <div className="flex justify-end">
+                   <button
+                     type="button"
+                     onClick={() => setIsChangingLanguage(false)}
+                     className="px-4 py-1.5 bg-brand-navy text-white rounded-full text-xs font-bold hover:bg-brand-navy/80 transition-all"
+                   >
+                     {t('إلغاء', 'Cancel')}
+                   </button>
+                 </div>
+               </div>
+             )}
           </div>
 
           {/* Navigation */}
