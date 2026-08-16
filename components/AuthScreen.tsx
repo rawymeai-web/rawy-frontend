@@ -105,12 +105,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess, langu
                     </motion.div>
                 ) : (
                     <div className="space-y-8 relative z-10">
-                        {/* Social Grid */}
-                        <div className="grid grid-cols-3 gap-4">
+                        {/* Social Buttons */}
+                        <div className="space-y-4">
                             <button 
                                 onClick={handleGoogleLogin}
                                 disabled={isLoading}
-                                className="flex flex-col items-center justify-center gap-3 bg-white border border-gray-100 py-5 rounded-3xl hover:border-brand-orange hover:shadow-xl hover:shadow-brand-orange/5 transition-all group disabled:opacity-50"
+                                className="w-full flex items-center justify-center gap-4 bg-white border border-gray-100 py-5 rounded-3xl hover:border-brand-orange hover:shadow-xl hover:shadow-brand-orange/5 transition-all group disabled:opacity-50"
                             >
                                 <svg className="w-6 h-6" viewBox="0 0 24 24">
                                     <path fill="#EA4335" d="M12 5.04c1.94 0 3.51.68 4.75 1.81l3.5-3.5C18.16 1.54 15.3 0 12 0 7.31 0 3.25 2.67 1.25 6.57l4.13 3.2C6.39 7.04 8.97 5.04 12 5.04z"/>
@@ -118,29 +118,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess, langu
                                     <path fill="#FBBC05" d="M5.38 14.77c-.24-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27L1.25 7.03C.45 8.54 0 10.22 0 12s.45 3.46 1.25 4.97l4.13-3.2z"/>
                                     <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.76-2.91c-1.08.72-2.45 1.16-4.17 1.16-3.03 0-5.61-2.02-6.53-4.73l-4.13 3.2C3.25 21.33 7.31 24 12 24z"/>
                                 </svg>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 group-hover:text-brand-navy">Google</span>
-                            </button>
-
-                            <button 
-                                onClick={handleAppleLogin}
-                                disabled={isLoading}
-                                className="flex flex-col items-center justify-center gap-3 bg-black text-white py-5 rounded-3xl hover:shadow-xl hover:shadow-black/20 transition-all disabled:opacity-50"
-                            >
-                                <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                                    <path d="M17.057 11.233c.01 2.378 2.083 3.167 2.106 3.176-.02.058-.33 1.133-1.096 2.253-.663.966-1.353 1.93-2.434 1.95-.53.01-.89-.23-1.49-.23-.605 0-.986.23-1.495.23-1.081-.02-1.79-.984-2.458-1.95-1.362-1.975-2.404-5.586-1.01-8.004.693-1.203 1.932-1.964 3.284-1.984.51-.01.99.23 1.495.23.504 0 .993-.23 1.494-.23 1.264.02 2.41.67 3.109 1.63-.04.053-1.004.836-1.004 3.14zM15.42 6.78c.563-.683.947-1.636.843-2.58-.809.034-1.785.542-2.365 1.226-.52.613-.974 1.583-.852 2.502.903.07 1.81-.465 2.374-1.148z"/>
-                                </svg>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-white/50">Apple</span>
-                            </button>
-
-                            <button 
-                                onClick={handleFacebookLogin}
-                                disabled={isLoading}
-                                className="flex flex-col items-center justify-center gap-3 bg-[#1877F2] text-white py-5 rounded-3xl hover:shadow-xl hover:shadow-[#1877F2]/20 transition-all group disabled:opacity-50"
-                            >
-                                <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                                </svg>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-white/50 group-hover:text-white">Facebook</span>
+                                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 group-hover:text-brand-navy">
+                                    {t('الدخول بحساب Google', 'Continue with Google')}
+                                </span>
                             </button>
                         </div>
 
