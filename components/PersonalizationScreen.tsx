@@ -71,16 +71,16 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-12 animate-enter-forward">
-      <div className="text-center space-y-4 mb-12">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-orange/10 rounded-full mb-2">
-           <span className="material-symbols-outlined text-brand-orange text-sm">edit_note</span>
-           <span className="text-xs font-bold text-brand-orange tracking-widest uppercase">{t('تخصيص بطل القصة', 'PERSONALIZE YOUR HERO')}</span>
+      <div className="text-center space-y-3 mb-12">
+        <div className="flex items-center justify-center gap-1.5 text-brand-orange mb-1">
+           <span className="material-symbols-outlined text-sm">edit_note</span>
+           <span className="text-[10px] font-black tracking-[0.2em] uppercase">{t('تخصيص بطل القصة', 'PERSONALIZE YOUR HERO')}</span>
         </div>
-        <h2 className="text-4xl font-black text-brand-navy leading-tight">
+        <h2 className="text-4xl text-brand-navy apple-display-heading">
           {t('أخبرنا عن ', 'Tell us about ')}
           <span className="text-brand-teal">{t('بطل القصة', 'the hero')}</span>
         </h2>
-        <p className="text-brand-navy/60 max-w-xl mx-auto">
+        <p className="text-brand-navy/60 max-w-xl mx-auto text-sm apple-body-text">
           {t('كل تفصيل هنا يساعدنا في صنع تجربة سحرية فريدة لطفلك.', 'Every detail helps us craft a unique magical experience for your child.')}
         </p>
       </div>
