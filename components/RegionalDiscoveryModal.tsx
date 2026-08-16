@@ -314,7 +314,6 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                                 className="w-full bg-brand-navy text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.25em] hover:bg-brand-orange hover:shadow-2xl hover:shadow-brand-orange/30 transition-all flex items-center justify-center gap-4 group"
                             >
                                 {t('ابدأ رحلتك الآن', 'Start Your Journey')}
-                                <span className="material-symbols-outlined text-2xl group-hover:translate-x-2 transition-transform">auto_fix_high</span>
                             </button>
                         </div>
                     </div>

@@ -102,7 +102,6 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                   value={localData.parentName || ''} 
                   onChange={(e) => setLocalData({ ...localData, parentName: e.target.value })} 
                   className="w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold" 
-                  placeholder={t('شادي أيمن', 'Shady Ayman')} 
                 />
               </div>
               <div>

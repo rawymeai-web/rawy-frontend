@@ -47,15 +47,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
             >
               <span className="absolute inset-0 bg-white/10 blur-md top-0 h-1/2 rounded-t-full pointer-events-none"></span>
               <span>Create a Story Now</span>
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-            </button>
-            <button 
-              onClick={() => {
-                throw new Error("Rawy Sentry Verification Error!");
-              }}
-              className="text-[12px] text-red-500 hover:text-red-700 underline opacity-40 hover:opacity-100 transition-opacity mt-4 block"
-            >
-              [Debug: Test Sentry Error Reporting]
             </button>
           </div>
 
