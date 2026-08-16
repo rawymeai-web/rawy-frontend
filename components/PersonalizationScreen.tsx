@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { CharacterInput } from './CharacterInput';
 import type { StoryData, Character, Language } from '../types';
+import { useStory } from '../context/StoryContext';
+import { convertPrice } from '../services/currencyService';
 
 interface PersonalizationScreenProps {
   onNext: (data: Partial<StoryData>) => void;
@@ -11,6 +13,7 @@ interface PersonalizationScreenProps {
 }
 
 const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, onBack, storyData, language }) => {
+  const { currency } = useStory();
   const [localData, setLocalData] = useState(storyData);
   const [isCharacterNameManuallyEdited, setIsCharacterNameManuallyEdited] = useState(false);
 
@@ -207,11 +210,15 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
             >
               <div className="flex items-center gap-4">
                  <span className="material-symbols-outlined">{localData.useSecondCharacter ? 'group_add' : 'person_add'}</span>
-                  <div className="text-left">
-                    <div className="flex items-center gap-2">
+                  <div className="text-start">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="font-bold text-sm">{t('إضافة شخصية ثانية؟', 'Add a second character?')}</p>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${localData.useSecondCharacter ? 'bg-white text-brand-teal' : 'bg-brand-teal/10 text-brand-teal'}`}>
-                        + 2.000 KWD
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border transition-all ${
+                        localData.useSecondCharacter 
+                          ? 'bg-white text-brand-teal border-white' 
+                          : 'bg-brand-orange/10 text-brand-orange border-brand-orange/20'
+                      }`}>
+                        {t('ميزة إضافية', 'PREMIUM')} • +{convertPrice(2.0, currency)}
                       </span>
                     </div>
                     <p className={`text-[10px] ${localData.useSecondCharacter ? 'text-white/80' : 'text-brand-navy/40'}`}>
