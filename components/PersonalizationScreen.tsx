@@ -136,33 +136,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
             )}
           </div>
 
-          <div className="glass-panel p-6 rounded-[2rem] flex flex-wrap sm:flex-nowrap items-center justify-between gap-4">
-             <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-brand-teal">celebration</span>
-                <div className="text-start">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-bold text-brand-navy/80">{t('مناسبة خاصة؟', 'Special Occasion?')}</span>
-                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border transition-all ${
-                      localData.occasion?.trim()
-                        ? 'bg-brand-teal text-white border-brand-teal shadow-sm' 
-                        : 'bg-brand-orange/10 text-brand-orange border-brand-orange/20'
-                    }`}>
-                      {t('ميزة إضافية', 'PREMIUM')} • +{convertPrice(1.0, currency)}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-brand-navy/40 mt-0.5">
-                    {t('تخصيص القصة لتناسب مناسبة معينة', 'Tailor the story to a specific event')}
-                  </p>
-                </div>
-             </div>
-             <input 
-                type="text" 
-                value={localData.occasion || ''} 
-                onChange={(e) => setLocalData({ ...localData, occasion: e.target.value })} 
-                className="bg-transparent border-b-2 border-brand-navy/5 focus:border-brand-orange outline-none px-2 py-1 text-sm font-bold text-brand-navy placeholder:text-brand-navy/20 w-full sm:w-48 text-start"
-                placeholder={t('مثال: عيد ميلاد', 'e.g. Birthday')}
-              />
-          </div>
+          {/* End of Left Column */}
         </div>
 
         {/* Right Column: Character Visuals */}

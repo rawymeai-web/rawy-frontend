@@ -4,6 +4,8 @@ import { getGuidelineComponentsForTheme } from '../services/storyGuidelines';
 import { getStyleForWriteYourOwn } from '../constants';
 import type { StoryData, Language, StoryTheme } from '../types';
 import { backendApi } from '../services/backendApi';
+import { useStory } from '../context/StoryContext';
+import { convertPrice } from '../services/currencyService';
 
 interface ThemeScreenProps {
   onNext: (data: Partial<StoryData>) => void;
@@ -70,12 +72,14 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ emoji, title, description, isSele
 );
 
 const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, language }) => {
+  const { currency } = useStory();
   const [themes, setThemes] = useState<StoryTheme[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(storyData.themeId || null);
   const [isAdvancedMode, setIsAdvancedMode] = useState(!!storyData.customGoal);
   const [customTitle, setCustomTitle] = useState(storyData.title);
   const [customGoal, setCustomGoal] = useState(storyData.customGoal || '');
+  const [occasion, setOccasion] = useState(storyData.occasion || '');
   const [customChallenge, setCustomChallenge] = useState(storyData.customChallenge || '');
   const [customStoryText, setCustomStoryText] = useState(storyData.customStoryText || '');
   const [customIllustrationNotes, setCustomIllustrationNotes] = useState(storyData.customIllustrationNotes || '');
@@ -148,7 +152,8 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
       customStoryText,
       customIllustrationNotes,
       selectedStylePrompt: finalStylePrompt,
-      isCustomTheme: isCustomMode || !!customGoal || !!customChallenge,
+      occasion,
+      isCustomTheme: isCustomMode || !!customGoal || !!customChallenge || !!occasion.trim(),
       ...(selectedThemeId === 'val-teamwork' && secondHeroName ? {
         secondCharacter: {
           name: secondHeroName,
@@ -248,6 +253,33 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
             </div>
           </div>
         )}
+        <div className="glass-panel p-8 rounded-[2.5rem] flex flex-wrap sm:flex-nowrap items-center justify-between gap-6 max-w-2xl mx-auto mb-8 animate-enter-forward">
+           <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-brand-teal text-3xl">celebration</span>
+              <div className="text-start">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-lg font-bold text-brand-navy">{t('مناسبة خاصة؟', 'Special Occasion?')}</span>
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border transition-all ${
+                    occasion.trim()
+                      ? 'bg-brand-teal text-white border-brand-teal shadow-sm' 
+                      : 'bg-brand-orange/10 text-brand-orange border-brand-orange/20'
+                  }`}>
+                    {t('ميزة إضافية', 'PREMIUM')} • +{convertPrice(1.0, currency)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-brand-navy/40 mt-1">
+                  {t('تخصيص القصة لتناسب مناسبة معينة', 'Tailor the story to a specific event')}
+                </p>
+              </div>
+           </div>
+           <input 
+              type="text" 
+              value={occasion} 
+              onChange={(e) => setOccasion(e.target.value)} 
+              className="w-full sm:w-64 px-5 py-3.5 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white outline-none text-brand-navy font-bold text-base text-start"
+              placeholder={t('مثال: عيد ميلاد سارة الثامن', 'e.g. Sarah\'s 8th Birthday')}
+            />
+        </div>
 
         <div className="text-center pt-8 mb-12">
           <button 
