@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface PageTransitionProps {
     children: React.ReactNode;
@@ -10,9 +9,9 @@ interface PageTransitionProps {
 const pageVariants = {
     initial: {
         opacity: 0,
-        x: 20,
-        scale: 0.98,
-        filter: "blur(10px)"
+        x: 16,
+        scale: 0.99,
+        filter: "blur(4px)"
     },
     in: {
         opacity: 1,
@@ -22,25 +21,40 @@ const pageVariants = {
     },
     out: {
         opacity: 0,
-        scale: 1.05,
-        filter: "blur(5px)"
+        x: -16,
+        scale: 0.99,
+        filter: "blur(4px)"
     }
 };
 
 const pageTransition = {
+    type: "spring",
+    bounce: 0,
+    duration: 0.4
+};
+
+const reducedVariants = {
+    initial: { opacity: 0 },
+    in: { opacity: 1 },
+    out: { opacity: 0 }
+};
+
+const reducedTransition = {
     type: "tween",
-    ease: [0.34, 1.56, 0.64, 1], // The "Secret Sauce" cubic-bezier
-    duration: 0.5
+    ease: "linear",
+    duration: 0.2
 };
 
 export const PageTransition: React.FC<PageTransitionProps> = ({ children, className = "w-full h-full" }) => {
+    const shouldReduceMotion = useReducedMotion();
+
     return (
         <motion.div
             initial="initial"
             animate="in"
             exit="out"
-            variants={pageVariants}
-            transition={pageTransition}
+            variants={shouldReduceMotion ? reducedVariants : pageVariants}
+            transition={shouldReduceMotion ? reducedTransition : pageTransition}
             className={className}
         >
             {children}

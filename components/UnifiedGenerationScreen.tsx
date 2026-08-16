@@ -61,7 +61,9 @@ export const UnifiedGenerationScreen: React.FC<UnifiedGenerationScreenProps> = (
             {/* Header: Global Progress */}
             <div className="absolute top-0 inset-x-0 p-6 bg-white/95 backdrop-blur-xl z-[60] shadow-lg border-b border-gray-200">
                 <div className="max-w-4xl mx-auto flex items-center gap-6">
-                    <div className="w-12 opacity-50"><Logo /></div>
+                    <div className="w-12 opacity-50 flex items-center justify-center">
+                        <Logo showText={false} className="h-8 w-8" />
+                    </div>
                     <div className="flex-1 space-y-2">
                         <div className="flex justify-between items-baseline">
                             <div className="flex flex-col">

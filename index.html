@@ -90,11 +90,28 @@
     }
 
     .glass-panel {
-      background: rgba(255, 255, 255, 0.45);
-      backdrop-filter: blur(32px);
-      -webkit-backdrop-filter: blur(32px);
-      border: 1.5px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 20px 40px rgba(36, 58, 97, 0.08);
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-top: 1.5px solid rgba(255, 255, 255, 0.7); /* catch light */
+      box-shadow: 0 10px 30px rgba(0, 26, 64, 0.04), 0 1px 3px rgba(0, 26, 64, 0.02);
+      transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-panel:hover {
+      box-shadow: 0 15px 35px rgba(0, 26, 64, 0.06), 0 2px 5px rgba(0, 26, 64, 0.03);
+    }
+
+    .apple-display-heading {
+      letter-spacing: -0.035em;
+      line-height: 1.15;
+      font-weight: 800;
+    }
+
+    .apple-body-text {
+      letter-spacing: 0em;
+      line-height: 1.5;
     }
 
     .bg-noise {
@@ -142,6 +159,53 @@
     body {
       background-color: #FFF9F0;
       color: #001A40;
+    }
+
+    /* Accessibility Overrides */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-delay: 0s !important;
+        animation-duration: 0s !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0s !important;
+        scroll-behavior: auto !important;
+        transform: none !important;
+      }
+      .animate-enter-forward {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+      }
+      .animate-stitch-in, .animate-stitch-out {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .glass-panel, header, .header-blur {
+        background: #FFFFFF !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 1.5px solid #001A40 !important;
+      }
+    }
+
+    @media (prefers-contrast: more) {
+      body {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+      }
+      .glass-panel {
+        border: 2px solid #001A40 !important;
+      }
+    }
+
+    /* Reset letter-spacing in RTL/Arabic contexts to prevent cursive letters from disconnecting */
+    [dir="rtl"] *, [lang="ar"] * {
+      letter-spacing: normal !important;
     }
   </style>
 

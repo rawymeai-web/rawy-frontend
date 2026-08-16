@@ -73,8 +73,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess, langu
                 <div className="absolute bottom-0 left-0 w-40 h-40 bg-brand-teal/10 rounded-full -ml-20 -mb-20 blur-3xl animate-pulse" />
 
                 <div className="relative z-10 flex flex-col items-center">
-                    <div className="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-6 border border-gray-50">
-                        <Logo />
+                    <div className="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-6 border border-gray-50 overflow-hidden p-3">
+                        <Logo showText={false} className="h-12 w-12" />
                     </div>
                     <div className="space-y-2">
                         <h2 className="text-4xl font-black text-brand-navy uppercase tracking-tighter">

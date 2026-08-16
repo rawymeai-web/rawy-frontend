@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Stitch Export - Storybook Editor</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        :root {
+            --surface-container: #1f1f25;
+            --background: #131319;
+            --primary: #bdc2ff;
+            --secondary: #ffbf81;
+            --tertiary: #70d8c8;
+            --on-background: #e4e1ea;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--on-background);
+        }
+        .headline { font-family: 'Space Grotesk', sans-serif; }
+        .glass-panel {
+            background-color: rgba(31, 31, 37, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .active-spread {
+            box-shadow: 0 0 0 2px #ff9800, 0 0 20px 0 rgba(255, 152, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col antialiased">
+
+    <!-- TOP NAVIGATION: MISSION CONTROL -->
+    <nav class="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-black/20 backdrop-blur-md z-50">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+                <span class="material-symbols-outlined text-white font-variation-settings-'FILL'-1">auto_stories</span>
+            </div>
+            <div>
+                <h1 class="headline font-black text-lg tracking-tight leading-none">STORY_ENGINE</h1>
+                <p class="text-[10px] font-bold text-orange-500/80 uppercase tracking-[0.2em]">Live Session: ORD-892A</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div class="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span class="text-[10px] font-black uppercase tracking-widest text-white/60">AI Workers Active</span>
+            </div>
+            <button class="px-6 py-2 bg-white text-black rounded-full text-[11px] font-black uppercase tracking-widest hover:scale-105 transition-transform">
+                Finalize & Print
+            </button>
+        </div>
+    </nav>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- SIDEBAR: ASSET DIRECTORY -->
+        <aside class="w-72 border-r border-white/5 flex flex-col bg-black/10">
+            <div class="p-6 border-b border-white/5">
+                <h3 class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4">Sequence Manifest</h3>
+                <div class="space-y-3">
+                    <!-- Spread Item -->
+                    <div class="p-3 rounded-2xl glass-panel active-spread flex gap-3 cursor-pointer">
+                        <div class="w-16 h-12 rounded-lg bg-white/10 overflow-hidden border border-white/10">
+                            <div class="w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-white/20">image</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-black text-white">Spread 01</p>
+                            <p class="text-[9px] text-orange-500 font-bold uppercase">Main Introduction</p>
+                        </div>
+                    </div>
+                    <!-- Repeat for more spreads -->
+                    <div class="p-3 rounded-2xl hover:bg-white/5 flex gap-3 cursor-pointer transition-colors opacity-50">
+                        <div class="w-16 h-12 rounded-lg bg-white/10 overflow-hidden border border-white/10"></div>
+                        <div>
+                            <p class="text-[11px] font-black text-white/60">Spread 02</p>
+                            <p class="text-[9px] text-white/20 font-bold uppercase">The Discovery</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DNA IDENTITY ANCHOR -->
+            <div class="p-6 mt-auto">
+                <div class="p-4 rounded-[2rem] bg-white/5 border border-white/10">
+                    <h4 class="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-3">Identity Anchor (DNA)</h4>
+                    <div class="flex gap-2">
+                        <div class="flex-1 aspect-square rounded-2xl bg-white/10 border border-white/10 overflow-hidden">
+                             <img src="https://via.placeholder.com/100" class="w-full h-full object-cover grayscale opacity-50" />
+                        </div>
+                        <div class="flex-1 aspect-square rounded-2xl bg-orange-500/20 border border-orange-500/40 overflow-hidden">
+                             <img src="https://via.placeholder.com/100" class="w-full h-full object-cover" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN EDITOR CANVAS -->
+        <main class="flex-1 flex flex-col bg-[#0d0e13] relative overflow-hidden">
+            
+            <!-- FLOATING AI INSTRUCTION BAR -->
+            <div class="absolute top-8 left-1/2 -translate-x-1/2 w-full max-w-2xl z-40">
+                <div class="glass-panel p-2 rounded-full border-white/20 shadow-2xl flex items-center gap-4 pl-6 pr-2">
+                    <span class="material-symbols-outlined text-orange-500">psychology</span>
+                    <input type="text" placeholder="Instruct AI to modify the whole book..." class="flex-1 bg-transparent border-none text-white text-sm outline-none placeholder-white/20" />
+                    <button class="px-6 py-2 bg-orange-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/40">Apply Globally</button>
+                </div>
+            </div>
+
+            <div class="flex-1 flex items-center justify-center p-20">
+                <!-- SPREAD PREVIEW -->
+                <div class="w-full max-w-5xl aspect-[2/1] rounded-[4rem] overflow-hidden border-[12px] border-white/5 shadow-2xl relative group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10"></div>
+                    
+                    <!-- TEXT OVERLAYS -->
+                    <div class="absolute inset-0 flex">
+                        <div class="flex-1 p-20 flex items-center justify-center text-center">
+                            <div class="max-w-xs space-y-4">
+                                <h2 class="headline text-4xl font-black text-white leading-tight">Once upon a time in a magical land...</h2>
+                                <button class="p-2 rounded-full bg-white/5 text-white/40 hover:text-white transition-colors">
+                                    <span class="material-symbols-outlined text-lg">edit</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex-1"></div>
+                    </div>
+
+                    <!-- HUD OVERLAYS -->
+                    <div class="absolute top-8 right-8 flex gap-2">
+                        <button class="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-white hover:bg-orange-500 transition-colors">
+                            <span class="material-symbols-outlined">refresh</span>
+                        </button>
+                        <button class="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-white hover:bg-orange-500 transition-colors">
+                            <span class="material-symbols-outlined">layers</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOWER TERMINAL / LOGS -->
+            <div class="h-48 border-t border-white/5 flex flex-col bg-black/20">
+                <div class="px-6 py-2 border-b border-white/5 flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-orange-500 text-sm">terminal</span>
+                        <span class="text-[9px] font-black text-white/40 uppercase tracking-widest">Logic Processor Logs</span>
+                    </div>
+                    <span class="text-[9px] font-black text-green-500 uppercase tracking-widest">System Stable</span>
+                </div>
+                <div class="flex-1 p-6 font-mono text-[11px] space-y-1 text-white/30 overflow-y-auto">
+                    <p><span class="text-white/10">[14:22:01]</span> <span class="text-orange-500/60">WORKER_01:</span> Analyzing spread_01 context...</p>
+                    <p><span class="text-white/10">[14:22:05]</span> <span class="text-teal-500/60">RENDER_04:</span> Pushing pixels to canvas_v5...</p>
+                    <p><span class="text-white/10">[14:22:10]</span> <span class="text-white/60">SYSTEM:</span> Spread 01 synchronized with master DNA.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT PANEL: CONTROL HUB -->
+        <aside class="w-80 border-l border-white/5 flex flex-col bg-black/10">
+            <div class="p-8 space-y-8">
+                <div>
+                    <h3 class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-6">Art Style Parameters</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 rounded-3xl bg-white/5 border border-white/10 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-orange-500/5 rounded-full blur-xl"></div>
+                            <p class="text-[10px] font-black text-orange-500 uppercase mb-1">Active Style</p>
+                            <p class="text-sm font-black text-white">Magical Watercolor</p>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[9px] font-black text-white/30 uppercase">
+                                <span>Identity Fidelity</span>
+                                <span>85%</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full bg-orange-500 w-[85%] rounded-full shadow-[0_0_10px_rgba(249,115,22,0.5)]"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-6">Spread Layout</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button class="p-4 rounded-2xl border-2 border-orange-500 bg-orange-500/10 flex flex-col items-center gap-2">
+                            <span class="material-symbols-outlined text-orange-500">align_horizontal_left</span>
+                            <span class="text-[8px] font-black text-white uppercase">Left Text</span>
+                        </button>
+                        <button class="p-4 rounded-2xl border-2 border-white/10 hover:border-white/20 transition-colors flex flex-col items-center gap-2">
+                            <span class="material-symbols-outlined text-white/20">align_horizontal_right</span>
+                            <span class="text-[8px] font-black text-white/40 uppercase">Right Text</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+</body>
+</html>

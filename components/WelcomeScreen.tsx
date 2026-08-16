@@ -34,15 +34,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
           
           {/* Text Content */}
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left space-y-8">
-            <h1 className="text-[48px] font-extrabold leading-[1.2] tracking-[-0.02em] text-[#001a40]">
+            <h1 className="text-[48px] text-[#001a40] apple-display-heading">
               Make Your Child the <span className="relative inline-block text-[#F78F50]">Hero<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> of Their Own Story.
             </h1>
-            <p className="text-[18px] font-medium leading-[1.6] text-[#554339] max-w-xl">
+            <p className="text-[18px] font-medium leading-[1.6] text-[#554339] max-w-xl apple-body-text">
               Create magical, personalized adventures filled with wonder and imagination. A premium digital storytelling experience.
             </p>
             <button 
               onClick={onStart}
-              className="text-[24px] font-bold py-4 px-10 rounded-full shadow-[0px_20px_40px_rgba(247,143,80,0.3)] hover:shadow-[0px_0px_30px_rgba(247,143,80,0.6)] hover:scale-105 transition-all duration-300 flex items-center gap-3 relative overflow-hidden group bg-[#F78F50] text-white" 
+              className="text-[24px] font-bold py-4 px-10 rounded-full shadow-sm hover:shadow-[0px_10px_25px_rgba(247,143,80,0.45)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center gap-3 relative overflow-hidden group bg-[#F78F50] text-white" 
               id="btn_start_journey"
             >
               <span className="absolute inset-0 bg-white/10 blur-md top-0 h-1/2 rounded-t-full pointer-events-none"></span>

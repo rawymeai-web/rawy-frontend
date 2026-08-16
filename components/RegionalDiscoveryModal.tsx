@@ -154,8 +154,8 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                     
                     <div className="p-10 relative z-10 space-y-8">
                         <div className="flex flex-col items-center text-center space-y-3">
-                            <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center border border-gray-50 mb-1">
-                                <Logo />
+                            <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center border border-gray-50 mb-1 overflow-hidden p-2">
+                                <Logo showText={false} className="h-10 w-10" />
                             </div>
                             <div>
                                 <h2 className="text-3xl font-black text-brand-navy tracking-tighter uppercase">

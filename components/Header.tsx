@@ -34,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full py-4 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm transition-all duration-300">
+    <header className="sticky top-0 z-30 w-full py-3 bg-white/70 backdrop-blur-xl saturate-180 border-b border-white/20 border-t border-t-white/35 shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 header-blur">
       <div className="flex items-center justify-between px-4 sm:px-8 max-w-7xl mx-auto">
 
         {/* Logo with Secret Admin Trigger */}
