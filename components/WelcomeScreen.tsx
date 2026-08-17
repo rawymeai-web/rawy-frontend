@@ -98,18 +98,18 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
           </div>
 
           {/* Hero Image / Illustration Area */}
-          <div className="flex-grow w-full max-w-md md:max-w-xl relative aspect-square" id="hero_carousel">
-            <div className="relative group overflow-visible w-full h-full">
+          <div className="flex-grow w-full max-w-md md:max-w-xl relative" id="hero_carousel">
+            <div className="relative group overflow-visible w-full">
               
               {/* Book Shadow/Depth (Global) */}
               <div className="absolute inset-0 bg-black/20 rounded-r-2xl blur-xl transform translate-x-4 translate-y-4"></div>
               
               {/* Slides Container */}
-              <div className="relative w-full h-full overflow-hidden rounded-r-2xl shadow-2xl">
+              <div className="relative w-full aspect-square overflow-hidden rounded-r-2xl shadow-2xl bg-slate-100/50">
                 {COVER_METADATA.map((cover, index) => (
                   <div 
                     key={index} 
-                    className={`transition-all duration-700 ease-in-out absolute inset-0 ${currentSlide === index ? 'opacity-100 relative z-10 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                    className={`transition-all duration-700 ease-in-out absolute inset-0 w-full h-full ${currentSlide === index ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
                   >
                     <div className={`relative w-full h-full bg-white border-l-8 ${cover.border} overflow-hidden`}>
                       <img alt={cover.title} className="absolute inset-0 w-full h-full object-cover" src={cover.src} />
