@@ -47,6 +47,9 @@ const MainLayout: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState(18.5); 
     const [isManualPayment, setIsManualPayment] = useState(false);
     const [user, setUser] = useState<any>(null);
+    const [authRedirectScreen, setAuthRedirectScreen] = useState<string | null>(null);
+    const authRedirectScreenRef = React.useRef<string | null>(null);
+    authRedirectScreenRef.current = authRedirectScreen;
 
     const storyDataRef = React.useRef(storyData);
     storyDataRef.current = storyData;
@@ -71,6 +74,11 @@ const MainLayout: React.FC = () => {
                 // We want to push them to the next logical step.
                 setScreen(prev => {
                     if (prev === 'auth') {
+                        if (authRedirectScreenRef.current) {
+                            const next = authRedirectScreenRef.current;
+                            setTimeout(() => setAuthRedirectScreen(null), 0);
+                            return next;
+                        }
                         // If they have story data (theme selected), go to checkout
                         // Otherwise (they just wanted to see orders), go to dashboard
                         return (storyDataRef.current.theme) ? 'checkout' : 'customerDashboard';
@@ -287,7 +295,15 @@ const MainLayout: React.FC = () => {
         switch (screen) {
             case 'welcome':
             case 'language': // Fallback mapping language to welcome
-                content = <WelcomeScreen onStart={() => { resetStory(); setScreen('personalization'); }} onBack={() => { }} language={language} setLanguage={setLanguage} />;
+                content = <WelcomeScreen onStart={() => { 
+                    resetStory(); 
+                    if (user) {
+                        setScreen('personalization'); 
+                    } else {
+                        setAuthRedirectScreen('personalization');
+                        setScreen('auth');
+                    }
+                }} onBack={() => { }} language={language} setLanguage={setLanguage} />;
                 break;
             case 'personalization':
                 content = <PersonalizationScreen onNext={(data) => { updateStory(data); setScreen('styleChoice'); }} onBack={() => setScreen('welcome')} storyData={storyData} language={language} />;
