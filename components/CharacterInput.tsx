@@ -33,6 +33,7 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<{ dataUrl: string; originalName: string; index?: number } | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -47,34 +48,45 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
     e.target.value = '';
   };
 
-  const handleCropComplete = (croppedImageBase64: string, croppedBlob: Blob) => {
+  const handleCropComplete = async (croppedImageBase64: string, croppedBlob: Blob) => {
     if (!imageToCrop) return;
     const croppedFile = new File([croppedBlob], imageToCrop.originalName, { type: 'image/jpeg' });
-    if (isMain) {
-      if (imageToCrop.index !== undefined) {
-        const newImages = [...character.images];
-        const newBase64s = [...character.imageBases64];
-        newImages[imageToCrop.index] = croppedFile;
-        newBase64s[imageToCrop.index] = croppedImageBase64;
-        onCharacterChange({ ...character, images: newImages, imageBases64: newBase64s });
-      } else {
-        onCharacterChange({
-          ...character,
-          images: [...character.images, croppedFile].slice(0, 3),
-          imageBases64: [...character.imageBases64, croppedImageBase64].slice(0, 3),
-        });
-      }
-    } else {
-      onCharacterChange({ ...character, images: [croppedFile], imageBases64: [croppedImageBase64] });
-    }
+    
+    // Set 1 single image in state
+    const updatedChar: Character = {
+      ...character,
+      images: [croppedFile],
+      imageBases64: [croppedImageBase64],
+      qualityAnalysis: undefined
+    };
+    onCharacterChange(updatedChar);
     setIsCropperOpen(false);
     setImageToCrop(null);
+
+    // Call the quality analysis API
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch('/api/generate/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: croppedImageBase64 })
+      });
+      if (res.ok) {
+        const analysisData = await res.json();
+        onCharacterChange({
+          ...updatedChar,
+          qualityAnalysis: analysisData
+        });
+      }
+    } catch (err) {
+      console.error("Failed to analyze image quality:", err);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleClearImage = (indexToRemove: number) => {
-    const newImages = character.images.filter((_, i) => i !== indexToRemove);
-    const newBase64s = character.imageBases64.filter((_, i) => i !== indexToRemove);
-    onCharacterChange({ ...character, images: newImages, imageBases64: newBase64s });
+    onCharacterChange({ ...character, images: [], imageBases64: [], qualityAnalysis: undefined });
   };
 
   const handleRecropImage = (index: number) => {
@@ -90,7 +102,37 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
 
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
   const nameLabel = character.type === 'person' ? t('اسم الشخصية', "Character's Name") : t('اسم الشيء (لعبة، بطانية..)', "Object's Name (toy, blanket..)");
-  const uploadText = isMain ? t('اضغط لرفع صور البطل (حتى 3)', 'Upload hero photos (up to 3)') : t('ارفع صورة أو انقر للتغيير', 'Upload an image or click to change');
+  const uploadText = isMain ? t('اضغط لرفع صورة البطل', 'Upload hero photo') : t('ارفع صورة أو انقر للتغيير', 'Upload an image or click to change');
+
+  const renderQualityRating = (score: string) => {
+    switch (score) {
+      case 'great':
+        return (
+          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-green-100 text-green-700 uppercase tracking-wider">
+            {t('ممتازة ✨', 'EXCELLENT')}
+          </span>
+        );
+      case 'acceptable':
+        return (
+          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-blue-100 text-blue-700 uppercase tracking-wider">
+            {t('مقبولة 👍', 'ACCEPTABLE')}
+          </span>
+        );
+      case 'not_good':
+        return (
+          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700 uppercase tracking-wider animate-pulse">
+            {t('غير موصى بها ⚠️', 'NOT RECOMMENDED')}
+          </span>
+        );
+      case 'not_usable':
+      default:
+        return (
+          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-700 uppercase tracking-wider animate-pulse">
+            {t('غير صالحة ❌', 'NOT USABLE')}
+          </span>
+        );
+    }
+  };
 
   return (
     <>
@@ -106,11 +148,6 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
           <div className="flex items-center gap-3">
              <h3 className="text-xl font-bold text-brand-navy">{label}</h3>
           </div>
-          {isMain && character.images.length > 0 && (
-            <span className="text-[10px] font-black text-brand-teal uppercase bg-brand-teal/10 px-3 py-1 rounded-full">
-              {character.images.length}/3 {t('صور', 'Photos')}
-            </span>
-          )}
         </div>
 
         <div className="space-y-5">
@@ -169,11 +206,11 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
           <div>
             <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-3">{t('صورة الشخصية', "Character's Image")}</label>
             
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch mb-4">
               {character.imageBases64.map((base64, index) => (
-                <div key={index} className="relative aspect-square group cursor-pointer" onClick={() => handleRecropImage(index)}>
+                <div key={index} className="relative w-36 h-36 group cursor-pointer shrink-0" onClick={() => handleRecropImage(index)}>
                   <div className="absolute inset-0 bg-brand-orange/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <img src={`data:image/jpeg;base64,${base64}`} alt={`Preview ${index + 1}`} className="w-full h-full rounded-2xl object-cover border-2 border-white shadow-lg group-hover:scale-[1.02] transition-all relative z-10" />
+                  <img src={`data:image/jpeg;base64,${base64}`} alt="Preview" className="w-full h-full rounded-2xl object-cover border-2 border-white shadow-lg group-hover:scale-[1.02] transition-all relative z-10" />
                   <button 
                     type="button" 
                     onClick={(e) => { e.stopPropagation(); handleClearImage(index); }} 
@@ -183,16 +220,36 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
                   </button>
                 </div>
               ))}
-              {(isMain ? character.images.length < 3 : character.images.length < 1) && (
-                <button 
-                  type="button" 
-                  onClick={() => fileInputRef.current?.click()} 
-                  className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-brand-navy/10 rounded-2xl bg-white/30 hover:bg-white hover:border-brand-orange hover:text-brand-orange transition-all group overflow-hidden relative"
-                >
-                  <div className="absolute inset-0 bg-brand-orange/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <span className="material-symbols-outlined text-3xl text-brand-navy/20 group-hover:text-brand-orange transition-colors">add_a_photo</span>
-                  <span className="text-[10px] font-black uppercase mt-2 opacity-50 group-hover:opacity-100">{t('إضافة', 'Add')}</span>
-                </button>
+
+              {isAnalyzing && (
+                <div className="flex-1 flex flex-col justify-center p-5 bg-brand-navy/5 rounded-2xl border border-brand-navy/10 animate-pulse text-start">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-brand-orange animate-spin">sync</span>
+                    <p className="text-xs font-black text-brand-navy uppercase tracking-wider">
+                      {t('جاري فحص جودة الصورة...', 'Analyzing photo quality...')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {!isAnalyzing && character.qualityAnalysis && (
+                <div className="flex-1 p-5 rounded-2xl border text-start space-y-2 bg-white/70 shadow-inner">
+                  <div className="flex items-center justify-between border-b border-brand-navy/5 pb-2">
+                    <span className="text-[10px] font-black text-brand-navy/40 uppercase tracking-wider">
+                      {t('فحص جودة الصورة', 'PHOTO QUALITY CHECK')}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {renderQualityRating(character.qualityAnalysis.score)}
+                    </div>
+                  </div>
+                  <p className={`text-xs font-bold leading-relaxed ${
+                    character.qualityAnalysis.score === 'not_usable' ? 'text-red-600 animate-pulse' :
+                    character.qualityAnalysis.score === 'not_good' ? 'text-amber-600' :
+                    'text-green-600'
+                  }`}>
+                    {language === 'ar' ? character.qualityAnalysis.feedback_ar : character.qualityAnalysis.feedback_en}
+                  </p>
+                </div>
               )}
             </div>
 

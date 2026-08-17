@@ -32,6 +32,12 @@ export interface Character {
   description: string;
   refinedDescription?: string;
   relationship?: string;
+  qualityAnalysis?: {
+    score: 'not_usable' | 'not_good' | 'acceptable' | 'great';
+    feedback_en: string;
+    feedback_ar: string;
+    issues: string[];
+  };
 }
 
 export interface StoryBlueprint {

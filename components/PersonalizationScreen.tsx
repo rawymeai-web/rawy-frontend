@@ -40,8 +40,20 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
     if (!isNaN(numericAge) && numericAge >= 6 && !localData.childGender) { alert(language === 'ar' ? 'الرجاء تحديد ما إذا كان البطل ولداً أم بنتاً للاستمرار.' : "Please select if the hero is a boy or a girl to continue."); return; }
     
     if (mainCharacter.images.length === 0) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الرئيسية.' : 'Please upload an image for the main character.'); return; }
+    if (mainCharacter.qualityAnalysis?.score === 'not_usable') {
+      alert(language === 'ar' 
+        ? 'الصورة المرفوعة غير صالحة للاستخدام. يرجى مراجعة فحص الجودة ورفع صورة أخرى واضحة للوجه.' 
+        : 'The uploaded image is not usable. Please review the photo quality check and upload a clearer face photo.');
+      return;
+    }
     if (useSecondCharacter) {
       if (secondCharacter && secondCharacter.images.length === 0) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الثانوية.' : "Please upload an image for the second character."); return; }
+      if (secondCharacter && secondCharacter.qualityAnalysis?.score === 'not_usable') {
+        alert(language === 'ar' 
+          ? 'صورة الشخصية الثانوية غير صالحة للاستخدام. يرجى مراجعة فحص الجودة ورفع صورة أخرى واضحة للوجه.' 
+          : 'The uploaded image for the second character is not usable. Please review the photo quality check and upload a clearer face photo.');
+        return;
+      }
     }
 
     onNext({
