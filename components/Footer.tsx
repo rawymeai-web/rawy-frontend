@@ -13,6 +13,8 @@ const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus, onContact
     const links = [
         { href: '#', ar: 'اتصل بنا', en: 'Contact Us', onClick: onContactUs },
         { href: '#', ar: 'طلباتي', en: 'My Order', onClick: onCheckOrderStatus },
+        { href: '/policy.html', ar: 'سياسة الخصوصية', en: 'Privacy Policy', isExternal: true },
+        { href: '/tos.html', ar: 'شروط الخدمة', en: 'Terms of Service', isExternal: true },
         { href: '#', ar: 'من نحن', en: 'About Us', isExternal: true },
         { href: '#', ar: 'الأسئلة الشائعة', en: 'FAQ' },
     ];
