@@ -257,10 +257,10 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
 
             {/* Footer Controls */}
             <div className="bg-white/10 backdrop-blur-md p-4 md:p-6 shrink-0 flex justify-center gap-4 border-t border-white/10">
-                <Button onClick={onClose} variant="ghost" className="text-white hover:bg-white/10">
+                <Button type="button" onClick={onClose} variant="ghost" className="text-white hover:bg-white/10">
                     {t('إلغاء', 'Cancel')}
                 </Button>
-                <Button onClick={handleCrop} className="bg-brand-orange hover:bg-brand-orange/90 text-white shadow-xl shadow-brand-orange/20 px-8 py-3 text-lg rounded-2xl">
+                <Button type="button" onClick={handleCrop} className="bg-brand-orange hover:bg-brand-orange/90 text-white shadow-xl shadow-brand-orange/20 px-8 py-3 text-lg rounded-2xl">
                     {t('تأكيد وحفظ', 'Confirm & Save')}
                 </Button>
             </div>
