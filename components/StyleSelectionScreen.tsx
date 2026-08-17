@@ -136,8 +136,14 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
             const callPreview = async (index: number) => {
                 try {
                     const { imageBase64, secondImageBase64 } = await backendApi.generatePreview({
-                        character: storyData.mainCharacter,
-                        secondCharacter: (storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object') ? storyData.secondCharacter : undefined,
+                        character: {
+                            ...storyData.mainCharacter,
+                            gender: storyData.childGender
+                        },
+                        secondCharacter: (storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object' && storyData.secondCharacter) ? {
+                            ...storyData.secondCharacter,
+                            gender: storyData.secondCharacter.gender || (storyData.childGender === 'boy' ? 'girl' : 'boy')
+                        } : undefined,
                         themeDescription: storyData.theme || "Likeness Portrait",
                         themeId: storyData.themeId,
                         stylePrompt: storyData.selectedStylePrompt,

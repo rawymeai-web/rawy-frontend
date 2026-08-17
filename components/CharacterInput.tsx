@@ -107,34 +107,65 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
   const nameLabel = character.type === 'person' ? t('اسم الشخصية', "Character's Name") : t('اسم الشيء (لعبة، بطانية..)', "Object's Name (toy, blanket..)");
   const uploadText = isMain ? t('اضغط لرفع صورة البطل', 'Upload hero photo') : t('ارفع صورة أو انقر للتغيير', 'Upload an image or click to change');
 
-  const renderQualityRating = (score: string) => {
+  const renderQualitySignal = (score: string) => {
+    let activeBars = 0;
+    let barColor = 'bg-gray-200';
+    let label = '';
+    
     switch (score) {
       case 'great':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-green-100 text-green-700 uppercase tracking-wider">
-            {t('ممتازة ✨', 'EXCELLENT')}
-          </span>
-        );
+        activeBars = 5;
+        barColor = 'bg-green-500';
+        label = t('ممتازة ✨', 'EXCELLENT');
+        break;
       case 'acceptable':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-blue-100 text-blue-700 uppercase tracking-wider">
-            {t('مقبولة 👍', 'ACCEPTABLE')}
-          </span>
-        );
+        activeBars = 4;
+        barColor = 'bg-emerald-400';
+        label = t('مقبولة 👍', 'ACCEPTABLE');
+        break;
       case 'not_good':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700 uppercase tracking-wider animate-pulse">
-            {t('غير موصى بها ⚠️', 'NOT RECOMMENDED')}
-          </span>
-        );
+        activeBars = 2.5; // Displays 2 bars active
+        activeBars = 2;
+        barColor = 'bg-amber-500';
+        label = t('ضعيفة ⚠️', 'POOR');
+        break;
       case 'not_usable':
       default:
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-700 uppercase tracking-wider animate-pulse">
-            {t('غير صالحة ❌', 'NOT USABLE')}
-          </span>
-        );
+        activeBars = 1;
+        barColor = 'bg-red-500';
+        label = t('غير صالحة ❌', 'NOT USABLE');
+        break;
     }
+
+    return (
+      <div className="flex items-center gap-3">
+        <div className="flex items-end gap-1 h-5">
+          {[1, 2, 3, 4, 5].map((bar) => {
+            const isActive = bar <= activeBars;
+            const heightClass = 
+              bar === 1 ? 'h-2' :
+              bar === 2 ? 'h-3' :
+              bar === 3 ? 'h-4' :
+              bar === 4 ? 'h-5' :
+              'h-5.5';
+            return (
+              <div 
+                key={bar} 
+                className={`w-1 rounded-full ${heightClass} ${isActive ? barColor : 'bg-gray-200/50'}`} 
+              />
+            );
+          })}
+        </div>
+        <span className={`text-[10px] font-black uppercase tracking-wider ${
+          score === 'great' ? 'text-green-600' :
+          score === 'acceptable' ? 'text-emerald-500' :
+          score === 'not_good' ? 'text-amber-600' :
+          'text-red-500 animate-pulse'
+        }`}>
+          {label}
+        </span>
+      </div>
+    );
   };
 
   return (
@@ -242,7 +273,7 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
                       {t('فحص جودة الصورة', 'PHOTO QUALITY CHECK')}
                     </span>
                     <div className="flex items-center gap-1.5">
-                      {renderQualityRating(character.qualityAnalysis.score)}
+                      {renderQualitySignal(character.qualityAnalysis.score)}
                     </div>
                   </div>
                   <p className={`text-xs font-bold leading-relaxed ${
