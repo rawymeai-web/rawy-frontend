@@ -270,12 +270,23 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                  className="mt-1 w-5 h-5 rounded border-gray-300 text-brand-orange focus:ring-brand-orange cursor-pointer shrink-0"
                  required
                />
-               <span className="text-[11px] font-bold text-brand-navy/70 leading-relaxed text-start">
-                 {t(
-                   'أؤكد أنني أملك حقوق هذه الصور أو لدي الإذن باستخدامها، وأوافق على استخدامها لإنشاء القصة الشخصية لطلفي وفقاً لـ شروط الخدمة وسياسة الخصوصية.',
-                   'I confirm that I own or have permission to use these photos, and consent to their use for creating my custom storybook in accordance with the Terms of Service and Privacy Policy.'
-                 )}
-               </span>
+                <span className="text-[11px] font-bold text-brand-navy/70 leading-relaxed text-start">
+                  {language === 'ar' ? (
+                    <>
+                      أؤكد أنني أملك حقوق هذه الصور أو لدي الإذن باستخدامها، وأوافق على استخدامها لإنشاء القصة الشخصية لطلفي وفقاً لـ{' '}
+                      <a href="/tos.html" target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:underline">شروط الخدمة</a>{' '}
+                      و{' '}
+                      <a href="/policy.html" target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:underline">سياسة الخصوصية</a>.
+                    </>
+                  ) : (
+                    <>
+                      I confirm that I own or have permission to use these photos, and consent to their use for creating my custom storybook in accordance with the{' '}
+                      <a href="/tos.html" target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:underline">Terms of Service</a>{' '}
+                      and{' '}
+                      <a href="/policy.html" target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:underline">Privacy Policy</a>.
+                    </>
+                  )}
+                </span>
              </label>
            </div>
 

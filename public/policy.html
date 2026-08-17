@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | Rawy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            navy: '#001A40',
+                            orange: '#F78F50',
+                            teal: '#006B5D',
+                            coral: '#E0533C',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Tajawal', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', 'Tajawal', sans-serif;
+            background-color: #FFF9F0;
+        }
+    </style>
+</head>
+<body class="text-brand-navy min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-brand-navy/5 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="/" class="text-2xl font-black tracking-tight text-brand-navy">Rawy</a>
+            <span class="text-xs font-bold text-brand-navy/40 uppercase tracking-widest">Privacy Policy</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-4xl mx-auto px-6 py-12 md:py-20">
+        <div class="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl shadow-brand-navy/5 border border-brand-navy/5 space-y-10">
+            <div>
+                <h1 class="text-4xl font-black tracking-tight text-brand-navy uppercase mb-3">Privacy Policy</h1>
+                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Last updated: August 18, 2026</p>
+            </div>
+
+            <p class="text-sm md:text-base text-brand-navy/80 leading-relaxed">
+                At Rawy (powered by Albumii), we value your privacy and are committed to protecting your personal data. This Privacy Policy describes how we collect, use, store, and share your personal information when you use our website, mobile application, and story creation services (collectively, the "Service"). By using Rawy, you consent to the collection and use of information in accordance with this policy.
+            </p>
+
+            <hr class="border-brand-navy/5" />
+
+            <!-- Sections -->
+            <div class="space-y-8">
+                <!-- Section 1 -->
+                <div class="space-y-3">
+                    <h2 class="text-lg font-black text-brand-navy uppercase tracking-wider">1. Information We Collect</h2>
+                    <div class="text-sm md:text-base text-brand-navy/80 space-y-2 leading-relaxed">
+                        <p>We collect information you provide directly to us when creating a custom storybook, signing up for an account, or making a purchase:</p>
+                        <ul class="list-disc list-inside pl-4 space-y-1">
+                            <li><strong>Account Data:</strong> Email address, name, and account password.</li>
+                            <li><strong>Child Personalization Data:</strong> Child's name, age, gender, and reference photo(s).</li>
+                            <li><strong>Photo Uploads:</strong> Crop selections of faces uploaded to serve as the character's facial likeness reference. We do not store original, uncropped photos long-term.</li>
+                            <li><strong>Shipping & Contact Data:</strong> Delivery addresses, recipient name, phone number, and support inquiry logs.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Section 2 -->
+                <div class="space-y-3">
+                    <h2 class="text-lg font-black text-brand-navy uppercase tracking-wider">2. How We Use Your Information</h2>
+                    <div class="text-sm md:text-base text-brand-navy/80 space-y-2 leading-relaxed">
+                        <p>We use the collected information for the following purposes:</p>
+                        <ul class="list-disc list-inside pl-4 space-y-1">
+                            <li>To train the visual likeness model (AI DNA mapping) to draw consistent illustrations of your child in the book.</li>
+                            <li>To compile and generate your custom PDF softcopy and print-ready files.</li>
+                            <li>To process payments and coordinate delivery of physical hardcovers with our print partners.</li>
+                            <li>To send order confirmation emails, tracking status updates, and support communications.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Section 3 -->
+                <div class="space-y-3">
+                    <h2 class="text-lg font-black text-brand-navy uppercase tracking-wider">3. Data Storage & Security</h2>
+                    <div class="text-sm md:text-base text-brand-navy/80 space-y-2 leading-relaxed">
+                        <p>Your data is stored securely in database systems powered by Supabase. Custom storybook assets (e.g. character reference photos and final illustrations) are stored in secure cloud storage buckets with access tokens. We use industry-standard encryption to protect your data both in transit and at rest. Reference images and AI-generated portraits are linked privately to your user account and are not accessible to public users.</p>
+                    </div>
+                </div>
+
+                <!-- Section 4 -->
+                <div class="space-y-3">
+                    <h2 class="text-lg font-black text-brand-navy uppercase tracking-wider">4. Third-Party Integrations</h2>
+                    <div class="text-sm md:text-base text-brand-navy/80 space-y-2 leading-relaxed">
+                        <p>We work with trusted third-party services to deliver the best experience:</p>
+                        <ul class="list-disc list-inside pl-4 space-y-1">
+                            <li><strong>Payment Processors:</strong> We use secure providers (like TAP, PayPal, Tabby) to process transactions. Financial details are submitted directly to the gateway and are not stored on Rawy servers.</li>
+                            <li><strong>Email Notifications:</strong> We use Resend to transmit verification, receipt, and delivery tracking emails.</li>
+                            <li><strong>Print & Delivery Partners:</strong> We share order details, shipping coordinates, and print-ready storybook PDF files with Albumii printing hubs to manufacture and deliver your physical hardcovers.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Section 5 -->
+                <div class="space-y-3">
+                    <h2 class="text-lg font-black text-brand-navy uppercase tracking-wider">5. Your Legal Rights</h2>
+                    <div class="text-sm md:text-base text-brand-navy/80 space-y-2 leading-relaxed">
+                        <p>Depending on your location, you may have the right to access, edit, or delete the personal data we hold about you. You can request account deletion or image data purging at any time by contacting our support team at <a href="mailto:support@rawytime.com" class="text-brand-orange hover:underline font-bold">support@rawytime.com</a>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-brand-navy/5" />
+
+            <div class="text-center pt-4">
+                <p class="text-sm text-brand-navy/60 font-bold uppercase tracking-wider">Rawy support team &middot; Albumii Printing</p>
+                <a href="mailto:support@rawytime.com" class="text-xs text-brand-orange hover:underline font-bold mt-1 block">support@rawytime.com</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-brand-navy text-white py-8 mt-auto border-t border-white/5">
+        <div class="max-w-4xl mx-auto px-6 text-center text-xs opacity-60">
+            <p>&copy; 2026 Rawy. All rights reserved. Powered by Albumii.</p>
+        </div>
+    </footer>
+</body>
+</html>
