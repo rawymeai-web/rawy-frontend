@@ -2,6 +2,7 @@
 // Using local PNG assets (downloaded from Imgur) for reliability.
 export const coverImageData = [
   '/covers/cover1.jpg',
+  '/covers/cover2.png',
   '/covers/cover3.png',
   '/covers/cover4.png',
   '/covers/cover5.png',
