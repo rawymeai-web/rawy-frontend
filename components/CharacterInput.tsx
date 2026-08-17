@@ -104,11 +104,6 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
       }`}>
         <div className="flex items-center justify-between border-b border-brand-navy/5 pb-4">
           <div className="flex items-center gap-3">
-             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-               isMain ? 'bg-brand-teal/10 text-brand-teal' : 'bg-brand-orange/10 text-brand-orange'
-             }`}>
-                <span className="material-symbols-outlined">{isMain ? 'face' : 'toys'}</span>
-             </div>
              <h3 className="text-xl font-bold text-brand-navy">{label}</h3>
           </div>
           {isMain && character.images.length > 0 && (

@@ -44,7 +44,7 @@ interface ThemeCardProps {
 const ThemeCard: React.FC<ThemeCardProps> = ({ emoji, title, description, isSelected, onClick }) => (
   <button
     onClick={onClick}
-    className={`relative p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col items-center justify-center group overflow-hidden ${isSelected
+    className={`relative p-5 sm:p-8 rounded-[1.8rem] sm:rounded-[2.5rem] transition-all duration-500 flex flex-col items-center justify-center group overflow-hidden ${isSelected
       ? 'bg-brand-orange text-white shadow-2xl shadow-brand-orange/30 scale-[1.02] z-10'
       : 'glass-panel bg-white/30 hover:bg-white/60 hover:shadow-xl hover:-translate-y-2'
       }`}
@@ -55,17 +55,17 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ emoji, title, description, isSele
       <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
     )}
     
-    <div className={`text-6xl mb-6 transition-all duration-500 ${isSelected ? 'scale-110 rotate-3' : 'group-hover:scale-110 group-hover:-rotate-3'}`} role="img">{emoji}</div>
-    <h4 className={`font-black text-xl leading-tight mb-3 transition-colors ${isSelected ? 'text-white' : 'text-brand-navy'}`}>{title}</h4>
-    <p className={`text-xs font-medium leading-relaxed opacity-80 max-w-[150px] mx-auto ${isSelected ? 'text-white/90' : 'text-brand-navy/60'}`}>{description}</p>
+    <div className={`text-4xl sm:text-6xl mb-4 sm:mb-6 transition-all duration-500 ${isSelected ? 'scale-110 rotate-3' : 'group-hover:scale-110 group-hover:-rotate-3'}`} role="img">{emoji}</div>
+    <h4 className={`font-black text-lg sm:text-xl leading-tight mb-2 sm:mb-3 transition-colors ${isSelected ? 'text-white' : 'text-brand-navy'}`}>{title}</h4>
+    <p className={`text-[10px] sm:text-xs font-medium leading-relaxed opacity-85 max-w-[150px] mx-auto ${isSelected ? 'text-white/90' : 'text-brand-navy/60'}`}>{description}</p>
 
     {isSelected ? (
-      <div className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
-        <span className="material-symbols-outlined text-white text-lg">check_circle</span>
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
+        <span className="material-symbols-outlined text-white text-sm sm:text-lg">check_circle</span>
       </div>
     ) : (
-      <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-         <span className="material-symbols-outlined text-brand-orange text-lg">arrow_forward</span>
+      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-orange/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+         <span className="material-symbols-outlined text-brand-orange text-sm sm:text-lg">arrow_forward</span>
       </div>
     )}
   </button>
@@ -85,6 +85,7 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const [customIllustrationNotes, setCustomIllustrationNotes] = useState(storyData.customIllustrationNotes || '');
   const [customStylePrompt, setCustomStylePrompt] = useState(storyData.selectedStylePrompt || '');
   const [secondHeroName, setSecondHeroName] = useState((storyData.secondCharacter as any)?.name || '');
+  const [activeCategory, setActiveCategory] = useState<'adventures' | 'values'>('adventures');
 
   useEffect(() => {
     backendApi.getCatalog().then((res: any) => {
@@ -228,9 +229,39 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
         </h2>
       </div>
 
-      <div className="space-y-4">
-        {valueThemes.length > 0 && <ThemeGrid themes={valueThemes} categoryTitle={t('قيم وأخلاق', 'Life Values')} icon="favorite" />}
-        {adventureThemes.length > 0 && <ThemeGrid themes={adventureThemes} categoryTitle={t('مغامرات سحرية', 'Magical Adventures')} icon="explore" />}
+      {/* Category Tabs Switcher */}
+      <div className="flex items-center justify-center gap-4 mb-12 max-w-md mx-auto">
+        <button
+          type="button"
+          onClick={() => setActiveCategory('adventures')}
+          className={`flex-1 py-3 px-6 rounded-2xl font-black text-sm uppercase tracking-wider transition-all duration-300 ${
+            activeCategory === 'adventures'
+              ? 'bg-brand-orange text-white shadow-lg shadow-brand-orange/20 scale-[1.02]'
+              : 'glass-panel text-brand-navy/60 hover:text-brand-navy hover:bg-white/50'
+          }`}
+        >
+          {t('مغامرات سحرية', 'Magical Adventures')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveCategory('values')}
+          className={`flex-1 py-3 px-6 rounded-2xl font-black text-sm uppercase tracking-wider transition-all duration-300 ${
+            activeCategory === 'values'
+              ? 'bg-brand-orange text-white shadow-lg shadow-brand-orange/20 scale-[1.02]'
+              : 'glass-panel text-brand-navy/60 hover:text-brand-navy hover:bg-white/50'
+          }`}
+        >
+          {t('قيم وأخلاق', 'Life Values')}
+        </button>
+      </div>
+
+      <div className="space-y-4 animate-enter-forward">
+        {activeCategory === 'adventures' && adventureThemes.length > 0 && (
+          <ThemeGrid themes={adventureThemes} categoryTitle={t('مغامرات سحرية', 'Magical Adventures')} icon="explore" />
+        )}
+        {activeCategory === 'values' && valueThemes.length > 0 && (
+          <ThemeGrid themes={valueThemes} categoryTitle={t('قيم وأخلاق', 'Life Values')} icon="favorite" />
+        )}
         
         {isTeamworkSelected && (
           <div className="glass-panel p-8 rounded-[2.5rem] border-2 border-brand-teal/20 animate-enter-forward max-w-2xl mx-auto mb-12">

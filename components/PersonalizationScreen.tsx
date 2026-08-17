@@ -179,31 +179,20 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
 
              {!isChangingLanguage ? (
                <div className="flex items-center gap-3 bg-white/40 p-4 rounded-2xl border border-white/60">
-                 <span className="text-2xl">{[
-                     { code: 'ar', label: 'العربية', flag: '🇸🇦' },
-                     { code: 'en', label: 'English', flag: '🇺🇸' },
-                     { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-                     { code: 'es', label: 'Español', flag: '🇪🇸' },
-                     { code: 'fr', label: 'Français', flag: '🇫🇷' },
-                     { code: 'it', label: 'Italiano', flag: '🇮🇹' },
-                     { code: 'pt', label: 'Português', flag: '🇵🇹' },
-                     { code: 'ru', label: 'Русский', flag: '🇷🇺' },
-                     { code: 'ja', label: '日本語', flag: '🇯🇵' },
-                     { code: 'tr', label: 'Türkçe', flag: '🇹🇷' }
-                 ].find(l => l.code === localData.language)?.flag || '🇺🇸'}</span>
+                 <span className="material-symbols-outlined text-brand-orange text-xl">translate</span>
                  <div className="text-start">
                    <p className="text-sm font-bold text-brand-navy">
                      {[
-                         { code: 'ar', label: 'العربية', flag: '🇸🇦' },
-                         { code: 'en', label: 'English', flag: '🇺🇸' },
-                         { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-                         { code: 'es', label: 'Español', flag: '🇪🇸' },
-                         { code: 'fr', label: 'Français', flag: '🇫🇷' },
-                         { code: 'it', label: 'Italiano', flag: '🇮🇹' },
-                         { code: 'pt', label: 'Português', flag: '🇵🇹' },
-                         { code: 'ru', label: 'Русский', flag: '🇷🇺' },
-                         { code: 'ja', label: '日本語', flag: '🇯🇵' },
-                         { code: 'tr', label: 'Türkçe', flag: '🇹🇷' }
+                         { code: 'ar', label: 'العربية' },
+                         { code: 'en', label: 'English' },
+                         { code: 'de', label: 'Deutsch' },
+                         { code: 'es', label: 'Español' },
+                         { code: 'fr', label: 'Français' },
+                         { code: 'it', label: 'Italiano' },
+                         { code: 'pt', label: 'Português' },
+                         { code: 'ru', label: 'Русский' },
+                         { code: 'ja', label: '日本語' },
+                         { code: 'tr', label: 'Türkçe' }
                      ].find(l => l.code === localData.language)?.label || 'English'}
                    </p>
                    <p className="text-[10px] text-brand-navy/50">
@@ -215,16 +204,16 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                <div className="animate-enter-forward space-y-4 pt-2">
                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
                    {[
-                       { code: 'ar', label: 'العربية', flag: '🇸🇦' },
-                       { code: 'en', label: 'English', flag: '🇺🇸' },
-                       { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-                       { code: 'es', label: 'Español', flag: '🇪🇸' },
-                       { code: 'fr', label: 'Français', flag: '🇫🇷' },
-                       { code: 'it', label: 'Italiano', flag: '🇮🇹' },
-                       { code: 'pt', label: 'Português', flag: '🇵🇹' },
-                       { code: 'ru', label: 'Русский', flag: '🇷🇺' },
-                       { code: 'ja', label: '日本語', flag: '🇯🇵' },
-                       { code: 'tr', label: 'Türkçe', flag: '🇹🇷' }
+                       { code: 'ar', label: 'العربية' },
+                       { code: 'en', label: 'English' },
+                       { code: 'de', label: 'Deutsch' },
+                       { code: 'es', label: 'Español' },
+                       { code: 'fr', label: 'Français' },
+                       { code: 'it', label: 'Italiano' },
+                       { code: 'pt', label: 'Português' },
+                       { code: 'ru', label: 'Русский' },
+                       { code: 'ja', label: '日本語' },
+                       { code: 'tr', label: 'Türkçe' }
                    ].map((langOption) => (
                      <button
                        key={langOption.code}
@@ -235,7 +224,6 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                        }}
                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all group ${localData.language === langOption.code ? 'bg-brand-orange border-brand-orange text-white shadow-lg shadow-brand-orange/20' : 'bg-white/50 border-brand-navy/5 text-brand-navy/60 hover:border-brand-orange/30'}`}
                      >
-                       <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">{langOption.flag}</span>
                        <span className="text-[10px] font-black uppercase tracking-tighter">{langOption.label}</span>
                      </button>
                    ))}
