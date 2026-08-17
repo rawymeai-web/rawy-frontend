@@ -80,12 +80,20 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
         <div className="w-full max-w-[1200px] mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-24">
           
           {/* Text Content */}
-          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left space-y-8">
-            <h1 className="text-[48px] text-[#001a40] apple-display-heading">
-              Make Your Child the <span className="relative inline-block text-[#F78F50]">Hero<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> of Their Own Story.
-            </h1>
-            <p className="text-[18px] font-medium leading-[1.6] text-[#554339] max-w-xl apple-body-text">
-              Create magical, personalized adventures filled with wonder and imagination. A premium digital storytelling experience.
+          <div className="flex-grow flex flex-col items-center md:items-start text-center md:text-left space-y-8">
+            <div className="space-y-2">
+              <span className="text-xs font-black uppercase tracking-widest text-[#F78F50] block md:text-left text-center">
+                {t('راوي - قصص أطفال مخصصة بالذكاء الاصطناعي', 'Rawy: Personalized AI Storybooks')}
+              </span>
+              <h1 className="text-[48px] text-[#001a40] apple-display-heading">
+                Make Your Child the <span className="relative inline-block text-[#F78F50]">Hero<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> of Their Own Story.
+              </h1>
+            </div>
+            <p className="text-[16px] md:text-[18px] font-medium leading-[1.6] text-[#554339] max-w-xl apple-body-text">
+              {t(
+                'راوي (Rawy) هي منصة مخصصة لإنشاء كتب وقصص الأطفال المصورة بالذكاء الاصطناعي. يمكنك إدخال اسم طفلك وعمره ورفع صورته لنقوم بتوليد كتاب مصور متكامل يكون طفلك فيه بطل القصة برسومات مذهلة تطابق ملامحه.',
+                'Rawy is an AI-powered personalized storybook creation platform. By uploading a photo, entering your child\'s name and age, we generate custom storybook illustrations featuring your child as the main character.'
+              )}
             </p>
             <button 
               onClick={onStart}
