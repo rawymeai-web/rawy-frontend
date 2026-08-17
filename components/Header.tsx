@@ -56,16 +56,16 @@ const Header: React.FC<HeaderProps> = ({
               onChange={(e) => setLanguage(e.target.value as Language)}
               className="appearance-none flex items-center gap-2 px-6 py-1.5 pr-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-sm font-bold text-brand-navy border-none outline-none cursor-pointer"
             >
-              <option value="en">🇺🇸 EN</option>
-              <option value="ar">🇸🇦 عربي</option>
-              <option value="de">🇩🇪 DE</option>
-              <option value="es">🇪🇸 ES</option>
-              <option value="fr">🇫🇷 FR</option>
-              <option value="it">🇮🇹 IT</option>
-              <option value="pt">🇵🇹 PT</option>
-              <option value="ru">🇷🇺 RU</option>
-              <option value="ja">🇯🇵 JA</option>
-              <option value="tr">🇹🇷 TR</option>
+              <option value="en">EN</option>
+              <option value="ar">عربي</option>
+              <option value="de">DE</option>
+              <option value="es">ES</option>
+              <option value="fr">FR</option>
+              <option value="it">IT</option>
+              <option value="pt">PT</option>
+              <option value="ru">RU</option>
+              <option value="ja">JA</option>
+              <option value="tr">TR</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-brand-navy">
               <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>

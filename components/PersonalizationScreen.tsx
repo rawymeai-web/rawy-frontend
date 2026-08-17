@@ -157,7 +157,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
           <div className="glass-panel p-6 rounded-[2rem] space-y-4">
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                   <span className="material-symbols-outlined text-brand-orange">translate</span>
+                   <span className="material-symbols-outlined text-brand-orange">language</span>
                    <div className="text-start">
                      <span className="text-sm font-bold text-brand-navy/80">{t('لغة القصة', 'Story Language')}</span>
                      <p className="text-[10px] text-brand-navy/40">
@@ -179,7 +179,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
 
              {!isChangingLanguage ? (
                <div className="flex items-center gap-3 bg-white/40 p-4 rounded-2xl border border-white/60">
-                 <span className="material-symbols-outlined text-brand-orange text-xl">translate</span>
+                 <span className="material-symbols-outlined text-brand-orange text-xl">language</span>
                  <div className="text-start">
                    <p className="text-sm font-bold text-brand-navy">
                      {[
