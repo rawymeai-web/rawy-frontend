@@ -86,13 +86,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
                 {t('راوي - قصص أطفال مخصصة بالذكاء الاصطناعي', 'Rawy: Personalized AI Storybooks')}
               </span>
               <h1 className="text-[48px] text-[#001a40] apple-display-heading">
-                Make Your Child the <span className="relative inline-block text-[#F78F50]">Hero<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> of Their Own Story.
+                Rawy: Make Your Child the <span className="relative inline-block text-[#F78F50]">Hero<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> of Their Own Story.
               </h1>
             </div>
             <p className="text-[16px] md:text-[18px] font-medium leading-[1.6] text-[#554339] max-w-xl apple-body-text">
               {t(
-                'راوي (Rawy) هي منصة مخصصة لإنشاء كتب وقصص الأطفال المصورة بالذكاء الاصطناعي. يمكنك إدخال اسم طفلك وعمره ورفع صورته لنقوم بتوليد كتاب مصور متكامل يكون طفلك فيه بطل القصة برسومات مذهلة تطابق ملامحه.',
-                'Rawy is an AI-powered personalized storybook creation platform. By uploading a photo, entering your child\'s name and age, we generate custom storybook illustrations featuring your child as the main character.'
+                'راوي (Rawy) هي منصة مخصصة لإنشاء كتب وقصص الأطفال المصورة بالذكاء الاصطناعي. ارفع صورة طفلك واكتب اسمه لتصنع له كتاباً مصوراً فريداً عالي الجودة. يقوم نظامنا المبتكر بتحويل ملامح طفلك إلى رسومات كرتونية ساحرة داخل مغامرات شيقة تطابق ملامحه.',
+                'Rawy is a personalized storybook platform that uses AI to customize illustrations and stories featuring your child as the main character. Simply enter their name and upload a photo to generate a print-ready custom hardcover adventure.'
               )}
             </p>
             <button 
@@ -101,7 +101,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
               id="btn_start_journey"
             >
               <span className="absolute inset-0 bg-white/10 blur-md top-0 h-1/2 rounded-t-full pointer-events-none"></span>
-              <span>Create a Story Now</span>
+              <span>{t('ابتدئ مغامرتك الآن', 'Create a Story Now')}</span>
             </button>
           </div>
 
@@ -147,6 +147,21 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
           </div>
         </div>
       </main>
+
+      {/* Footer with legal links required by Google verification */}
+      <footer className="w-full py-6 mt-12 border-t border-brand-navy/5 relative z-10 bg-white/30 backdrop-blur-sm">
+        <div className="max-w-[1200px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-brand-navy/40">
+          <p>© 2026 Rawy. All rights reserved. Powered by Albumii.</p>
+          <div className="flex items-center gap-6">
+            <a href="/policy.html" target="_blank" rel="noopener noreferrer" className="hover:text-[#F78F50] transition-colors">
+              {t('سياسة الخصوصية', 'Privacy Policy')}
+            </a>
+            <a href="/tos.html" target="_blank" rel="noopener noreferrer" className="hover:text-[#F78F50] transition-colors">
+              {t('شروط الخدمة', 'Terms of Service')}
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
