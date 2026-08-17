@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /policy.html
+Allow: /tos.html
+Disallow: /api/
+
+Sitemap: https://rawytime.com/sitemap.xml

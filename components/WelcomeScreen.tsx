@@ -95,6 +95,12 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLan
                 'Rawy is a personalized storybook platform that uses AI to customize illustrations and stories featuring your child as the main character. Simply enter their name and upload a photo to generate a print-ready custom hardcover adventure.'
               )}
             </p>
+            <p className="text-[12px] text-[#554339]/60 max-w-xl text-center md:text-left leading-relaxed">
+              {t(
+                'خصوصية بياناتك مضمونة: نطلب اسم طفلك وعمره وصورته الشخصية فقط لإنشاء وتخصيص رسومات وقصص كتابك المطبوع بشكل آمن بالكامل دون مشاركتها مع أي جهات خارجية.',
+                'Your privacy is guaranteed: We collect your child\'s name, age, and photo reference solely to personalize the illustrations and custom story texts for your book. All uploads are processed securely and never sold or shared.'
+              )}
+            </p>
             <button 
               onClick={onStart}
               className="text-[24px] font-bold py-4 px-10 rounded-full shadow-sm hover:shadow-[0px_10px_25px_rgba(247,143,80,0.45)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center gap-3 relative overflow-hidden group bg-[#F78F50] text-white" 
