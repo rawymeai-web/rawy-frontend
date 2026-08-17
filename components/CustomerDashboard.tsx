@@ -161,7 +161,17 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({ language, onLogout
                                     <div className="flex items-center gap-6 flex-1">
                                         <div className="w-20 h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 shrink-0">
                                             {order.storyData?.coverImageUrl ? (
-                                                <img src={`data:image/jpeg;base64,${order.storyData.coverImageUrl}`} alt="Cover" className="w-full h-full object-cover" />
+                                                <img 
+                                                    src={
+                                                        order.storyData.coverImageUrl.startsWith('http') || 
+                                                        order.storyData.coverImageUrl.startsWith('/') || 
+                                                        order.storyData.coverImageUrl.startsWith('data:')
+                                                            ? order.storyData.coverImageUrl
+                                                            : `data:image/jpeg;base64,${order.storyData.coverImageUrl}`
+                                                    } 
+                                                    alt="Cover" 
+                                                    className="w-full h-full object-cover" 
+                                                />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-gray-300">
                                                     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 6.253v11.494m-9-5.747h18" /></svg>
