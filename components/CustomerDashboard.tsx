@@ -11,9 +11,19 @@ interface DashboardProps {
     onEditPreferences: () => void;
     onViewBook: (order: AdminOrder) => void;
     onOrderPrint: (order: AdminOrder) => void;
+    onBack: () => void;
+    onStartAdventure: () => void;
 }
 
-export const CustomerDashboard: React.FC<DashboardProps> = ({ language, onLogout, onEditPreferences, onViewBook, onOrderPrint }) => {
+export const CustomerDashboard: React.FC<DashboardProps> = ({ 
+    language, 
+    onLogout, 
+    onEditPreferences, 
+    onViewBook, 
+    onOrderPrint,
+    onBack,
+    onStartAdventure
+}) => {
     const [activeSub, setActiveSub] = useState<Subscription | null>(null);
     const [orders, setOrders] = useState<AdminOrder[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -88,6 +98,14 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({ language, onLogout
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
                 <div>
+                    <button 
+                        type="button" 
+                        onClick={onBack}
+                        className="flex items-center gap-1.5 text-xs font-black text-brand-navy/40 hover:text-brand-orange uppercase tracking-wider mb-3 transition-all active:scale-95 bg-transparent border-none outline-none cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-sm">{language === 'ar' ? 'arrow_forward' : 'arrow_back'}</span>
+                        {t('العودة للرئيسية', 'Back to Home')}
+                    </button>
                     <h1 className="text-4xl md:text-5xl font-black text-brand-navy tracking-tight uppercase">
                         {t('مغامراتي', 'My Adventures')}
                     </h1>
@@ -151,7 +169,7 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({ language, onLogout
                 {orders.length === 0 ? (
                     <div className="bg-white rounded-[2.5rem] p-16 text-center border-2 border-dashed border-gray-100">
                         <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">{t('لا توجد مغامرات بعد', 'Your library is empty... for now.')}</p>
-                        <Button className="mt-6 !px-8 !py-3 rounded-xl">{t('ابدأ مغامرتك الأولى', 'Start First Adventure')}</Button>
+                        <Button onClick={onStartAdventure} className="mt-6 !px-8 !py-3 rounded-xl">{t('ابدأ مغامرتك الأولى', 'Start First Adventure')}</Button>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-4">

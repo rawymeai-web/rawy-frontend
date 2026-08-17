@@ -183,7 +183,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
     const handleTypes = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
 
     return (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[99999] flex flex-col animate-fadeIn">
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[99999] flex flex-col overflow-hidden animate-fadeIn h-screen w-screen">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-white/10 backdrop-blur-md border-b border-white/10 shrink-0">
                 <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
@@ -195,8 +195,8 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
             </div>
 
             {/* Main Content - Expanded to fit */}
-            <div className="flex-grow relative flex items-center justify-center p-4 md:p-8 overflow-hidden">
-                <div ref={containerRef} className="relative w-full h-full max-w-5xl max-h-[85vh] flex items-center justify-center">
+            <div className="flex-1 min-h-0 relative flex items-center justify-center p-4 md:p-8 overflow-hidden">
+                <div ref={containerRef} className="relative w-full h-full max-w-5xl max-h-full flex items-center justify-center">
                     <img
                         ref={imageRef}
                         src={imageSrc}

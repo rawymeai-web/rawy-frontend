@@ -82,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({
             variant="secondary"
             className="!px-5 !py-2 text-sm font-bold shadow-sm hover:shadow-md border-brand-teal/20 text-brand-teal hover:bg-brand-teal hover:text-white transition-all"
           >
-            {language === 'ar' ? 'طلباتي' : 'My Orders'}
+            {language === 'ar' ? 'حسابي' : 'My Account'}
           </Button>
         </div>
       </div>

@@ -16,6 +16,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
   const { currency } = useStory();
   const [localData, setLocalData] = useState(storyData);
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const normalizeName = (name: string): string => {
     return name.trim().split(' ').map(word => {
@@ -54,6 +55,13 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
           : 'The uploaded image for the second character is not usable. Please review the photo quality check and upload a clearer face photo.');
         return;
       }
+    }
+
+    if (!consentChecked) {
+      alert(language === 'ar' 
+        ? 'يرجى الموافقة على شروط الاستخدام والإذن بالصور للمتابعة.' 
+        : 'Please confirm that you own or have permission to use these photos to continue.');
+      return;
     }
 
     onNext({
@@ -251,6 +259,25 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                </div>
              )}
           </div>
+
+           {/* Legal Consent Checkbox */}
+           <div className="glass-panel p-6 rounded-[2rem] border border-white/60 bg-white/40 shadow-sm">
+             <label className="flex items-start gap-4 cursor-pointer select-none">
+               <input 
+                 type="checkbox" 
+                 checked={consentChecked} 
+                 onChange={(e) => setConsentChecked(e.target.checked)}
+                 className="mt-1 w-5 h-5 rounded border-gray-300 text-brand-orange focus:ring-brand-orange cursor-pointer shrink-0"
+                 required
+               />
+               <span className="text-[11px] font-bold text-brand-navy/70 leading-relaxed text-start">
+                 {t(
+                   'أؤكد أنني أملك حقوق هذه الصور أو لدي الإذن باستخدامها، وأوافق على استخدامها لإنشاء القصة الشخصية لطلفي وفقاً لـ شروط الخدمة وسياسة الخصوصية.',
+                   'I confirm that I own or have permission to use these photos, and consent to their use for creating my custom storybook in accordance with the Terms of Service and Privacy Policy.'
+                 )}
+               </span>
+             </label>
+           </div>
 
           {/* Navigation */}
           <div className="flex items-center gap-4 pt-4">

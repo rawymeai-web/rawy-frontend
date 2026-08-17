@@ -18,6 +18,7 @@ import PageDecorations from './PageDecorations';
 import PaymentModal from './PaymentModal';
 import OrderStatusModal from './OrderStatusModal';
 import { CustomerDashboard } from './CustomerDashboard';
+import { ContactModal } from './ContactModal';
 import { AuthScreen } from './AuthScreen';
 import StyleSelectionScreen from './StyleSelectionScreen';
 import SizeScreen from './SizeScreen';
@@ -47,6 +48,7 @@ const MainLayout: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState(18.5); 
     const [isManualPayment, setIsManualPayment] = useState(false);
     const [user, setUser] = useState<any>(null);
+    const [isContactOpen, setIsContactOpen] = useState(false);
     const [authRedirectScreen, setAuthRedirectScreen] = useState<string | null>(null);
     const authRedirectScreenRef = React.useRef<string | null>(null);
     authRedirectScreenRef.current = authRedirectScreen;
@@ -426,7 +428,9 @@ const MainLayout: React.FC = () => {
                             resetStory();
                             setScreen('welcome');
                         }} 
-                        onEditPreferences={() => {}} 
+                        onEditPreferences={() => setScreen('personalization')} 
+                        onStartAdventure={() => setScreen('personalization')}
+                        onBack={() => setScreen('welcome')}
                         onViewBook={(order) => {
                             updateStory(order.storyData);
                             setScreen('preview');
@@ -470,9 +474,14 @@ const MainLayout: React.FC = () => {
                 <PageDecorations />
                 <div className={`relative w-full h-full p-4 sm:p-8 flex flex-col justify-center ${(screen === 'unified-generation' || screen === 'editor') ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
             </main>
-            <Footer language={language} onCheckOrderStatus={() => setScreen('customerDashboard')} />
+            <Footer 
+                language={language} 
+                onCheckOrderStatus={() => setScreen('customerDashboard')} 
+                onContactUs={() => setIsContactOpen(true)}
+            />
             <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(paymentAmount, currency)} orderId={storyData.orderId || ''} language={language} />
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
+            <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} language={language} />
             <RegionalDiscoveryModal 
                 currentLanguage={language} 
                 onLanguageChange={(lang) => {

@@ -2,8 +2,8 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { Character, Language } from '../types';
 import { Button } from './Button';
-
 import { ImageCropModal } from './ImageCropModal';
+import { backendApi } from '../services/backendApi';
 
 interface CharacterInputProps {
   character: Character;
@@ -66,20 +66,23 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
     // Call the quality analysis API
     setIsAnalyzing(true);
     try {
-      const res = await fetch('/api/generate/analyze-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: croppedImageBase64 })
+      const analysisData = await backendApi.analyzeImage({ imageBase64: croppedImageBase64 });
+      onCharacterChange({
+        ...updatedChar,
+        qualityAnalysis: analysisData
       });
-      if (res.ok) {
-        const analysisData = await res.json();
-        onCharacterChange({
-          ...updatedChar,
-          qualityAnalysis: analysisData
-        });
-      }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to analyze image quality:", err);
+      // Fail safely but informatively in the UI
+      onCharacterChange({
+        ...updatedChar,
+        qualityAnalysis: {
+          score: 'not_good',
+          feedback_en: `Scanner Unavailable: Please ensure this photo is a clear, front-facing portrait of the child's face.`,
+          feedback_ar: 'الفاحص غير متوفر: يرجى التأكد من أن الصورة هي صورة شخصية واضحة ومواجهة للأمام لوجه الطفل.',
+          issues: ['scan_failed']
+        }
+      });
     } finally {
       setIsAnalyzing(false);
     }

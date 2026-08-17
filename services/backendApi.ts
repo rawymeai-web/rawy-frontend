@@ -132,6 +132,16 @@ export const backendApi = {
         body: JSON.stringify(payload)
     }),
 
+    analyzeImage: (payload: { imageBase64: string, email?: string | null }) => fetchBackend<{
+        score: 'not_usable' | 'not_good' | 'acceptable' | 'great';
+        feedback_en: string;
+        feedback_ar: string;
+        issues: string[];
+    }>('/generate/analyze-image', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    }),
+
     // Drafts / Orders V2
     createDraftOrder: (payload: { storyData: any, customerEmail?: string, userId?: string, customerName?: string, total?: number }) => fetchBackend<{ success: boolean; orderId: string; message: string }>('/orders/draft', {
         method: 'POST',

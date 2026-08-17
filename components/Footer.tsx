@@ -4,13 +4,14 @@ import type { Language } from '../types';
 interface FooterProps {
     language: Language;
     onCheckOrderStatus: () => void;
+    onContactUs: () => void;
 }
 
-const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus }) => {
+const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus, onContactUs }) => {
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
     const links = [
-        { href: '#', ar: 'اتصل بنا', en: 'Contact Us', isExternal: true },
+        { href: '#', ar: 'اتصل بنا', en: 'Contact Us', onClick: onContactUs },
         { href: '#', ar: 'طلباتي', en: 'My Order', onClick: onCheckOrderStatus },
         { href: '#', ar: 'من نحن', en: 'About Us', isExternal: true },
         { href: '#', ar: 'الأسئلة الشائعة', en: 'FAQ' },
