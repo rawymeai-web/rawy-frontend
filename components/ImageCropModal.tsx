@@ -184,7 +184,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
     const handleTypes = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
 
     return createPortal(
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[99999] flex flex-col overflow-hidden animate-fadeIn h-screen w-screen">
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[99999] flex flex-col overflow-hidden animate-fadeIn h-[100dvh] w-full">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-white/10 backdrop-blur-md border-b border-white/10 shrink-0">
                 <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
@@ -257,7 +257,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
             </div>
 
             {/* Footer Controls */}
-            <div className="bg-white/10 backdrop-blur-md p-4 md:p-6 shrink-0 flex justify-center gap-4 border-t border-white/10">
+            <div className="bg-white/10 backdrop-blur-md p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] md:p-6 shrink-0 flex justify-center gap-4 border-t border-white/10">
                 <Button type="button" onClick={onClose} variant="ghost" className="text-white hover:bg-white/10">
                     {t('إلغاء', 'Cancel')}
                 </Button>
