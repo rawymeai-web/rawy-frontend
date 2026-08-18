@@ -213,7 +213,7 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
               />
             </div>
 
-            {isMain && onAgeChange && (
+            {isMain && onAgeChange ? (
               <div>
                 <label htmlFor={`childAge-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{t('العمر', 'Age')}</label>
                 <input 
@@ -226,10 +226,23 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
                   required
                 />
               </div>
-            )}
+            ) : (!isMain && character.type === 'person') ? (
+              <div>
+                <label htmlFor={`childAge-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{t('العمر', 'Age')}</label>
+                <input 
+                  type="number" 
+                  id={`childAge-${label}`} 
+                  value={character.age || ''} 
+                  onChange={(e) => onCharacterChange({ ...character, age: e.target.value })} 
+                  className="block w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-lg text-center" 
+                  min="1" max="12" 
+                  required
+                />
+              </div>
+            ) : null}
           </div>
 
-          {isMain && childAge && parseInt(childAge, 10) >= 6 && onGenderChange && (
+          {isMain && childAge && parseInt(childAge, 10) >= 6 && onGenderChange ? (
             <div className="animate-enter-forward">
               <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{t('جنس البطل', "Hero's Gender")}</label>
               <div className="flex gap-3">
@@ -249,7 +262,27 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
                 ))}
               </div>
             </div>
-          )}
+          ) : (!isMain && character.type === 'person' && character.age && parseInt(character.age, 10) >= 6) ? (
+            <div className="animate-enter-forward">
+              <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{t('جنس البطل', "Hero's Gender")}</label>
+              <div className="flex gap-3">
+                {['boy', 'girl'].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => onCharacterChange({ ...character, gender: g as any })}
+                    className={`flex-1 py-3 rounded-2xl font-bold border-2 transition-all ${
+                      character.gender === g 
+                        ? 'bg-brand-orange border-brand-orange text-white shadow-lg shadow-brand-orange/20' 
+                        : 'bg-white/50 border-brand-navy/5 text-brand-navy/60 hover:border-brand-orange/30'
+                    }`}
+                  >
+                    {g === 'boy' ? t('ولد', 'Boy') : t('بنت', 'Girl')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div>
             <label className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-3">{t('صورة الشخصية', "Character's Image")}</label>

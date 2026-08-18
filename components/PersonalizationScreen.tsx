@@ -48,8 +48,23 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
       return;
     }
     if (useSecondCharacter) {
-      if (secondCharacter && secondCharacter.images.length === 0) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الثانوية.' : "Please upload an image for the second character."); return; }
-      if (secondCharacter && secondCharacter.qualityAnalysis?.score === 'not_usable') {
+      if (!secondCharacter || !secondCharacter.name.trim()) {
+        alert(language === 'ar' ? 'الرجاء إدخال اسم الشخصية الثانية.' : "Please enter the second character's name.");
+        return;
+      }
+      if (secondCharacter.type === 'person') {
+        if (!secondCharacter.age || !secondCharacter.age.trim()) {
+          alert(language === 'ar' ? 'الرجاء إدخال عمر الشخصية الثانية.' : "Please enter the second character's age.");
+          return;
+        }
+        const secAge = parseInt(secondCharacter.age, 10);
+        if (!isNaN(secAge) && secAge >= 6 && !secondCharacter.gender) {
+          alert(language === 'ar' ? 'الرجاء تحديد ما إذا كان البطل الثاني ولداً أم بنتاً للاستمرار.' : "Please select if the second hero is a boy or a girl to continue.");
+          return;
+        }
+      }
+      if (secondCharacter.images.length === 0) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الثانوية.' : "Please upload an image for the second character."); return; }
+      if (secondCharacter.qualityAnalysis?.score === 'not_usable') {
         alert(language === 'ar' 
           ? 'صورة الشخصية الثانوية غير صالحة للاستخدام. يرجى مراجعة فحص الجودة ورفع صورة أخرى واضحة للوجه.' 
           : 'The uploaded image for the second character is not usable. Please review the photo quality check and upload a clearer face photo.');
