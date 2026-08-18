@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { Language } from '../types';
 import { Button } from './Button';
 
@@ -182,7 +183,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
 
     const handleTypes = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[99999] flex flex-col overflow-hidden animate-fadeIn h-screen w-screen">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-white/10 backdrop-blur-md border-b border-white/10 shrink-0">
@@ -264,6 +265,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
                     {t('تأكيد وحفظ', 'Confirm & Save')}
                 </Button>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
