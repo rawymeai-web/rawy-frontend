@@ -67,24 +67,10 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
     setIsAnalyzing(true);
     try {
       const analysisData = await backendApi.analyzeImage({ imageBase64: croppedImageBase64 });
-      let updatedCharWithAnalysis: Character = {
+      onCharacterChange({
         ...updatedChar,
         qualityAnalysis: analysisData
-      };
-
-      if (analysisData.score !== 'not_usable') {
-        try {
-          // Pre-generate child's facial identity text description to guide likeness preview generation
-          const descData = await backendApi.describeSubject({ imageBase64: croppedImageBase64 });
-          if (descData && descData.description) {
-            updatedCharWithAnalysis.description = descData.description;
-          }
-        } catch (descErr) {
-          console.error("Failed to pre-describe subject features:", descErr);
-        }
-      }
-
-      onCharacterChange(updatedCharWithAnalysis);
+      });
     } catch (err: any) {
       console.error("Failed to analyze image quality:", err);
       // Fail safely but informatively in the UI
