@@ -69,10 +69,25 @@ export const backendApi = {
     getCatalog: () => fetchBackend('/catalog'),
 
     // Generation
-    generateDna: (payload: any) => fetchBackend('/generate/dna', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    }),
+    generateDna: (payload: any) => {
+        const cleanPayload = {
+            ...payload,
+            mainCharacter: payload.mainCharacter ? {
+                ...payload.mainCharacter,
+                imageDNA: undefined,
+                images: undefined
+            } : undefined,
+            secondCharacter: payload.secondCharacter ? {
+                ...payload.secondCharacter,
+                imageDNA: undefined,
+                images: undefined
+            } : undefined
+        };
+        return fetchBackend('/generate/dna', {
+            method: 'POST',
+            body: JSON.stringify(cleanPayload)
+        });
+    },
 
     generateBlueprint: (payload: any) => fetchBackend('/generate/blueprint', {
         method: 'POST',
@@ -117,10 +132,25 @@ export const backendApi = {
         }),
 
 
-    generatePreview: (payload: { character: any, secondCharacter?: any, themeDescription: string, themeId?: string, stylePrompt: string, age: string }) => fetchBackend<{ imageBase64: string, prompt: string, secondImageBase64?: string, secondPrompt?: string }>('/generate/preview', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    }),
+    generatePreview: (payload: { character: any, secondCharacter?: any, themeDescription: string, themeId?: string, stylePrompt: string, age: string }) => {
+        const cleanPayload = {
+            ...payload,
+            character: payload.character ? {
+                ...payload.character,
+                imageDNA: undefined,
+                images: undefined
+            } : undefined,
+            secondCharacter: payload.secondCharacter ? {
+                ...payload.secondCharacter,
+                imageDNA: undefined,
+                images: undefined
+            } : undefined
+        };
+        return fetchBackend<{ imageBase64: string, prompt: string, secondImageBase64?: string, secondPrompt?: string }>('/generate/preview', {
+            method: 'POST',
+            body: JSON.stringify(cleanPayload)
+        });
+    },
 
     generateStyleGuide: (payload: { imageBase64: string, stylePrompt: string }) => fetchBackend<{ guide: string }>('/generate/style-guide', {
         method: 'POST',
