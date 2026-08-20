@@ -386,7 +386,8 @@ const MainLayout: React.FC = () => {
                                 storyData: apiStory, // Sends lightweight version
                                 customerName: details.name,
                                 customerEmail: details.email,
-                                total: totalAmount
+                                total: totalAmount,
+                                shippingDetails: details
                             });
 
                             if (res.success && res.orderId) {

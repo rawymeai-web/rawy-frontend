@@ -173,7 +173,7 @@ export const backendApi = {
     }),
 
     // Drafts / Orders V2
-    createDraftOrder: (payload: { storyData: any, customerEmail?: string, userId?: string, customerName?: string, total?: number }) => fetchBackend<{ success: boolean; orderId: string; message: string }>('/orders/draft', {
+    createDraftOrder: (payload: { storyData: any, customerEmail?: string, userId?: string, customerName?: string, total?: number, shippingDetails?: any }) => fetchBackend<{ success: boolean; orderId: string; message: string }>('/orders/draft', {
         method: 'POST',
         body: JSON.stringify(payload)
     }),
