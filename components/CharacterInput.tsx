@@ -63,6 +63,13 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
     setIsCropperOpen(false);
     setImageToCrop(null);
 
+    // Track UploadPhoto event
+    import('../utils/analytics').then(({ trackPixelEvent }) => {
+      trackPixelEvent('UploadPhoto', {
+        is_main: isMain,
+      });
+    });
+
     // Call the quality analysis API
     setIsAnalyzing(true);
     try {

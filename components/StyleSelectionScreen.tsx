@@ -204,6 +204,13 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
         setIsLocking(true);
         const lockedAt = new Date().toISOString();
 
+        // Track Style selection
+        import('../utils/analytics').then(({ trackPixelEvent }) => {
+            trackPixelEvent('SelectStyle', {
+                style_name: primaryChoice.name || 'custom',
+            });
+        });
+
         try {
             const promises: Promise<any>[] = [
                 backendApi.generateStyleGuide({ imageBase64: primaryChoice.imageBase64, stylePrompt: primaryChoice.prompt }),

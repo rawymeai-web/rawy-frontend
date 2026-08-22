@@ -49,9 +49,27 @@ const MainLayout: React.FC = () => {
     const [isManualPayment, setIsManualPayment] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [isContactOpen, setIsContactOpen] = useState(false);
-    const [authRedirectScreen, setAuthRedirectScreen] = useState<string | null>(null);
+    const [authRedirectScreen, setAuthRedirectScreen] = useState<string | null>(() => {
+        try {
+            return localStorage.getItem('authRedirectScreen') || null;
+        } catch (e) {
+            return null;
+        }
+    });
     const authRedirectScreenRef = React.useRef<string | null>(null);
     authRedirectScreenRef.current = authRedirectScreen;
+
+    useEffect(() => {
+        try {
+            if (authRedirectScreen) {
+                localStorage.setItem('authRedirectScreen', authRedirectScreen);
+            } else {
+                localStorage.removeItem('authRedirectScreen');
+            }
+        } catch (e) {
+            console.error("Failed to save authRedirectScreen", e);
+        }
+    }, [authRedirectScreen]);
 
     const storyDataRef = React.useRef(storyData);
     storyDataRef.current = storyData;
@@ -465,7 +483,10 @@ const MainLayout: React.FC = () => {
         <div className={`app-container font-sans bg-gray-50 text-gray-800 min-h-screen flex flex-col ${language === 'ar' ? 'rtl' : 'ltr'}`}>
             <Header
                 onAdminLoginClick={() => setScreen('admin')}
-                onMyOrdersClick={() => setScreen(user ? 'customerDashboard' : 'auth')}
+                onMyOrdersClick={() => {
+                    if (!user) setAuthRedirectScreen(screen);
+                    setScreen(user ? 'customerDashboard' : 'auth');
+                }}
                 language={language}
                 setLanguage={setLanguage}
                 currency={currency}

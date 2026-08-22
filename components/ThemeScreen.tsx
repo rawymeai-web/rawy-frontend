@@ -33,7 +33,141 @@ const LightbulbIcon: React.FC = () => (
   </svg>
 );
 
+const THEME_STYLING: Record<string, { bg: string; border: string; emojiBg: string; text: string; subtext: string }> = {
+  // Values themes (warm & gentle pastels)
+  'val-sleep': {
+    bg: 'bg-gradient-to-br from-indigo-50/75 to-blue-50/50 hover:from-indigo-100/60 hover:to-blue-100/50',
+    border: 'border-indigo-100/65 hover:border-indigo-200',
+    emojiBg: 'bg-indigo-100/80 text-indigo-700',
+    text: 'text-indigo-950',
+    subtext: 'text-indigo-900/60'
+  },
+  'val-respect': {
+    bg: 'bg-gradient-to-br from-amber-50/75 to-orange-50/50 hover:from-amber-100/60 hover:to-orange-100/50',
+    border: 'border-amber-100/65 hover:border-amber-200',
+    emojiBg: 'bg-amber-100/80 text-amber-700',
+    text: 'text-amber-950',
+    subtext: 'text-amber-900/60'
+  },
+  'val-siblings': {
+    bg: 'bg-gradient-to-br from-rose-50/75 to-pink-50/50 hover:from-rose-100/60 hover:to-pink-100/50',
+    border: 'border-rose-100/65 hover:border-rose-200',
+    emojiBg: 'bg-rose-100/80 text-rose-700',
+    text: 'text-rose-950',
+    subtext: 'text-rose-900/60'
+  },
+  'val-dentist': {
+    bg: 'bg-gradient-to-br from-cyan-50/75 to-teal-50/50 hover:from-cyan-100/60 hover:to-teal-100/50',
+    border: 'border-cyan-100/65 hover:border-cyan-200',
+    emojiBg: 'bg-cyan-100/80 text-cyan-700',
+    text: 'text-cyan-950',
+    subtext: 'text-cyan-900/60'
+  },
+  'val-honesty': {
+    bg: 'bg-gradient-to-br from-sky-50/75 to-blue-50/50 hover:from-sky-100/60 hover:to-blue-100/50',
+    border: 'border-sky-100/65 hover:border-sky-200',
+    emojiBg: 'bg-sky-100/80 text-sky-700',
+    text: 'text-sky-950',
+    subtext: 'text-sky-900/60'
+  },
+  'val-helping': {
+    bg: 'bg-gradient-to-br from-orange-50/75 to-amber-50/50 hover:from-orange-100/60 hover:to-amber-100/50',
+    border: 'border-orange-100/65 hover:border-orange-200',
+    emojiBg: 'bg-orange-100/80 text-orange-700',
+    text: 'text-orange-950',
+    subtext: 'text-orange-900/60'
+  },
+  'val-tidy': {
+    bg: 'bg-gradient-to-br from-emerald-50/75 to-green-50/50 hover:from-emerald-100/60 hover:to-green-100/50',
+    border: 'border-emerald-100/65 hover:border-emerald-200',
+    emojiBg: 'bg-emerald-100/80 text-emerald-700',
+    text: 'text-emerald-950',
+    subtext: 'text-emerald-900/60'
+  },
+  'val-sharing-toys': {
+    bg: 'bg-gradient-to-br from-violet-50/75 to-purple-50/50 hover:from-violet-100/60 hover:to-purple-100/50',
+    border: 'border-violet-100/65 hover:border-violet-200',
+    emojiBg: 'bg-violet-100/80 text-violet-700',
+    text: 'text-violet-950',
+    subtext: 'text-violet-900/60'
+  },
+
+  // Adventures themes (adventurous & colorful)
+  'adv-lost-found': {
+    bg: 'bg-gradient-to-br from-yellow-50/75 to-amber-50/50 hover:from-yellow-100/60 hover:to-amber-100/50',
+    border: 'border-yellow-100/65 hover:border-yellow-200',
+    emojiBg: 'bg-yellow-100/80 text-yellow-700',
+    text: 'text-yellow-950',
+    subtext: 'text-yellow-900/60'
+  },
+  'adv-mini-nature': {
+    bg: 'bg-gradient-to-br from-lime-50/75 to-emerald-50/50 hover:from-lime-100/60 hover:to-emerald-100/50',
+    border: 'border-lime-100/65 hover:border-lime-200',
+    emojiBg: 'bg-lime-100/80 text-lime-700',
+    text: 'text-lime-950',
+    subtext: 'text-lime-900/60'
+  },
+  'adv-daily': {
+    bg: 'bg-gradient-to-br from-amber-50/75 to-yellow-50/50 hover:from-amber-100/60 hover:to-yellow-100/50',
+    border: 'border-amber-100/65 hover:border-amber-200',
+    emojiBg: 'bg-amber-100/80 text-amber-700',
+    text: 'text-amber-950',
+    subtext: 'text-amber-900/60'
+  },
+  'adv-animal': {
+    bg: 'bg-gradient-to-br from-teal-50/75 to-emerald-50/50 hover:from-teal-100/60 hover:to-emerald-100/50',
+    border: 'border-teal-100/65 hover:border-teal-200',
+    emojiBg: 'bg-teal-100/80 text-teal-700',
+    text: 'text-teal-950',
+    subtext: 'text-teal-900/60'
+  },
+  'adv-magic-obj': {
+    bg: 'bg-gradient-to-br from-purple-50/75 to-fuchsia-50/50 hover:from-purple-100/60 hover:to-fuchsia-100/50',
+    border: 'border-purple-100/65 hover:border-purple-200',
+    emojiBg: 'bg-purple-100/80 text-purple-700',
+    text: 'text-purple-950',
+    subtext: 'text-purple-900/60'
+  },
+  'adv-fantasy': {
+    bg: 'bg-gradient-to-br from-fuchsia-50/75 to-pink-50/50 hover:from-fuchsia-100/60 hover:to-pink-100/50',
+    border: 'border-fuchsia-100/65 hover:border-fuchsia-200',
+    emojiBg: 'bg-fuchsia-100/80 text-fuchsia-700',
+    text: 'text-fuchsia-950',
+    subtext: 'text-fuchsia-900/60'
+  },
+  'adv-treasure': {
+    bg: 'bg-gradient-to-br from-amber-50/75 to-yellow-50/50 hover:from-amber-100/60 hover:to-yellow-100/50',
+    border: 'border-amber-100/65 hover:border-amber-200',
+    emojiBg: 'bg-amber-100/80 text-amber-700',
+    text: 'text-amber-950',
+    subtext: 'text-amber-900/60'
+  },
+  'adv-dino': {
+    bg: 'bg-gradient-to-br from-green-50/75 to-emerald-50/50 hover:from-green-100/60 hover:to-emerald-100/50',
+    border: 'border-green-100/65 hover:border-green-200',
+    emojiBg: 'bg-green-100/80 text-green-700',
+    text: 'text-green-950',
+    subtext: 'text-green-900/60'
+  },
+  'adv-space': {
+    bg: 'bg-gradient-to-br from-blue-50/75 to-indigo-50/50 hover:from-blue-100/60 hover:to-indigo-100/50',
+    border: 'border-blue-100/65 hover:border-blue-200',
+    emojiBg: 'bg-blue-100/80 text-blue-700',
+    text: 'text-blue-950',
+    subtext: 'text-blue-900/60'
+  }
+};
+
+const DEFAULT_STYLING = {
+  bg: 'glass-panel bg-white/30 hover:bg-white/60',
+  border: 'border-brand-navy/5 hover:border-brand-navy/15',
+  emojiBg: 'bg-brand-orange/10 text-brand-orange',
+  text: 'text-brand-navy',
+  subtext: 'text-brand-navy/60'
+};
+
 interface ThemeCardProps {
+  id: string;
   emoji: string;
   title: string;
   description: string;
@@ -41,35 +175,41 @@ interface ThemeCardProps {
   onClick: () => void;
 }
 
-const ThemeCard: React.FC<ThemeCardProps> = ({ emoji, title, description, isSelected, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`relative p-5 sm:p-8 rounded-[1.8rem] sm:rounded-[2.5rem] transition-all duration-500 flex flex-col items-center justify-center group overflow-hidden ${isSelected
-      ? 'bg-brand-orange text-white shadow-2xl shadow-brand-orange/30 scale-[1.02] z-10'
-      : 'glass-panel bg-white/30 hover:bg-white/60 hover:shadow-xl hover:-translate-y-2'
-      }`}
-    aria-pressed={isSelected}
-  >
-    {/* Selection Glow */}
-    {isSelected && (
-      <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
-    )}
-    
-    <div className={`text-4xl sm:text-6xl mb-4 sm:mb-6 transition-all duration-500 ${isSelected ? 'scale-110 rotate-3' : 'group-hover:scale-110 group-hover:-rotate-3'}`} role="img">{emoji}</div>
-    <h4 className={`font-black text-lg sm:text-xl leading-tight mb-2 sm:mb-3 transition-colors ${isSelected ? 'text-white' : 'text-brand-navy'}`}>{title}</h4>
-    <p className={`text-[10px] sm:text-xs font-medium leading-relaxed opacity-85 max-w-[150px] mx-auto ${isSelected ? 'text-white/90' : 'text-brand-navy/60'}`}>{description}</p>
+const ThemeCard: React.FC<ThemeCardProps> = ({ id, emoji, title, description, isSelected, onClick }) => {
+  const style = THEME_STYLING[id] || DEFAULT_STYLING;
 
-    {isSelected ? (
-      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
-        <span className="material-symbols-outlined text-white text-sm sm:text-lg">check_circle</span>
+  return (
+    <button
+      onClick={onClick}
+      className={`relative p-5 sm:p-8 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 transition-all duration-500 flex flex-col items-center justify-center group overflow-hidden ${isSelected
+        ? 'bg-brand-orange border-brand-orange text-white shadow-2xl shadow-brand-orange/30 scale-[1.02] z-10'
+        : `${style.bg} ${style.border}`
+        }`}
+      aria-pressed={isSelected}
+    >
+      {/* Selection Glow */}
+      {isSelected && (
+        <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
+      )}
+      
+      <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl mb-4 sm:mb-6 transition-all duration-500 ${isSelected ? 'bg-white/20 text-white scale-110 rotate-3' : `${style.emojiBg} group-hover:scale-110 group-hover:-rotate-3`}`} role="img">
+        {emoji}
       </div>
-    ) : (
-      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-orange/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-         <span className="material-symbols-outlined text-brand-orange text-sm sm:text-lg">arrow_forward</span>
-      </div>
-    )}
-  </button>
-);
+      <h4 className={`font-black text-lg sm:text-xl leading-tight mb-2 sm:mb-3 transition-colors ${isSelected ? 'text-white' : style.text}`}>{title}</h4>
+      <p className={`text-[10px] sm:text-xs font-medium leading-relaxed opacity-85 max-w-[150px] mx-auto ${isSelected ? 'text-white/90' : style.subtext}`}>{description}</p>
+
+      {isSelected ? (
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
+          <span className="material-symbols-outlined text-white text-sm sm:text-lg">check_circle</span>
+        </div>
+      ) : (
+        <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-orange/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+           <span className="material-symbols-outlined text-brand-orange text-sm sm:text-lg">arrow_forward</span>
+        </div>
+      )}
+    </button>
+  );
+};
 
 const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, language }) => {
   const { currency } = useStory();
@@ -143,6 +283,14 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
       finalStylePrompt = customStylePrompt;
     }
 
+    // Track Theme selection
+    import('../utils/analytics').then(({ trackPixelEvent }) => {
+      trackPixelEvent('SelectTheme', {
+        theme_id: selectedThemeId || 'custom',
+        theme_title: customTitle || (selectedPredefinedTheme ? getTranslation(selectedPredefinedTheme.title, language) : 'Custom'),
+      });
+    });
+
     onNext({
       title: customTitle,
       theme: finalThemeDescription,
@@ -184,6 +332,7 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
         {themes.map((themeOption) => (
           <ThemeCard
             key={themeOption.id}
+            id={themeOption.id}
             emoji={themeOption.emoji}
             title={getTranslation(themeOption.title, language)}
             description={getTranslation(themeOption.description, language)}

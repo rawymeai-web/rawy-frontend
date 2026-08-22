@@ -153,7 +153,7 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                             onClick={onEditPreferences} 
                             className="w-full md:w-auto !px-10 !py-5 rounded-2xl bg-white text-brand-navy hover:bg-gray-100 shadow-xl transition-all transform hover:-translate-y-1 font-black uppercase tracking-widest text-sm"
                         >
-                            {t('تخصيص البطل (DNA)', 'Customize Hero DNA')}
+                            {t('بدء طلب جديد', 'Start an Order')}
                         </Button>
                     </div>
                 </div>
