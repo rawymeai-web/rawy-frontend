@@ -37,9 +37,10 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                 setUser(currentUser);
                 
                 if (currentUser) {
-                    const data = await backendApi.getCustomerDashboard(currentUser.id);
-                    setActiveSub(data.subscription);
-                    setOrders(data.orders);
+                    const identifier = currentUser.email || currentUser.id;
+                    const data = await backendApi.getCustomerDashboard(identifier);
+                    setActiveSub(data?.subscription || null);
+                    setOrders(data?.orders || []);
                 }
             } catch (err) {
                 console.error("Dashboard failed to load", err);
@@ -52,29 +53,33 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
 
     const getStatusBadge = (dbStatus: DbOrderStatus | string) => {
         const friendlyMap: Record<string, string> = {
-            'paid_confirmed': t('تم تأكيد الدفع', 'Payment Confirmed'),
+            'paid_confirmed': t('تم تأكيد الطلب', 'Order Confirmed'),
+            'processing': t('جاري التجهيز والرسم', 'In Production'),
+            'Processing': t('جاري التجهيز والرسم', 'In Production'),
             'queued': t('في قائمة الانتظار', 'In Queue'),
             'story_generating': t('كتابة القصة', 'Drafting Story'),
-            'story_ready': t('تمت كتابة القصة', 'Story Written'),
+            'story_ready': t('تمت كتابة القصة', 'Story Ready'),
             'illustrations_generating': t('رسم الصور', 'Painting Illustrations'),
             'illustrations_ready': t('الصور جاهزة', 'Illustrations Ready'),
             'book_compiling': t('تجميع الكتاب', 'Binding Book'),
-            'softcopy_ready': t('النسخة الرقمية جاهزة!', 'Digital Copy Ready!'),
-            'awaiting_preview_approval': t('بانتظار موافقتك', 'Action: Preview'),
-            'sent_to_print': t('تم الإرسال للمطبعة', 'Sent to Printers'),
+            'softcopy_ready': t('النسخة الرقمية جاهزة!', 'Digital Book Ready!'),
+            'awaiting_preview_approval': t('جاهز للمعاينة', 'Ready for Preview'),
+            'completed': t('مكتمل وجاهز', 'Complete & Ready'),
+            'sent_to_print': t('تم الإرسال للمطبعة', 'Sent to Print'),
             'printing': t('جاري الطباعة', 'Printing'),
             'shipped': t('تم الشحن!', 'Shipped!'),
             'delivered': t('تم التوصيل', 'Delivered'),
+            'pending_payment': t('بانتظار الدفع', 'Pending Payment'),
         };
         const translated = friendlyMap[dbStatus] || dbStatus;
 
-        const isSuccess = ['shipped', 'delivered', 'softcopy_ready'].includes(dbStatus);
-        const isAction = ['awaiting_preview_approval'].includes(dbStatus);
+        const isSuccess = ['shipped', 'delivered', 'softcopy_ready', 'completed'].includes(dbStatus as string);
+        const isAction = ['awaiting_preview_approval', 'Processing', 'processing'].includes(dbStatus as string);
 
         return (
             <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                 isSuccess ? 'bg-green-100 text-green-700' : 
-                isAction ? 'bg-brand-orange text-white animate-pulse' : 
+                isAction ? 'bg-brand-orange text-white' : 
                 'bg-blue-50 text-blue-600'
             }`}>
                 {translated}
@@ -173,69 +178,73 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
-                        {orders.map(order => (
-                            <div key={order.orderNumber} className="group bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:border-brand-orange/20 transition-all">
-                                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                                    <div className="flex items-center gap-6 flex-1">
-                                        <div className="w-20 h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 shrink-0">
-                                            {order.storyData?.coverImageUrl ? (
-                                                <img 
-                                                    src={
-                                                        order.storyData.coverImageUrl.startsWith('http') || 
-                                                        order.storyData.coverImageUrl.startsWith('/') || 
-                                                        order.storyData.coverImageUrl.startsWith('data:')
-                                                            ? order.storyData.coverImageUrl
-                                                            : `data:image/jpeg;base64,${order.storyData.coverImageUrl}`
-                                                    } 
-                                                    alt="Cover" 
-                                                    className="w-full h-full object-cover" 
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 6.253v11.494m-9-5.747h18" /></svg>
+                        {orders.map(order => {
+                            const hasPreview = !!(
+                                order.storyData?.coverImageUrl ||
+                                (order.storyData?.spreads && order.storyData.spreads.length > 0) ||
+                                order.storyData?.title
+                            );
+
+                            return (
+                                <div key={order.orderNumber} className="group bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:border-brand-orange/20 transition-all">
+                                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                                        <div className="flex items-center gap-6 flex-1">
+                                            <div className="w-20 h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 shrink-0 shadow-sm">
+                                                {order.storyData?.coverImageUrl ? (
+                                                    <img 
+                                                        src={
+                                                            order.storyData.coverImageUrl.startsWith('http') || 
+                                                            order.storyData.coverImageUrl.startsWith('/') || 
+                                                            order.storyData.coverImageUrl.startsWith('data:')
+                                                                ? order.storyData.coverImageUrl
+                                                                : `data:image/jpeg;base64,${order.storyData.coverImageUrl}`
+                                                        } 
+                                                        alt="Cover" 
+                                                        className="w-full h-full object-cover" 
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                        <span className="material-symbols-outlined text-3xl">menu_book</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-black text-brand-navy opacity-40">#{order.orderNumber}</span>
+                                                    {getStatusBadge(order.status as string)}
                                                 </div>
+                                                <h3 className="text-xl font-black text-brand-navy uppercase tracking-tight truncate max-w-xs md:max-w-md">
+                                                    {order.storyData?.title || t('مغامرة خاصة', 'A Personalized Adventure')}
+                                                </h3>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    {new Date(order.orderDate).toLocaleDateString(language === 'ar' ? 'ar-KW' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 w-full md:w-auto">
+                                            {hasPreview && (
+                                                <Button 
+                                                    onClick={() => onViewBook(order)}
+                                                    className="flex-1 md:flex-none !px-8 !py-3 rounded-xl bg-brand-navy text-white hover:bg-brand-navy/90 text-xs font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">auto_stories</span>
+                                                    {t('معاينة وتصفح الكتاب', 'Preview Book')}
+                                                </Button>
+                                            )}
+                                            {(!order.storyData?.isPhysicalPrint) && (
+                                                <Button 
+                                                    onClick={() => onOrderPrint(order)}
+                                                    className="flex-1 md:flex-none !px-8 !py-3 rounded-xl bg-brand-coral text-white hover:bg-brand-coral/90 text-xs font-black uppercase tracking-widest shadow-lg"
+                                                >
+                                                    {t('طلب نسخة مطبوعة', 'Order HD Print')}
+                                                </Button>
                                             )}
                                         </div>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs font-black text-brand-navy opacity-40">#{order.orderNumber}</span>
-                                                {getStatusBadge(order.status as string)}
-                                            </div>
-                                            <h3 className="text-xl font-black text-brand-navy uppercase tracking-tight truncate max-w-xs md:max-w-md">
-                                                {order.storyData?.title || t('مغامرة خاصة', 'A Personalized Adventure')}
-                                            </h3>
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                                {new Date(order.orderDate).toLocaleDateString(language === 'ar' ? 'ar-KW' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-3 w-full md:w-auto">
-                                        {['softcopy_ready', 'awaiting_preview_approval', 'sent_to_print', 'printing', 'shipped', 'delivered'].includes(order.status as string) && (
-                                            <Button 
-                                                onClick={() => onViewBook(order)}
-                                                className="flex-1 md:flex-none !px-8 !py-3 rounded-xl bg-brand-navy text-white hover:bg-brand-navy/90 text-xs font-black uppercase tracking-widest shadow-lg"
-                                            >
-                                                {t('مشاهدة الكتاب', 'View Book')}
-                                            </Button>
-                                        )}
-                                        {(!order.storyData?.isPhysicalPrint) && (
-                                            <Button 
-                                                onClick={() => onOrderPrint(order)}
-                                                className="flex-1 md:flex-none !px-8 !py-3 rounded-xl bg-brand-coral text-white hover:bg-brand-coral/90 text-xs font-black uppercase tracking-widest shadow-lg"
-                                            >
-                                                {t('طلب نسخة مطبوعة', 'Order HD Print')}
-                                            </Button>
-                                        )}
-                                        {order.status === 'delivered' && (
-                                            <Button variant="outline" className="!p-3 rounded-xl">
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                            </Button>
-                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
