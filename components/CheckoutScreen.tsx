@@ -1,8 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from './Button';
 import type { ShippingDetails, Language, StoryData } from '../types';
 import { convertPrice, type Currency } from '../services/currencyService';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  COUNTRIES, 
+  KUWAIT_GOVERNORATES, 
+  SAUDI_REGIONS, 
+  UAE_EMIRATES, 
+  US_STATES, 
+  formatFullAddress 
+} from '../services/countryAddressConfig';
 
 interface CheckoutScreenProps {
   onProceedToPayment: (details: ShippingDetails, planType: 'one_time' | 'monthly' | 'yearly', total: number) => void;
@@ -31,17 +39,30 @@ const REGION_NAMES = {
 };
 
 const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onBack, language, storyData, currency }) => {
+  const isPhysicalInitial = !!storyData.isPhysicalPrint;
+  const [isPhysicalAddon, setIsPhysicalAddon] = useState(isPhysicalInitial);
+
   const [details, setDetails] = useState<ShippingDetails>({ 
     name: storyData.parentName || '', 
     address: '', 
     city: '', 
     phone: '', 
     email: storyData.parentEmail || '',
-    region: 'kuwait'
+    country: 'KW',
+    countryName: 'Kuwait',
+    region: 'kuwait',
+    governorate: 'العاصمة',
+    area: '',
+    block: '',
+    street: '',
+    building: '',
+    floorApt: '',
+    postalCode: '',
+    deliveryNotes: '',
+    isPhysicalDelivery: isPhysicalInitial
   });
   
   const [planType, setPlanType] = useState<'one_time' | 'monthly' | 'yearly'>('monthly');
-  const [isPhysicalAddon, setIsPhysicalAddon] = useState(false);
 
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
@@ -71,7 +92,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
     const finalDigital = storyData.isPrintUpsell ? 0 : subTotal;
     const physicalPrice = isPhysicalAddon ? 21.000 : 0;
-    const shipping = isPhysicalAddon ? SHIPPING_RATES[details.region || 'kuwait'] : 0;
+    const shipping = isPhysicalAddon ? SHIPPING_RATES[details.region as keyof typeof SHIPPING_RATES || 'kuwait'] : 0;
     
     return {
       aLaCarteDigitalTotal,
@@ -88,9 +109,51 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     }
   }, [storyData.isPhysicalPrint]);
 
+  // Handle Country Change
+  const handleCountryChange = (countryCode: string) => {
+    const selected = COUNTRIES.find(c => c.code === countryCode) || COUNTRIES[0];
+    const newRegion = selected.region;
+    
+    let defaultGov = '';
+    if (countryCode === 'KW') defaultGov = language === 'ar' ? 'العاصمة' : 'Capital (Al Asimah)';
+    if (countryCode === 'SA') defaultGov = language === 'ar' ? 'منطقة الرياض' : 'Riyadh';
+    if (countryCode === 'AE') defaultGov = language === 'ar' ? 'دبي' : 'Dubai';
+    if (countryCode === 'US') defaultGov = 'CA';
+
+    const updated = {
+      ...details,
+      country: countryCode,
+      countryName: selected.name[language],
+      region: newRegion,
+      governorate: defaultGov,
+      province: defaultGov,
+      emirate: defaultGov,
+      state: defaultGov,
+      city: countryCode === 'KW' ? (language === 'ar' ? 'الكويت' : 'Kuwait City') : details.city
+    };
+
+    updated.address = formatFullAddress({ ...updated, language });
+    setDetails(updated);
+  };
+
+  const updateField = (field: keyof ShippingDetails, val: any) => {
+    const updated = { ...details, [field]: val };
+    updated.address = formatFullAddress({ ...updated, language });
+    setDetails(updated);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onProceedToPayment(details, planType, pricing.total);
+    
+    const finalDetails = {
+      ...details,
+      isPhysicalDelivery: isPhysicalAddon,
+      address: isPhysicalAddon 
+        ? formatFullAddress({ ...details, language }) 
+        : (language === 'ar' ? 'طلب رقمي (لا يتطلب شحن فعلي)' : 'Digital Softcopy (No physical delivery required)')
+    };
+
+    onProceedToPayment(finalDetails, planType, pricing.total);
   };
 
   return (
@@ -254,64 +317,428 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
             </AnimatePresence>
           </div>
 
-          {/* Shipping Form */}
+          {/* Contact & Shipping Form */}
           <div className="bg-white/50 backdrop-blur-xl p-8 rounded-[3rem] border border-white shadow-xl space-y-8">
             <h3 className="text-xl font-black text-brand-navy flex items-center gap-3">
-              <span className="material-symbols-outlined text-brand-coral">location_on</span>
-              {t('بيانات التوصيل والاتصال', 'Delivery & Contact Details')}
+              <span className="material-symbols-outlined text-brand-coral">
+                {isPhysicalAddon ? 'local_shipping' : 'contact_mail'}
+              </span>
+              {isPhysicalAddon ? t('بيانات الشحن والتوصيل', 'Shipping & Delivery Details') : t('بيانات التواصل واستلام النسخة الرقمية', 'Contact & Digital Delivery Details')}
             </h3>
             
-            <form id="checkout-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الاسم الكامل', 'Full Name')}</label>
-                <input 
-                  required
-                  type="text"
-                  value={details.name}
-                  onChange={(e) => setDetails({ ...details, name: e.target.value })}
-                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy"
-                />
+            <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
+              {/* Contact Information (Required for All Orders) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الاسم الكامل', 'Full Name')} *</label>
+                  <input 
+                    required
+                    type="text"
+                    value={details.name}
+                    onChange={(e) => updateField('name', e.target.value)}
+                    placeholder={t('اسم المستلم', 'Full Name')}
+                    className="w-full px-5 py-3.5 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('البريد الإلكتروني', 'Email Address')} *</label>
+                  <input 
+                    required
+                    type="email"
+                    value={details.email}
+                    onChange={(e) => updateField('email', e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full px-5 py-3.5 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('رقم الهاتف (واتساب)', 'Phone / WhatsApp')} *</label>
+                  <input 
+                    required
+                    type="tel"
+                    value={details.phone}
+                    onChange={(e) => updateField('phone', e.target.value)}
+                    placeholder="+965 xxxxxxxx"
+                    className="w-full px-5 py-3.5 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy text-sm"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('البريد الإلكتروني', 'Email Address')}</label>
-                <input 
-                  required
-                  type="email"
-                  value={details.email}
-                  onChange={(e) => setDetails({ ...details, email: e.target.value })}
-                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('رقم الهاتف', 'Phone Number')}</label>
-                <input 
-                  required
-                  type="tel"
-                  value={details.phone}
-                  onChange={(e) => setDetails({ ...details, phone: e.target.value })}
-                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المدينة', 'City')}</label>
-                <input 
-                  required
-                  type="text"
-                  value={details.city}
-                  onChange={(e) => setDetails({ ...details, city: e.target.value })}
-                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy"
-                />
-              </div>
-              <div className="md:col-span-2 space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('العنوان بالتفصيل', 'Full Address')}</label>
-                <textarea 
-                  required
-                  rows={3}
-                  value={details.address}
-                  onChange={(e) => setDetails({ ...details, address: e.target.value })}
-                  className="w-full px-6 py-4 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy resize-none"
-                />
-              </div>
+
+              {/* Physical Delivery Address (Rendered ONLY when physical hardcover is selected) */}
+              <AnimatePresence>
+                {isPhysicalAddon ? (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-6 pt-6 border-t border-gray-100 overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-black text-brand-navy uppercase tracking-wider flex items-center gap-2">
+                        <span className="material-symbols-outlined text-brand-teal text-lg">home_pin</span>
+                        {t('عنوان التوصيل للمطبوعة الفاخرة', 'Hardcover Delivery Address')}
+                      </h4>
+                      <span className="text-[10px] bg-brand-teal/10 text-brand-teal font-black px-3 py-1 rounded-full uppercase">
+                        {t(REGION_NAMES[details.region as keyof typeof REGION_NAMES || 'kuwait'].ar, REGION_NAMES[details.region as keyof typeof REGION_NAMES || 'kuwait'].en)}
+                      </span>
+                    </div>
+
+                    {/* Country Selector */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الدولة', 'Country')} *</label>
+                      <select
+                        value={details.country || 'KW'}
+                        onChange={(e) => handleCountryChange(e.target.value)}
+                        className="w-full px-5 py-3.5 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none transition-colors font-bold text-brand-navy text-sm cursor-pointer"
+                      >
+                        {COUNTRIES.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.flag} {c.name[language]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* KUWAIT Dynamic Address */}
+                    {details.country === 'KW' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المحافظة', 'Governorate')} *</label>
+                          <select
+                            required
+                            value={details.governorate || KUWAIT_GOVERNORATES[0].ar}
+                            onChange={(e) => updateField('governorate', e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          >
+                            {KUWAIT_GOVERNORATES.map((g) => (
+                              <option key={g.ar} value={language === 'ar' ? g.ar : g.en}>
+                                {language === 'ar' ? g.ar : g.en}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة', 'Area')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.area || ''}
+                            onChange={(e) => updateField('area', e.target.value)}
+                            placeholder={t('مثال: مشرف، السرة، الروضة', 'e.g. Mishref, Surra')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('القطعة', 'Block')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.block || ''}
+                            onChange={(e) => updateField('block', e.target.value)}
+                            placeholder={t('مثال: 4', 'e.g. 4')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الشارع', 'Street')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.street || ''}
+                            onChange={(e) => updateField('street', e.target.value)}
+                            placeholder={t('اسم أو رقم الشارع', 'Street name/number')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المبنى / المنزل', 'Building / House')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.building || ''}
+                            onChange={(e) => updateField('building', e.target.value)}
+                            placeholder={t('رقم المنزل / العمارة', 'House/Bldg number')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الدور / الشقة (اختياري)', 'Floor / Apt (Optional)')}</label>
+                          <input 
+                            type="text"
+                            value={details.floorApt || ''}
+                            onChange={(e) => updateField('floorApt', e.target.value)}
+                            placeholder={t('مثال: دور 2، شقة 5', 'e.g. Floor 2, Apt 5')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SAUDI ARABIA Dynamic Address */}
+                    {details.country === 'SA' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة', 'Province/Region')} *</label>
+                          <select
+                            required
+                            value={details.province || SAUDI_REGIONS[0].ar}
+                            onChange={(e) => updateField('province', e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          >
+                            {SAUDI_REGIONS.map((r) => (
+                              <option key={r.ar} value={language === 'ar' ? r.ar : r.en}>
+                                {language === 'ar' ? r.ar : r.en}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المدينة', 'City')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.city || ''}
+                            onChange={(e) => updateField('city', e.target.value)}
+                            placeholder={t('الرياض، جدة، الدمام...', 'Riyadh, Jeddah, Dammam...')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الحي', 'District')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.area || ''}
+                            onChange={(e) => updateField('area', e.target.value)}
+                            placeholder={t('اسم الحي', 'District name')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الشارع', 'Street')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.street || ''}
+                            onChange={(e) => updateField('street', e.target.value)}
+                            placeholder={t('اسم الشارع', 'Street name')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('رقم المبنى / العنوان الوطني', 'Building / National Address')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.building || ''}
+                            onChange={(e) => updateField('building', e.target.value)}
+                            placeholder={t('رقم المبنى أو الرمز القصير', 'Building # or Short Address')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الرمز البريدي (اختياري)', 'Postal Code (Optional)')}</label>
+                          <input 
+                            type="text"
+                            value={details.postalCode || ''}
+                            onChange={(e) => updateField('postalCode', e.target.value)}
+                            placeholder="12345"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* UAE Dynamic Address */}
+                    {details.country === 'AE' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الإمارة', 'Emirate')} *</label>
+                          <select
+                            required
+                            value={details.emirate || UAE_EMIRATES[0].ar}
+                            onChange={(e) => updateField('emirate', e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          >
+                            {UAE_EMIRATES.map((em) => (
+                              <option key={em.ar} value={language === 'ar' ? em.ar : em.en}>
+                                {language === 'ar' ? em.ar : em.en}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة / المجتمع', 'Area / Community')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.area || ''}
+                            onChange={(e) => updateField('area', e.target.value)}
+                            placeholder={t('مثال: مارينا، البرشاء', 'e.g. Marina, Al Barsha')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الشارع', 'Street')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.street || ''}
+                            onChange={(e) => updateField('street', e.target.value)}
+                            placeholder={t('اسم أو رقم الشارع', 'Street name/number')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="sm:col-span-2 md:col-span-3 space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الفيلا / المبنى والشقة', 'Villa / Building & Apt')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.building || ''}
+                            onChange={(e) => updateField('building', e.target.value)}
+                            placeholder={t('رقم الفيلا أو اسم البرج ورقم الشقة', 'Villa # or Tower Name & Apt #')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* USA Dynamic Address */}
+                    {details.country === 'US' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="sm:col-span-2 space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Street Address (Line 1) *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.street || ''}
+                            onChange={(e) => updateField('street', e.target.value)}
+                            placeholder="123 Main St, Apt 4B"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Apt / Suite / Unit (Optional)</label>
+                          <input 
+                            type="text"
+                            value={details.floorApt || ''}
+                            onChange={(e) => updateField('floorApt', e.target.value)}
+                            placeholder="Unit 102"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">City *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.city || ''}
+                            onChange={(e) => updateField('city', e.target.value)}
+                            placeholder="San Francisco"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">State *</label>
+                          <select
+                            required
+                            value={details.state || 'CA'}
+                            onChange={(e) => updateField('state', e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          >
+                            {US_STATES.map((s) => (
+                              <option key={s.code} value={s.code}>
+                                {s.name} ({s.code})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">ZIP Code *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.postalCode || ''}
+                            onChange={(e) => updateField('postalCode', e.target.value)}
+                            placeholder="94103"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* OTHER COUNTRIES Generic Address */}
+                    {!['KW', 'SA', 'AE', 'US'].includes(details.country || 'KW') && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المدينة', 'City')} *</label>
+                          <input 
+                            required
+                            type="text"
+                            value={details.city || ''}
+                            onChange={(e) => updateField('city', e.target.value)}
+                            placeholder={t('اسم المدينة', 'City')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المقاطعة / الولاية', 'State / Province')}</label>
+                          <input 
+                            type="text"
+                            value={details.province || ''}
+                            onChange={(e) => updateField('province', e.target.value)}
+                            placeholder={t('الولاية أو المحافظة', 'State / Province')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الرمز البريدي', 'Postal / ZIP Code')}</label>
+                          <input 
+                            type="text"
+                            value={details.postalCode || ''}
+                            onChange={(e) => updateField('postalCode', e.target.value)}
+                            placeholder="Postal Code"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                          />
+                        </div>
+                        <div className="sm:col-span-2 md:col-span-3 space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('العنوان التفصيلي', 'Street Address & Building')} *</label>
+                          <textarea 
+                            required
+                            rows={2}
+                            value={details.street || ''}
+                            onChange={(e) => updateField('street', e.target.value)}
+                            placeholder={t('الشارع، رقم المبنى، الشقة...', 'Street, Building #, Apartment, Unit...')}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm resize-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Delivery Notes */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('ملاحظات خاصة بالتوصيل (اختياري)', 'Delivery Notes (Optional)')}</label>
+                      <input 
+                        type="text"
+                        value={details.deliveryNotes || ''}
+                        onChange={(e) => updateField('deliveryNotes', e.target.value)}
+                        placeholder={t('مثال: الاتصال قبل الوصول، ترك الطرد عند الباب', 'e.g. Call before delivery')}
+                        className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                      />
+                    </div>
+                  </motion.div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-brand-coral/5 border border-brand-coral/15 flex items-center gap-3 text-xs text-brand-navy font-bold">
+                    <span className="material-symbols-outlined text-brand-coral text-xl">cloud_download</span>
+                    <p>
+                      {t(
+                        'تم اختيار النسخة الرقمية (PDF) فقط — سيتم إرسال رابط التصفح والتحميل مباشرة إلى بريدك الإلكتروني وهاتفك دون الحاجة لعنوان شحن.',
+                        'Digital Softcopy selected — Your preview and high-res PDF will be delivered directly to your email and phone without requiring a shipping address.'
+                      )}
+                    </p>
+                  </div>
+                )}
+              </AnimatePresence>
             </form>
           </div>
         </div>
