@@ -54,7 +54,6 @@ const COVER_METADATA = [
 ];
 
 interface TranslationStrings {
-  heroTag: string;
   headingPrefix: string;
   heroWord: string;
   headingSuffix: string;
@@ -70,11 +69,10 @@ interface TranslationStrings {
 
 const TRANSLATIONS: Record<Language, TranslationStrings> = {
   ar: {
-    heroTag: 'هدية ساحرة ومخصصة تدوم للأبد',
     headingPrefix: 'اجعل طفلك',
     heroWord: 'بطل',
     headingSuffix: 'قصته الخاصة 📖',
-    subheading: 'كتاب مصور فاخر مطبوع باسم طفلك وملامحه في مغامرة شيقة يختارها بنفسه.',
+    subheading: 'باسم وملامح طفلك الحقيقية ✨',
     ctaButton: '✨ ابدأ تخصيص كتاب طفلك الآن',
     badge1: '⚡ تخصيص كامل في دقيقة واحدة',
     badge2: '📖 غلاف مقوى فاخر',
@@ -84,11 +82,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: 'شروط الخدمة'
   },
   en: {
-    heroTag: 'A Magical Personalized Gift That Lasts Forever',
     headingPrefix: 'Turn Your Child Into the',
     heroWord: 'Hero',
     headingSuffix: 'of Their Own Story 📖',
-    subheading: 'A premium personalized hardcover storybook featuring your child’s name and likeness.',
+    subheading: 'Starring your child’s name & likeness ✨',
     ctaButton: '✨ Create Your Child\'s Book Now',
     badge1: '⚡ 1-Minute Customization',
     badge2: '📖 Premium Hardcover',
@@ -98,11 +95,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: 'Terms of Service'
   },
   de: {
-    heroTag: 'Ein magisches personalisiertes Geschenk für immer',
     headingPrefix: 'Mach dein Kind zum',
     heroWord: 'Helden',
     headingSuffix: 'seiner eigenen Geschichte 📖',
-    subheading: 'Ein edles personalisiertes Buch mit dem Namen und dem Aussehen Ihres Kindes.',
+    subheading: 'Mit Bild und Name deines Kindes ✨',
     ctaButton: '✨ Jetzt Kinderbuch gestalten',
     badge1: '⚡ In 1 Minute gestaltet',
     badge2: '📖 Edles Hardcover',
@@ -112,11 +108,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: 'AGB'
   },
   tr: {
-    heroTag: 'Ömür Boyu Sürecek Sihirli Kişiselleştirilmiş Bir Hediye',
     headingPrefix: 'Çocuğunuzu Kendi Hikayesinin',
     heroWord: 'Kahramanı',
     headingSuffix: 'Yapın 📖',
-    subheading: 'Çocuğunuzun adı ve yüzüyle tasarlanmış unutulmaz bir özel hikaye kitabı.',
+    subheading: 'Çocuğunuzun adı ve yüzüyle özel ✨',
     ctaButton: '✨ Çocuğunuzun Kitabını Şimdi Oluşturun',
     badge1: '⚡ 1 Dakikada Tasarım',
     badge2: '📖 Lüks Sert Kapak',
@@ -126,11 +121,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: 'Kullanım Şartları'
   },
   zh: {
-    heroTag: '一份伴随一生的神奇定制礼物',
     headingPrefix: '让您的孩子成为自己故事的',
     heroWord: '主角',
     headingSuffix: '📖',
-    subheading: '精美定制精装绘本，印有您孩子的姓名和专属插画形象。',
+    subheading: '印有您孩子的姓名与插画形象 ✨',
     ctaButton: '✨ 立即定制儿童绘本',
     badge1: '⚡ 1分钟极速定制',
     badge2: '📖 高端精装硬壳',
@@ -140,11 +134,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: '服务条款'
   },
   ja: {
-    heroTag: '一生の宝物になる魔法のパーソナライズ絵本',
     headingPrefix: 'お子さまが',
     heroWord: '主人公',
     headingSuffix: 'になる世界でたったひとつの絵本 📖',
-    subheading: 'お子さまのお名前とお顔のイラストが入った、特別仕立てのハードカバー絵本。',
+    subheading: 'お子さまのお名前とお顔入り ✨',
     ctaButton: '✨ 今すぐ絵本をつくる',
     badge1: '⚡ 1分でかんたん作成',
     badge2: '📖 高級ハードカバー',
@@ -154,11 +147,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: '利用規約'
   },
   fr: {
-    heroTag: 'Un cadeau magique et personnalisé pour toujours',
     headingPrefix: 'Faites de votre enfant le',
     heroWord: 'héros',
     headingSuffix: 'de sa propre histoire 📖',
-    subheading: 'Un livre d\'histoire personnalisé haut de gamme avec le nom et les traits de votre enfant.',
+    subheading: 'Avec le prénom et visage de l\'enfant ✨',
     ctaButton: '✨ Créer le livre de votre enfant',
     badge1: '⚡ Personnalisation en 1 min',
     badge2: '📖 Couverture rigide premium',
@@ -168,11 +160,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: 'Conditions d\'utilisation'
   },
   es: {
-    heroTag: 'Un regalo mágico y personalizado para siempre',
     headingPrefix: 'Haz que tu hijo sea el',
     heroWord: 'héroe',
     headingSuffix: 'de su propia historia 📖',
-    subheading: 'Un libro personalizado prémium con el nombre y los rasgos de tu hijo.',
+    subheading: 'Con el nombre y rostro de tu hijo ✨',
     ctaButton: '✨ Crea el libro de tu hijo ahora',
     badge1: '⚡ Personalización en 1 minuto',
     badge2: '📖 Tapa dura de lujo',
@@ -182,11 +173,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: 'Términos de servicio'
   },
   it: {
-    heroTag: 'Un regalo magico e personalizzato per sempre',
     headingPrefix: 'Rendi tuo figlio il',
     heroWord: 'protagonista',
     headingSuffix: 'della sua storia 📖',
-    subheading: 'Un libro illustrato personalizzato di alta qualità con il nome e il volto di tuo figlio.',
+    subheading: 'Con nome e volto di tuo figlio ✨',
     ctaButton: '✨ Crea subito il libro per tuo figlio',
     badge1: '⚡ Personalizzazione in 1 minuto',
     badge2: '📖 Copertina rigida premium',
@@ -196,11 +186,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: 'Termini di servizio'
   },
   pt: {
-    heroTag: 'Um presente mágico e personalizado para sempre',
     headingPrefix: 'Torne seu filho o',
     heroWord: 'herói',
     headingSuffix: 'da sua própria história 📖',
-    subheading: 'Um livro personalizado de capa dura com o nome e as feições do seu filho.',
+    subheading: 'Com o nome e rosto do seu filho ✨',
     ctaButton: '✨ Crie o livro do seu filho agora',
     badge1: '⚡ Personalização em 1 minuto',
     badge2: '📖 Capa dura premium',
@@ -210,11 +199,10 @@ const TRANSLATIONS: Record<Language, TranslationStrings> = {
     termsOfService: 'Termos de serviço'
   },
   ru: {
-    heroTag: 'Волшебный персонализированный подарок на всю жизнь',
     headingPrefix: 'Сделайте вашего ребенка',
     heroWord: 'героем',
     headingSuffix: 'его собственной сказки 📖',
-    subheading: 'Красочная книга в твердом переплете с именем и внешностью вашего ребенка.',
+    subheading: 'С именем и внешностью вашего ребенка ✨',
     ctaButton: '✨ Создать книгу для ребенка',
     badge1: '⚡ Создание за 1 минуту',
     badge2: '📖 Твердый переплет премиум',
@@ -269,18 +257,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
       </div>
 
       {/* Main Hero Container */}
-      <main className="flex-grow flex flex-col items-center justify-center relative z-10 px-4 sm:px-6 py-4 md:py-8 max-w-6xl mx-auto w-full">
+      <main className="flex-grow flex flex-col items-center justify-center relative z-10 px-4 sm:px-6 py-6 md:py-10 max-w-6xl mx-auto w-full">
         
-        {/* Top Floating Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100/80 border border-amber-200/80 shadow-sm text-brand-navy mb-4 animate-fade-in">
-          <span className="text-sm">✨</span>
-          <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-[#F78F50]">
-            {lang.heroTag}
-          </span>
-        </div>
-
         {/* Ultra-Lean Catchy Headline */}
-        <div className="text-center max-w-3xl space-y-3 mb-6 sm:mb-8">
+        <div className="text-center max-w-3xl space-y-2 mb-6 sm:mb-8 animate-fade-in">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-[#001a40] tracking-tight leading-[1.15] drop-shadow-sm">
             {lang.headingPrefix}{' '}
             <span className="relative inline-block text-[#F78F50]">
