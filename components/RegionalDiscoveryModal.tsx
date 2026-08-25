@@ -6,17 +6,23 @@ import { Logo } from './Logo';
 import type { Language } from '../types';
 
 interface RegionalDiscoveryModalProps {
+    isOpen?: boolean;
+    onClose?: () => void;
     currentLanguage: Language;
     onLanguageChange: (lang: Language) => void;
     onCurrencyChange: (currencyCode: string) => void;
 }
 
 export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
+    isOpen: controlledIsOpen,
+    onClose,
     currentLanguage,
     onLanguageChange,
     onCurrencyChange
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [internalIsOpen, setInternalIsOpen] = useState(false);
+    const isModalOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+
     const [detectedRegion, setDetectedRegion] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -29,6 +35,10 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
     
     const [isShowingAllCountries, setIsShowingAllCountries] = useState(false);
     const [isShowingAllLangs, setIsShowingAllLangs] = useState(false);
+
+    useEffect(() => {
+        setSelectedLang(currentLanguage);
+    }, [currentLanguage]);
 
     const t = (ar: string, en: string) => ['ar'].includes(selectedLang) ? ar : en;
 
@@ -53,6 +63,7 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
         { code: 'JO', name: 'Jordan', ar: 'الأردن', flag: '🇯🇴', currency: 'USD' },
         { code: 'LB', name: 'Lebanon', ar: 'لبنان', flag: '🇱🇧', currency: 'USD' },
         { code: 'TR', name: 'Turkey', ar: 'تركيا', flag: '🇹🇷', currency: 'USD' },
+        { code: 'CN', name: 'China', ar: 'الصين', flag: '🇨🇳', currency: 'USD' },
         { code: 'ES', name: 'Spain', ar: 'إسبانيا', flag: '🇪🇸', currency: 'EUR' },
         { code: 'IT', name: 'Italy', ar: 'إيطاليا', flag: '🇮🇹', currency: 'EUR' },
     ];
@@ -61,19 +72,20 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
         { code: 'ar', label: 'العربية', flag: '🇸🇦' },
         { code: 'en', label: 'English', flag: '🇺🇸' },
         { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-        { code: 'es', label: 'Español', flag: '🇪🇸' },
+        { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
+        { code: 'zh', label: '中文 (Chinese)', flag: '🇨🇳' },
+        { code: 'ja', label: '日本語', flag: '🇯🇵' },
         { code: 'fr', label: 'Français', flag: '🇫🇷' },
+        { code: 'es', label: 'Español', flag: '🇪🇸' },
         { code: 'it', label: 'Italiano', flag: '🇮🇹' },
         { code: 'pt', label: 'Português', flag: '🇵🇹' },
         { code: 'ru', label: 'Русский', flag: '🇷🇺' },
-        { code: 'ja', label: '日本語', flag: '🇯🇵' },
-        { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
     ];
 
     useEffect(() => {
         const checkRegion = async () => {
             const hasSeen = localStorage.getItem('rawy_region_discovered');
-            if (hasSeen) {
+            if (hasSeen && controlledIsOpen === undefined) {
                 setIsLoading(false);
                 return;
             }
@@ -93,17 +105,21 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                 const initialLang = ['KW', 'SA', 'AE', 'QA', 'BH', 'OM', 'EG', 'JO', 'LB'].includes(country.code) ? 'ar' : 'en';
                 setSelectedLang(initialLang as Language);
                 
-                setIsOpen(true);
+                if (!hasSeen && controlledIsOpen === undefined) {
+                    setInternalIsOpen(true);
+                }
             } catch (error) {
                 console.error("Region detection failed", error);
-                setIsOpen(true);
+                if (!hasSeen && controlledIsOpen === undefined) {
+                    setInternalIsOpen(true);
+                }
             } finally {
                 setIsLoading(false);
             }
         };
 
         checkRegion();
-    }, []);
+    }, [controlledIsOpen]);
 
     const handleCountryChange = (code: string) => {
         let country = allCountries.find(c => c.code === code);
@@ -126,10 +142,11 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
         onLanguageChange(selectedLang);
         onCurrencyChange(selectedCurrency);
         localStorage.setItem('rawy_region_discovered', 'true');
-        setIsOpen(false);
+        setInternalIsOpen(false);
+        onClose?.();
     };
 
-    if (isLoading || !isOpen) return null;
+    if (!isModalOpen) return null;
 
     const filteredCountries = allCountries.filter(c => 
         c.name.toLowerCase().includes(countrySearch.toLowerCase()) || 
@@ -152,6 +169,16 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                 >
                     <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-brand-orange/15 to-transparent" />
                     
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-brand-navy flex items-center justify-center shadow-md z-20 transition-all active:scale-95"
+                            aria-label="Close"
+                        >
+                            <span className="material-symbols-outlined text-lg">close</span>
+                        </button>
+                    )}
+
                     <div className="p-10 relative z-10 space-y-8">
                         <div className="flex flex-col items-center text-center space-y-3">
                             <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center border border-gray-50 mb-1 overflow-hidden p-2">

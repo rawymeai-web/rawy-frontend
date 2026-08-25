@@ -41,7 +41,8 @@ const MainLayout: React.FC = () => {
         shippingDetails, setShippingDetails,
         screen, setScreen,
         isPaymentModalOpen, setPaymentModalOpen,
-        isOrderStatusModalOpen, setOrderStatusModalOpen
+        isOrderStatusModalOpen, setOrderStatusModalOpen,
+        isRegionModalOpen, setRegionModalOpen
     } = useStory();
 
     const [currentPrice, setCurrentPrice] = useState(17.0);
@@ -502,6 +503,7 @@ const MainLayout: React.FC = () => {
                 setLanguage={setLanguage}
                 currency={currency}
                 onCurrencyChange={(c) => setCurrency(currencies.find(x => x.code === c) || currencies[0])}
+                onOpenRegionModal={() => setRegionModalOpen(true)}
             />
             <main className="flex-grow relative">
                 <PageDecorations />
@@ -516,6 +518,8 @@ const MainLayout: React.FC = () => {
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
             <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} language={language} />
             <RegionalDiscoveryModal 
+                isOpen={isRegionModalOpen}
+                onClose={() => setRegionModalOpen(false)}
                 currentLanguage={language} 
                 onLanguageChange={(lang) => {
                     setLanguage(lang);

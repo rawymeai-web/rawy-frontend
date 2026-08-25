@@ -45,6 +45,8 @@ interface StoryContextType {
     setPaymentModalOpen: (isOpen: boolean) => void;
     isOrderStatusModalOpen: boolean;
     setOrderStatusModalOpen: (isOpen: boolean) => void;
+    isRegionModalOpen: boolean;
+    setRegionModalOpen: (isOpen: boolean) => void;
 }
 
 const StoryContext = createContext<StoryContextType | undefined>(undefined);
@@ -102,6 +104,7 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [isOrderStatusModalOpen, setOrderStatusModalOpen] = useState(false);
+    const [isRegionModalOpen, setRegionModalOpen] = useState(false);
 
     // Persistence Effect
     React.useEffect(() => {
@@ -149,7 +152,9 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             isPaymentModalOpen,
             setPaymentModalOpen,
             isOrderStatusModalOpen,
-            setOrderStatusModalOpen
+            setOrderStatusModalOpen,
+            isRegionModalOpen,
+            setRegionModalOpen
         }}>
             {children}
         </StoryContext.Provider>
