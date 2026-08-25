@@ -81,25 +81,68 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
         { code: 'ru', label: 'Русский', flag: '🇷🇺' },
     ];
 
+    const getPhoneLanguage = (): Language => {
+        if (typeof navigator === 'undefined') return 'ar';
+        const navLangs = navigator.languages && navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+        for (const raw of navLangs) {
+            if (!raw) continue;
+            const code = raw.toLowerCase().split('-')[0];
+            if (['ar', 'en', 'de', 'tr', 'zh', 'ja', 'fr', 'es', 'it', 'pt', 'ru'].includes(code)) {
+                return code as Language;
+            }
+        }
+        return 'ar';
+    };
+
     useEffect(() => {
         const checkRegion = async () => {
+            // 1. Phone / Device Language Detection
+            const phoneLang = getPhoneLanguage();
+            setSelectedLang(phoneLang);
+
+            // 2. IP Detection with reliable fallback
+            let countryCode = 'KW';
+            let countryName = 'Kuwait';
+            let detectedCurr = 'KWD';
+
             try {
                 const res = await fetch('https://ipapi.co/json/');
-                const data = await res.json();
-                setDetectedRegion(data);
-
-                const country = allCountries.find(c => c.code === data.country_code) || 
-                                { code: data.country_code, name: data.country_name, ar: data.country_name, flag: '🌍', currency: 'USD' };
-                
-                setSelectedCountry(country.code);
-                const supportedCurrency = currencies.find(c => c.code === country.currency);
-                setSelectedCurrency(supportedCurrency ? supportedCurrency.code : 'USD');
-                
-                const initialLang = ['KW', 'SA', 'AE', 'QA', 'BH', 'OM', 'EG', 'JO', 'LB'].includes(country.code) ? 'ar' : 'en';
-                setSelectedLang(initialLang as Language);
-            } catch (error) {
-                console.error("Region detection failed", error);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.country_code) {
+                        countryCode = data.country_code;
+                        countryName = data.country_name || 'Kuwait';
+                        detectedCurr = data.currency || 'USD';
+                        setDetectedRegion(data);
+                    }
+                } else {
+                    throw new Error('ipapi error');
+                }
+            } catch (e) {
+                try {
+                    const res2 = await fetch('https://ipwho.is/');
+                    if (res2.ok) {
+                        const data2 = await res2.json();
+                        if (data2 && data2.country_code) {
+                            countryCode = data2.country_code;
+                            countryName = data2.country || 'Kuwait';
+                            detectedCurr = data2.currency?.code || 'USD';
+                            setDetectedRegion(data2);
+                        }
+                    }
+                } catch (e2) {
+                    console.error("IP detection fallback failed", e2);
+                }
             }
+
+            const country = allCountries.find(c => c.code === countryCode) || 
+                            { code: countryCode, name: countryName, ar: countryName, flag: '🌍', currency: detectedCurr };
+            
+            setSelectedCountry(country.code);
+            const supportedCurrency = currencies.find(c => c.code === country.currency) || 
+                                     currencies.find(c => c.code === detectedCurr) || 
+                                     currencies[0];
+            setSelectedCurrency(supportedCurrency.code);
         };
 
         checkRegion();
