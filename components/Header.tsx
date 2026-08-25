@@ -59,13 +59,14 @@ const Header: React.FC<HeaderProps> = ({
               <option value="en">EN</option>
               <option value="ar">عربي</option>
               <option value="de">DE</option>
-              <option value="es">ES</option>
+              <option value="tr">TR</option>
+              <option value="zh">中文</option>
+              <option value="ja">JA</option>
               <option value="fr">FR</option>
+              <option value="es">ES</option>
               <option value="it">IT</option>
               <option value="pt">PT</option>
               <option value="ru">RU</option>
-              <option value="ja">JA</option>
-              <option value="tr">TR</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-brand-navy">
               <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>

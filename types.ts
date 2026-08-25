@@ -19,7 +19,7 @@ export type Screen =
   | 'customerDashboard'
   | 'orderStatus';
 
-export type Language = 'ar' | 'en' | 'de' | 'es' | 'fr' | 'pt' | 'it' | 'ru' | 'ja' | 'tr';
+export type Language = 'ar' | 'en' | 'de' | 'es' | 'fr' | 'pt' | 'it' | 'ru' | 'ja' | 'tr' | 'zh';
 
 export interface Character {
   name: string;

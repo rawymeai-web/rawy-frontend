@@ -53,6 +53,178 @@ const COVER_METADATA = [
   }
 ];
 
+interface TranslationStrings {
+  heroTag: string;
+  headingPrefix: string;
+  heroWord: string;
+  headingSuffix: string;
+  subheading: string;
+  ctaButton: string;
+  badge1: string;
+  badge2: string;
+  badge3: string;
+  customStoryBadge: string;
+  privacyPolicy: string;
+  termsOfService: string;
+}
+
+const TRANSLATIONS: Record<Language, TranslationStrings> = {
+  ar: {
+    heroTag: 'هدية ساحرة ومخصصة تدوم للأبد',
+    headingPrefix: 'اجعل طفلك',
+    heroWord: 'بطل',
+    headingSuffix: 'قصته الخاصة 📖',
+    subheading: 'كتاب مصور فاخر مطبوع باسم طفلك وملامحه في مغامرة شيقة يختارها بنفسه.',
+    ctaButton: '✨ ابدأ تخصيص كتاب طفلك الآن',
+    badge1: '⚡ تخصيص كامل في دقيقة واحدة',
+    badge2: '📖 غلاف مقوى فاخر',
+    badge3: '🚚 شحن سريع لجميع الدول',
+    customStoryBadge: 'قصة مخصصة',
+    privacyPolicy: 'سياسة الخصوصية',
+    termsOfService: 'شروط الخدمة'
+  },
+  en: {
+    heroTag: 'A Magical Personalized Gift That Lasts Forever',
+    headingPrefix: 'Turn Your Child Into the',
+    heroWord: 'Hero',
+    headingSuffix: 'of Their Own Story 📖',
+    subheading: 'A premium personalized hardcover storybook featuring your child’s name and likeness.',
+    ctaButton: '✨ Create Your Child\'s Book Now',
+    badge1: '⚡ 1-Minute Customization',
+    badge2: '📖 Premium Hardcover',
+    badge3: '🚚 Fast Worldwide Delivery',
+    customStoryBadge: 'Personalized Story',
+    privacyPolicy: 'Privacy Policy',
+    termsOfService: 'Terms of Service'
+  },
+  de: {
+    heroTag: 'Ein magisches personalisiertes Geschenk für immer',
+    headingPrefix: 'Mach dein Kind zum',
+    heroWord: 'Helden',
+    headingSuffix: 'seiner eigenen Geschichte 📖',
+    subheading: 'Ein edles personalisiertes Buch mit dem Namen und dem Aussehen Ihres Kindes.',
+    ctaButton: '✨ Jetzt Kinderbuch gestalten',
+    badge1: '⚡ In 1 Minute gestaltet',
+    badge2: '📖 Edles Hardcover',
+    badge3: '🚚 Weltweiter Schnellversand',
+    customStoryBadge: 'Personalisiertes Buch',
+    privacyPolicy: 'Datenschutz',
+    termsOfService: 'AGB'
+  },
+  tr: {
+    heroTag: 'Ömür Boyu Sürecek Sihirli Kişiselleştirilmiş Bir Hediye',
+    headingPrefix: 'Çocuğunuzu Kendi Hikayesinin',
+    heroWord: 'Kahramanı',
+    headingSuffix: 'Yapın 📖',
+    subheading: 'Çocuğunuzun adı ve yüzüyle tasarlanmış unutulmaz bir özel hikaye kitabı.',
+    ctaButton: '✨ Çocuğunuzun Kitabını Şimdi Oluşturun',
+    badge1: '⚡ 1 Dakikada Tasarım',
+    badge2: '📖 Lüks Sert Kapak',
+    badge3: '🚚 Tüm Dünyaya Hızlı Kargo',
+    customStoryBadge: 'Kişiye Özel Kitap',
+    privacyPolicy: 'Gizlilik Politikası',
+    termsOfService: 'Kullanım Şartları'
+  },
+  zh: {
+    heroTag: '一份伴随一生的神奇定制礼物',
+    headingPrefix: '让您的孩子成为自己故事的',
+    heroWord: '主角',
+    headingSuffix: '📖',
+    subheading: '精美定制精装绘本，印有您孩子的姓名和专属插画形象。',
+    ctaButton: '✨ 立即定制儿童绘本',
+    badge1: '⚡ 1分钟极速定制',
+    badge2: '📖 高端精装硬壳',
+    badge3: '🚚 全球快速配送',
+    customStoryBadge: '专属定制故事',
+    privacyPolicy: '隐私政策',
+    termsOfService: '服务条款'
+  },
+  ja: {
+    heroTag: '一生の宝物になる魔法のパーソナライズ絵本',
+    headingPrefix: 'お子さまが',
+    heroWord: '主人公',
+    headingSuffix: 'になる世界でたったひとつの絵本 📖',
+    subheading: 'お子さまのお名前とお顔のイラストが入った、特別仕立てのハードカバー絵本。',
+    ctaButton: '✨ 今すぐ絵本をつくる',
+    badge1: '⚡ 1分でかんたん作成',
+    badge2: '📖 高級ハードカバー',
+    badge3: '🚚 世界中へスピード配送',
+    customStoryBadge: 'オリジナル絵本',
+    privacyPolicy: 'プライバシーポリシー',
+    termsOfService: '利用規約'
+  },
+  fr: {
+    heroTag: 'Un cadeau magique et personnalisé pour toujours',
+    headingPrefix: 'Faites de votre enfant le',
+    heroWord: 'héros',
+    headingSuffix: 'de sa propre histoire 📖',
+    subheading: 'Un livre d\'histoire personnalisé haut de gamme avec le nom et les traits de votre enfant.',
+    ctaButton: '✨ Créer le livre de votre enfant',
+    badge1: '⚡ Personnalisation en 1 min',
+    badge2: '📖 Couverture rigide premium',
+    badge3: '🚚 Livraison rapide mondiale',
+    customStoryBadge: 'Histoire personnalisée',
+    privacyPolicy: 'Politique de confidentialité',
+    termsOfService: 'Conditions d\'utilisation'
+  },
+  es: {
+    heroTag: 'Un regalo mágico y personalizado para siempre',
+    headingPrefix: 'Haz que tu hijo sea el',
+    heroWord: 'héroe',
+    headingSuffix: 'de su propia historia 📖',
+    subheading: 'Un libro personalizado prémium con el nombre y los rasgos de tu hijo.',
+    ctaButton: '✨ Crea el libro de tu hijo ahora',
+    badge1: '⚡ Personalización en 1 minuto',
+    badge2: '📖 Tapa dura de lujo',
+    badge3: '🚚 Envío rápido mundial',
+    customStoryBadge: 'Historia personalizada',
+    privacyPolicy: 'Política de privacidad',
+    termsOfService: 'Términos de servicio'
+  },
+  it: {
+    heroTag: 'Un regalo magico e personalizzato per sempre',
+    headingPrefix: 'Rendi tuo figlio il',
+    heroWord: 'protagonista',
+    headingSuffix: 'della sua storia 📖',
+    subheading: 'Un libro illustrato personalizzato di alta qualità con il nome e il volto di tuo figlio.',
+    ctaButton: '✨ Crea subito il libro per tuo figlio',
+    badge1: '⚡ Personalizzazione in 1 minuto',
+    badge2: '📖 Copertina rigida premium',
+    badge3: '🚚 Spedizione rapida nel mondo',
+    customStoryBadge: 'Storia personalizzata',
+    privacyPolicy: 'Informativa sulla privacy',
+    termsOfService: 'Termini di servizio'
+  },
+  pt: {
+    heroTag: 'Um presente mágico e personalizado para sempre',
+    headingPrefix: 'Torne seu filho o',
+    heroWord: 'herói',
+    headingSuffix: 'da sua própria história 📖',
+    subheading: 'Um livro personalizado de capa dura com o nome e as feições do seu filho.',
+    ctaButton: '✨ Crie o livro do seu filho agora',
+    badge1: '⚡ Personalização em 1 minuto',
+    badge2: '📖 Capa dura premium',
+    badge3: '🚚 Envio rápido para o mundo todo',
+    customStoryBadge: 'História personalizada',
+    privacyPolicy: 'Política de privacidade',
+    termsOfService: 'Termos de serviço'
+  },
+  ru: {
+    heroTag: 'Волшебный персонализированный подарок на всю жизнь',
+    headingPrefix: 'Сделайте вашего ребенка',
+    heroWord: 'героем',
+    headingSuffix: 'его собственной сказки 📖',
+    subheading: 'Красочная книга в твердом переплете с именем и внешностью вашего ребенка.',
+    ctaButton: '✨ Создать книгу для ребенка',
+    badge1: '⚡ Создание за 1 минуту',
+    badge2: '📖 Твердый переплет премиум',
+    badge3: '🚚 Быстрая доставка по всему миру',
+    customStoryBadge: 'Именная сказка',
+    privacyPolicy: 'Политика конфиденциальности',
+    termsOfService: 'Условия использования'
+  }
+};
+
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -64,7 +236,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
     return () => clearInterval(timer);
   }, []);
 
-  const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+  const lang = TRANSLATIONS[language] || TRANSLATIONS.en;
   const isAr = language === 'ar';
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -103,28 +275,24 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100/80 border border-amber-200/80 shadow-sm text-brand-navy mb-4 animate-fade-in">
           <span className="text-sm">✨</span>
           <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-[#F78F50]">
-            {t('هدية ساحرة ومخصصة تدوم للأبد', 'A Magical Personalized Gift That Lasts Forever')}
+            {lang.heroTag}
           </span>
         </div>
 
         {/* Ultra-Lean Catchy Headline */}
         <div className="text-center max-w-3xl space-y-3 mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-[#001a40] tracking-tight leading-[1.15] drop-shadow-sm">
-            {isAr ? (
-              <>
-                اجعل طفلك <span className="relative inline-block text-[#F78F50]">بطل<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> قصته الخاصة 📖
-              </>
-            ) : (
-              <>
-                Turn Your Child Into the <span className="relative inline-block text-[#F78F50]">Hero<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> of Their Own Story 📖
-              </>
-            )}
+            {lang.headingPrefix}{' '}
+            <span className="relative inline-block text-[#F78F50]">
+              {lang.heroWord}
+              <svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10">
+                <path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path>
+              </svg>
+            </span>{' '}
+            {lang.headingSuffix}
           </h1>
           <p className="text-sm sm:text-base md:text-lg font-medium text-[#554339]/80 max-w-xl mx-auto leading-relaxed">
-            {t(
-              'كتاب مصور فاخر مطبوع باسم طفلك وملامحه في مغامرة شيقة يختارها بنفسه.',
-              'A premium personalized hardcover storybook featuring your child’s name and likeness in an adventure they will never forget.'
-            )}
+            {lang.subheading}
           </p>
         </div>
 
@@ -162,7 +330,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
                 {/* Book Title Overlay */}
                 <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 sm:pb-10 px-4 text-center text-white">
                   <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest text-amber-200 mb-2 border border-white/20">
-                    {t('قصة مخصصة', 'Personalized Story')}
+                    {lang.customStoryBadge}
                   </span>
                   <h2 className="text-xl sm:text-2xl md:text-3xl font-black drop-shadow-md">
                     {isAr ? cover.title.ar : cover.title.en}
@@ -197,7 +365,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
           >
             {/* Shimmer Highlight */}
             <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></span>
-            <span>{t('✨ ابدأ تخصيص كتاب طفلك الآن', '✨ Create Your Child\'s Book Now')}</span>
+            <span>{lang.ctaButton}</span>
             <span className="material-symbols-outlined font-black text-xl md:text-2xl">
               {isAr ? 'arrow_back' : 'arrow_forward'}
             </span>
@@ -206,18 +374,18 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
           {/* 3 Trust Micro-Badges */}
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[11px] sm:text-xs font-bold text-brand-navy/70 pt-1">
             <div className="flex items-center gap-1">
-              <span>⭐</span>
-              <span>{t('معاينة مجانية كاملة', '100% Free Full Preview')}</span>
+              <span>⚡</span>
+              <span>{lang.badge1}</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-brand-navy/20 hidden sm:block"></div>
             <div className="flex items-center gap-1">
               <span>📖</span>
-              <span>{t('غلاف مقوى فاخر', 'Premium Hardcover')}</span>
+              <span>{lang.badge2}</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-brand-navy/20 hidden sm:block"></div>
             <div className="flex items-center gap-1">
               <span>🚚</span>
-              <span>{t('شحن سريع لجميع الدول', 'Worldwide Delivery')}</span>
+              <span>{lang.badge3}</span>
             </div>
           </div>
         </div>
@@ -230,10 +398,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
           <p>© 2026 Rawy. All rights reserved. Powered by Albumii.</p>
           <div className="flex items-center gap-5">
             <a href="/policy.html" target="_blank" rel="noopener noreferrer" className="hover:text-[#F78F50] transition-colors">
-              {t('سياسة الخصوصية', 'Privacy Policy')}
+              {lang.privacyPolicy}
             </a>
             <a href="/tos.html" target="_blank" rel="noopener noreferrer" className="hover:text-[#F78F50] transition-colors">
-              {t('شروط الخدمة', 'Terms of Service')}
+              {lang.termsOfService}
             </a>
           </div>
         </div>
