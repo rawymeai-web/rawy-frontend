@@ -63,7 +63,7 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
             'illustrations_ready': t('الصور جاهزة', 'Illustrations Ready'),
             'book_compiling': t('تجميع الكتاب', 'Binding Book'),
             'softcopy_ready': t('النسخة الرقمية جاهزة!', 'Digital Book Ready!'),
-            'awaiting_preview_approval': t('جاهز للمعاينة', 'Ready for Preview'),
+            'awaiting_preview_approval': t('القصة جاهزة للقراءة!', 'Story is Ready!'),
             'completed': t('مكتمل وجاهز', 'Complete & Ready'),
             'sent_to_print': t('تم الإرسال للمطبعة', 'Sent to Print'),
             'printing': t('جاري الطباعة', 'Printing'),
@@ -73,12 +73,12 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
         };
         const translated = friendlyMap[dbStatus] || dbStatus;
 
-        const isSuccess = ['shipped', 'delivered', 'softcopy_ready', 'completed'].includes(dbStatus as string);
-        const isAction = ['awaiting_preview_approval', 'Processing', 'processing'].includes(dbStatus as string);
+        const isSuccess = ['shipped', 'delivered', 'softcopy_ready', 'completed', 'awaiting_preview_approval'].includes(dbStatus as string);
+        const isAction = ['Processing', 'processing', 'story_generating', 'illustrations_generating'].includes(dbStatus as string);
 
         return (
             <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                isSuccess ? 'bg-green-100 text-green-700' : 
+                isSuccess ? 'bg-emerald-100 text-emerald-800' : 
                 isAction ? 'bg-brand-orange text-white' : 
                 'bg-blue-50 text-blue-600'
             }`}>
@@ -99,24 +99,21 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
     );
 
     return (
-        <div className="max-w-6xl mx-auto p-6 space-y-12 animate-enter-forward pb-20">
+        <div className="max-w-6xl mx-auto p-6 md:p-12 space-y-12 animate-fade-in text-brand-navy">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
-                <div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b border-gray-100">
+                <div className="flex items-center gap-4">
                     <button 
                         type="button" 
                         onClick={onBack}
-                        className="flex items-center gap-1.5 text-xs font-black text-brand-navy/40 hover:text-brand-orange uppercase tracking-wider mb-3 transition-all active:scale-95 bg-transparent border-none outline-none cursor-pointer"
+                        className="p-3 bg-white rounded-2xl border border-gray-200 shadow-sm hover:scale-105 transition-all text-brand-navy"
                     >
-                        <span className="material-symbols-outlined text-sm">{language === 'ar' ? 'arrow_forward' : 'arrow_back'}</span>
-                        {t('العودة للرئيسية', 'Back to Home')}
+                        <span className="material-symbols-outlined">{language === 'ar' ? 'arrow_forward' : 'arrow_back'}</span>
                     </button>
-                    <h1 className="text-4xl md:text-5xl font-black text-brand-navy tracking-tight uppercase">
-                        {t('مغامراتي', 'My Adventures')}
-                    </h1>
-                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-2">
-                        {user?.email || 'Authenticated Explorer'}
-                    </p>
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight">{t('حسابي والمكتبة', 'My Library & Account')}</h1>
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-1">{t('إدارة اشتراكاتك والكتب الخاصة بك', 'Manage your subscriptions & custom stories')}</p>
+                    </div>
                 </div>
                 <Button onClick={onLogout} variant="outline" className="!px-6 !py-2 text-xs font-black uppercase tracking-widest border-2">
                     {t('تسجيل الخروج', 'Sign Out')}
@@ -246,7 +243,7 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                                                     className="flex-1 md:flex-none !px-6 sm:!px-8 !py-3 rounded-xl bg-brand-orange text-white hover:bg-brand-orange/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-orange/20 flex items-center justify-center gap-2"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">auto_stories</span>
-                                                    {t('معاينة وتصفح الكتاب', 'Preview Book')}
+                                                    {t('تصفح وقراءة الكتاب 📖', 'Read & Flip Storybook 📖')}
                                                 </Button>
                                             )}
                                             {(!order.storyData?.isPhysicalPrint) && (
