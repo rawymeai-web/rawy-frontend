@@ -62,7 +62,32 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     });
 
     const [shippingDetails, setShippingDetails] = useState<ShippingDetails | null>(null);
-    const [language, setLanguage] = useState<Language>('en');
+    const [language, setLanguageState] = useState<Language>(() => {
+        try {
+            const savedLang = localStorage.getItem('preferred_language');
+            if (savedLang) return savedLang as Language;
+
+            // Auto-detect Arabic if user browser / system locale is Arabic
+            if (typeof navigator !== 'undefined' && navigator.language) {
+                const navLang = navigator.language.toLowerCase();
+                if (navLang.startsWith('ar')) return 'ar';
+            }
+            // Default to Arabic as primary regional brand language, or 'ar'
+            return 'ar';
+        } catch (e) {
+            return 'ar';
+        }
+    });
+
+    const setLanguage = (lang: Language) => {
+        setLanguageState(lang);
+        try {
+            localStorage.setItem('preferred_language', lang);
+        } catch (e) {
+            console.error("Failed to save language to storage", e);
+        }
+    };
+
     const [currency, setCurrency] = useState<Currency>(currencies[0]);
 
     // Default to 'welcome' as language is now handled on the welcome screen
