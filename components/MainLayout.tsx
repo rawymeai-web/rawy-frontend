@@ -49,6 +49,7 @@ const MainLayout: React.FC = () => {
     const [isManualPayment, setIsManualPayment] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [isContactOpen, setIsContactOpen] = useState(false);
+    const [previewReturnScreen, setPreviewReturnScreen] = useState<string>('customerDashboard');
     const [authRedirectScreen, setAuthRedirectScreen] = useState<string | null>(() => {
         try {
             return localStorage.getItem('authRedirectScreen') || null;
@@ -377,7 +378,16 @@ const MainLayout: React.FC = () => {
                 content = <UnifiedGenerationScreen progress={unifiedProgress} statusMessage={unifiedStatus} quote={currentQuote} onComplete={() => setScreen('editor')} language={language} onStartWorkflow={startWorkflow} />;
                 break;
             case 'preview':
-                content = <PreviewScreen storyData={storyData} onOrder={() => setScreen('confirmation')} onDownloadPreview={() => { }} onRestart={() => { resetStory(); }} onTitleChange={(t) => updateStory({ title: t })} onRegenerate={() => { setScreen('unified-generation'); startWorkflow(); }} language={language} onBack={() => setScreen('unified-generation')} />;
+                content = <PreviewScreen 
+                    storyData={storyData} 
+                    onOrder={() => setScreen('confirmation')} 
+                    onDownloadPreview={() => { }} 
+                    onRestart={() => { resetStory(); }} 
+                    onTitleChange={(t) => updateStory({ title: t })} 
+                    onRegenerate={() => { setScreen('unified-generation'); startWorkflow(); }} 
+                    language={language} 
+                    onBack={() => setScreen(previewReturnScreen || (storyData.orderId ? 'customerDashboard' : 'welcome'))} 
+                />;
                 break;
             case 'checkout':
                 content = <CheckoutScreen
@@ -451,6 +461,7 @@ const MainLayout: React.FC = () => {
                         onStartAdventure={() => setScreen('personalization')}
                         onBack={() => setScreen('welcome')}
                         onViewBook={(order) => {
+                            setPreviewReturnScreen('customerDashboard');
                             updateStory(order.storyData);
                             setScreen('preview');
                         }}

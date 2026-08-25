@@ -186,47 +186,64 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                             );
 
                             return (
-                                <div key={order.orderNumber} className="group bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:border-brand-orange/20 transition-all">
-                                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                                        <div className="flex items-center gap-6 flex-1">
-                                            <div className="w-20 h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 shrink-0 shadow-sm">
-                                                {order.storyData?.coverImageUrl ? (
-                                                    <img 
-                                                        src={
-                                                            order.storyData.coverImageUrl.startsWith('http') || 
-                                                            order.storyData.coverImageUrl.startsWith('/') || 
-                                                            order.storyData.coverImageUrl.startsWith('data:')
-                                                                ? order.storyData.coverImageUrl
-                                                                : `data:image/jpeg;base64,${order.storyData.coverImageUrl}`
-                                                        } 
-                                                        alt="Cover" 
-                                                        className="w-full h-full object-cover" 
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                        <span className="material-symbols-outlined text-3xl">menu_book</span>
+                                <div key={order.orderNumber} className="group bg-white rounded-[2.5rem] p-6 sm:p-7 border border-gray-100 shadow-sm hover:shadow-xl hover:border-brand-orange/20 transition-all">
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                        <div className="flex items-center gap-4 sm:gap-6 flex-1 w-full">
+                                            
+                                            {/* Cover Thumbnail */}
+                                            {(() => {
+                                                const rawCover = order.storyData?.coverImageUrl 
+                                                    || order.storyData?.spreads?.[0]?.illustrationUrl 
+                                                    || (order.storyData?.spreads as any)?.[0]?.imageUrl
+                                                    || (order.storyData?.spreads as any)?.find((s: any) => s?.illustrationUrl)?.illustrationUrl;
+                                                    
+                                                const coverSrc = rawCover
+                                                    ? (rawCover.startsWith('http') || rawCover.startsWith('/') || rawCover.startsWith('data:')
+                                                        ? rawCover
+                                                        : `data:image/jpeg;base64,${rawCover}`)
+                                                    : null;
+
+                                                return (
+                                                    <div className="w-20 h-24 sm:w-24 sm:h-28 bg-gradient-to-br from-brand-orange/10 via-brand-teal/5 to-brand-navy/10 rounded-2xl overflow-hidden border border-gray-200 shrink-0 shadow-md relative flex items-center justify-center group-hover:scale-105 transition-transform">
+                                                        {coverSrc && (
+                                                            <img 
+                                                                src={coverSrc} 
+                                                                alt="" 
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLElement).style.display = 'none';
+                                                                }}
+                                                                className="w-full h-full object-cover object-center relative z-10" 
+                                                            />
+                                                        )}
+                                                        <div className="absolute inset-0 flex items-center justify-center text-brand-navy/30 z-0">
+                                                            <span className="material-symbols-outlined text-3xl">auto_stories</span>
+                                                        </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-xs font-black text-brand-navy opacity-40">#{order.orderNumber}</span>
+                                                );
+                                            })()}
+
+                                            {/* Story Metadata */}
+                                            <div className="space-y-1.5 flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                                    <span className="text-xs font-mono font-black text-brand-navy/60 bg-gray-100 px-2 py-0.5 rounded-md">
+                                                        #{order.orderNumber}
+                                                    </span>
                                                     {getStatusBadge(order.status as string)}
                                                 </div>
-                                                <h3 className="text-xl font-black text-brand-navy uppercase tracking-tight truncate max-w-xs md:max-w-md">
+                                                <h3 className="text-lg sm:text-xl font-black text-brand-navy uppercase tracking-tight line-clamp-1">
                                                     {order.storyData?.title || t('مغامرة خاصة', 'A Personalized Adventure')}
                                                 </h3>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
                                                     {new Date(order.orderDate).toLocaleDateString(language === 'ar' ? 'ar-KW' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3 w-full md:w-auto">
+                                        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-gray-100">
                                             {hasPreview && (
                                                 <Button 
                                                     onClick={() => onViewBook(order)}
-                                                    className="flex-1 md:flex-none !px-8 !py-3 rounded-xl bg-brand-navy text-white hover:bg-brand-navy/90 text-xs font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2"
+                                                    className="flex-1 md:flex-none !px-6 sm:!px-8 !py-3 rounded-xl bg-brand-orange text-white hover:bg-brand-orange/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-orange/20 flex items-center justify-center gap-2"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">auto_stories</span>
                                                     {t('معاينة وتصفح الكتاب', 'Preview Book')}
@@ -235,7 +252,7 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                                             {(!order.storyData?.isPhysicalPrint) && (
                                                 <Button 
                                                     onClick={() => onOrderPrint(order)}
-                                                    className="flex-1 md:flex-none !px-8 !py-3 rounded-xl bg-brand-coral text-white hover:bg-brand-coral/90 text-xs font-black uppercase tracking-widest shadow-lg"
+                                                    className="flex-1 md:flex-none !px-6 sm:!px-8 !py-3 rounded-xl bg-brand-navy text-white hover:bg-brand-navy/90 text-xs font-black uppercase tracking-widest shadow-lg"
                                                 >
                                                     {t('طلب نسخة مطبوعة', 'Order HD Print')}
                                                 </Button>
