@@ -104,7 +104,14 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [isOrderStatusModalOpen, setOrderStatusModalOpen] = useState(false);
-    const [isRegionModalOpen, setRegionModalOpen] = useState(false);
+    const [isRegionModalOpen, setRegionModalOpen] = useState<boolean>(() => {
+        try {
+            const hasConfirmed = sessionStorage.getItem('rawy_region_confirmed');
+            return !hasConfirmed;
+        } catch (e) {
+            return true;
+        }
+    });
 
     // Persistence Effect
     React.useEffect(() => {

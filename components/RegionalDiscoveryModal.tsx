@@ -20,11 +20,10 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
     onLanguageChange,
     onCurrencyChange
 }) => {
-    const [internalIsOpen, setInternalIsOpen] = useState(false);
+    const [internalIsOpen, setInternalIsOpen] = useState(true);
     const isModalOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
 
     const [detectedRegion, setDetectedRegion] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
 
     const [selectedCountry, setSelectedCountry] = useState('KW');
     const [selectedLang, setSelectedLang] = useState<Language>(currentLanguage);
@@ -84,12 +83,6 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
 
     useEffect(() => {
         const checkRegion = async () => {
-            const hasSeen = localStorage.getItem('rawy_region_discovered');
-            if (hasSeen && controlledIsOpen === undefined) {
-                setIsLoading(false);
-                return;
-            }
-
             try {
                 const res = await fetch('https://ipapi.co/json/');
                 const data = await res.json();
@@ -104,22 +97,13 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                 
                 const initialLang = ['KW', 'SA', 'AE', 'QA', 'BH', 'OM', 'EG', 'JO', 'LB'].includes(country.code) ? 'ar' : 'en';
                 setSelectedLang(initialLang as Language);
-                
-                if (!hasSeen && controlledIsOpen === undefined) {
-                    setInternalIsOpen(true);
-                }
             } catch (error) {
                 console.error("Region detection failed", error);
-                if (!hasSeen && controlledIsOpen === undefined) {
-                    setInternalIsOpen(true);
-                }
-            } finally {
-                setIsLoading(false);
             }
         };
 
         checkRegion();
-    }, [controlledIsOpen]);
+    }, []);
 
     const handleCountryChange = (code: string) => {
         let country = allCountries.find(c => c.code === code);
@@ -141,7 +125,18 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
     const handleConfirm = () => {
         onLanguageChange(selectedLang);
         onCurrencyChange(selectedCurrency);
-        localStorage.setItem('rawy_region_discovered', 'true');
+        try {
+            sessionStorage.setItem('rawy_region_confirmed', 'true');
+            localStorage.setItem('rawy_region_discovered', 'true');
+        } catch (e) {}
+        setInternalIsOpen(false);
+        onClose?.();
+    };
+
+    const handleClose = () => {
+        try {
+            sessionStorage.setItem('rawy_region_confirmed', 'true');
+        } catch (e) {}
         setInternalIsOpen(false);
         onClose?.();
     };
@@ -171,7 +166,7 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                     
                     {onClose && (
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-brand-navy flex items-center justify-center shadow-md z-20 transition-all active:scale-95"
                             aria-label="Close"
                         >
