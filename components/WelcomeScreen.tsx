@@ -53,335 +53,130 @@ const COVER_METADATA = [
   }
 ];
 
-interface TranslationStrings {
-  headingPrefix: string;
-  heroWord: string;
-  headingSuffix: string;
-  subheading: string;
-  ctaButton: string;
-  badge1: string;
-  badge2: string;
-  badge3: string;
-  customStoryBadge: string;
-  privacyPolicy: string;
-  termsOfService: string;
-}
-
-const TRANSLATIONS: Record<Language, TranslationStrings> = {
-  ar: {
-    headingPrefix: 'اجعل طفلك',
-    heroWord: 'بطل',
-    headingSuffix: 'قصته الخاصة 📖',
-    subheading: 'باسم وملامح طفلك الحقيقية ✨',
-    ctaButton: '✨ ابدأ تخصيص كتاب طفلك الآن',
-    badge1: '⚡ تخصيص كامل في دقيقة واحدة',
-    badge2: '📖 غلاف مقوى فاخر',
-    badge3: '🚚 شحن سريع لجميع الدول',
-    customStoryBadge: 'قصة مخصصة',
-    privacyPolicy: 'سياسة الخصوصية',
-    termsOfService: 'شروط الخدمة'
-  },
-  en: {
-    headingPrefix: 'Turn Your Child Into the',
-    heroWord: 'Hero',
-    headingSuffix: 'of Their Own Story 📖',
-    subheading: 'Starring your child’s name & likeness ✨',
-    ctaButton: '✨ Create Your Child\'s Book Now',
-    badge1: '⚡ 1-Minute Customization',
-    badge2: '📖 Premium Hardcover',
-    badge3: '🚚 Fast Worldwide Delivery',
-    customStoryBadge: 'Personalized Story',
-    privacyPolicy: 'Privacy Policy',
-    termsOfService: 'Terms of Service'
-  },
-  de: {
-    headingPrefix: 'Mach dein Kind zum',
-    heroWord: 'Helden',
-    headingSuffix: 'seiner eigenen Geschichte 📖',
-    subheading: 'Mit Bild und Name deines Kindes ✨',
-    ctaButton: '✨ Jetzt Kinderbuch gestalten',
-    badge1: '⚡ In 1 Minute gestaltet',
-    badge2: '📖 Edles Hardcover',
-    badge3: '🚚 Weltweiter Schnellversand',
-    customStoryBadge: 'Personalisiertes Buch',
-    privacyPolicy: 'Datenschutz',
-    termsOfService: 'AGB'
-  },
-  tr: {
-    headingPrefix: 'Çocuğunuzu Kendi Hikayesinin',
-    heroWord: 'Kahramanı',
-    headingSuffix: 'Yapın 📖',
-    subheading: 'Çocuğunuzun adı ve yüzüyle özel ✨',
-    ctaButton: '✨ Çocuğunuzun Kitabını Şimdi Oluşturun',
-    badge1: '⚡ 1 Dakikada Tasarım',
-    badge2: '📖 Lüks Sert Kapak',
-    badge3: '🚚 Tüm Dünyaya Hızlı Kargo',
-    customStoryBadge: 'Kişiye Özel Kitap',
-    privacyPolicy: 'Gizlilik Politikası',
-    termsOfService: 'Kullanım Şartları'
-  },
-  zh: {
-    headingPrefix: '让您的孩子成为自己故事的',
-    heroWord: '主角',
-    headingSuffix: '📖',
-    subheading: '印有您孩子的姓名与插画形象 ✨',
-    ctaButton: '✨ 立即定制儿童绘本',
-    badge1: '⚡ 1分钟极速定制',
-    badge2: '📖 高端精装硬壳',
-    badge3: '🚚 全球快速配送',
-    customStoryBadge: '专属定制故事',
-    privacyPolicy: '隐私政策',
-    termsOfService: '服务条款'
-  },
-  ja: {
-    headingPrefix: 'お子さまが',
-    heroWord: '主人公',
-    headingSuffix: 'になる世界でたったひとつの絵本 📖',
-    subheading: 'お子さまのお名前とお顔入り ✨',
-    ctaButton: '✨ 今すぐ絵本をつくる',
-    badge1: '⚡ 1分でかんたん作成',
-    badge2: '📖 高級ハードカバー',
-    badge3: '🚚 世界中へスピード配送',
-    customStoryBadge: 'オリジナル絵本',
-    privacyPolicy: 'プライバシーポリシー',
-    termsOfService: '利用規約'
-  },
-  fr: {
-    headingPrefix: 'Faites de votre enfant le',
-    heroWord: 'héros',
-    headingSuffix: 'de sa propre histoire 📖',
-    subheading: 'Avec le prénom et visage de l\'enfant ✨',
-    ctaButton: '✨ Créer le livre de votre enfant',
-    badge1: '⚡ Personnalisation en 1 min',
-    badge2: '📖 Couverture rigide premium',
-    badge3: '🚚 Livraison rapide mondiale',
-    customStoryBadge: 'Histoire personnalisée',
-    privacyPolicy: 'Politique de confidentialité',
-    termsOfService: 'Conditions d\'utilisation'
-  },
-  es: {
-    headingPrefix: 'Haz que tu hijo sea el',
-    heroWord: 'héroe',
-    headingSuffix: 'de su propia historia 📖',
-    subheading: 'Con el nombre y rostro de tu hijo ✨',
-    ctaButton: '✨ Crea el libro de tu hijo ahora',
-    badge1: '⚡ Personalización en 1 minuto',
-    badge2: '📖 Tapa dura de lujo',
-    badge3: '🚚 Envío rápido mundial',
-    customStoryBadge: 'Historia personalizada',
-    privacyPolicy: 'Política de privacidad',
-    termsOfService: 'Términos de servicio'
-  },
-  it: {
-    headingPrefix: 'Rendi tuo figlio il',
-    heroWord: 'protagonista',
-    headingSuffix: 'della sua storia 📖',
-    subheading: 'Con nome e volto di tuo figlio ✨',
-    ctaButton: '✨ Crea subito il libro per tuo figlio',
-    badge1: '⚡ Personalizzazione in 1 minuto',
-    badge2: '📖 Copertina rigida premium',
-    badge3: '🚚 Spedizione rapida nel mondo',
-    customStoryBadge: 'Storia personalizzata',
-    privacyPolicy: 'Informativa sulla privacy',
-    termsOfService: 'Termini di servizio'
-  },
-  pt: {
-    headingPrefix: 'Torne seu filho o',
-    heroWord: 'herói',
-    headingSuffix: 'da sua própria história 📖',
-    subheading: 'Com o nome e rosto do seu filho ✨',
-    ctaButton: '✨ Crie o livro do seu filho agora',
-    badge1: '⚡ Personalização em 1 minuto',
-    badge2: '📖 Capa dura premium',
-    badge3: '🚚 Envio rápido para o mundo todo',
-    customStoryBadge: 'História personalizada',
-    privacyPolicy: 'Política de privacidade',
-    termsOfService: 'Termos de serviço'
-  },
-  ru: {
-    headingPrefix: 'Сделайте вашего ребенка',
-    heroWord: 'героем',
-    headingSuffix: 'его собственной сказки 📖',
-    subheading: 'С именем и внешностью вашего ребенка ✨',
-    ctaButton: '✨ Создать книгу для ребенка',
-    badge1: '⚡ Создание за 1 минуту',
-    badge2: '📖 Твердый переплет премиум',
-    badge3: '🚚 Быстрая доставка по всему миру',
-    customStoryBadge: 'Именная сказка',
-    privacyPolicy: 'Политика конфиденциальности',
-    termsOfService: 'Условия использования'
-  }
-};
-
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language }) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, language, setLanguage }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % COVER_METADATA.length);
-    }, 4500);
+    }, 5000);
     return () => clearInterval(timer);
   }, []);
 
-  const lang = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const t = (ar: string, en: string) => language === 'ar' ? ar : en;
   const isAr = language === 'ar';
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const diff = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) {
-        // Next slide
-        setCurrentSlide((prev) => (prev + 1) % COVER_METADATA.length);
-      } else {
-        // Prev slide
-        setCurrentSlide((prev) => (prev - 1 + COVER_METADATA.length) % COVER_METADATA.length);
-      }
-    }
-    setTouchStartX(null);
-  };
-
   return (
-    <div className="text-[#243A61] font-sans overflow-x-hidden flex flex-col relative w-full min-h-[calc(100vh-80px)] justify-between">
+    <div className="text-[#243A61] font-sans overflow-x-hidden flex flex-col relative w-full">
       
-      {/* Subtle Background Glows */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[140px] opacity-30 bg-[#006b5d]"></div>
-        <div className="absolute top-[30%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] opacity-40 bg-[#F78F50]/20"></div>
-        <div className="absolute bottom-[-10%] left-[30%] w-[40vw] h-[40vw] rounded-full blur-[120px] opacity-30 bg-amber-200/40"></div>
+      {/* Background Blobs */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" id="container_hero_bg">
+        <div className="absolute top-[-15%] left-[-10%] w-[60vw] h-[60vw] rounded-full blur-[120px] opacity-40 bg-[#006b5d]"></div>
+        <div className="absolute top-[40%] right-[-10%] w-[60vw] h-[60vw] rounded-full blur-3xl opacity-50" style={{ background: 'radial-gradient(circle, rgba(144,244,224,0.4) 0%, rgba(144,244,224,0) 70%)' }}></div>
+        <div className="absolute bottom-[-20%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-3xl opacity-60" style={{ background: 'radial-gradient(circle, rgba(236,193,86,0.3) 0%, rgba(236,193,86,0) 70%)' }}></div>
       </div>
 
-      {/* Main Hero Container */}
-      <main className="flex-grow flex flex-col items-center justify-center relative z-10 px-4 sm:px-6 py-6 md:py-10 max-w-6xl mx-auto w-full">
-        
-        {/* Ultra-Lean Catchy Headline */}
-        <div className="text-center max-w-3xl space-y-2 mb-6 sm:mb-8 animate-fade-in">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-[#001a40] tracking-tight leading-[1.15] drop-shadow-sm">
-            {lang.headingPrefix}{' '}
-            <span className="relative inline-block text-[#F78F50]">
-              {lang.heroWord}
-              <svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10">
-                <path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path>
-              </svg>
-            </span>{' '}
-            {lang.headingSuffix}
-          </h1>
-          <p className="text-sm sm:text-base md:text-lg font-medium text-[#554339]/80 max-w-xl mx-auto leading-relaxed">
-            {lang.subheading}
-          </p>
-        </div>
+      {/* Main Content */}
+      <main className="flex-grow flex flex-col items-center justify-center relative z-10 px-6 py-6 md:py-12">
+        <div className="w-full max-w-[1200px] mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-24">
+          
+          {/* Text Content */}
+          <div className="flex-grow flex flex-col items-center md:items-start text-center md:text-left space-y-8">
+            <div className="space-y-2">
+              <span className="text-xs font-black uppercase tracking-widest text-[#F78F50] block md:text-left text-center">
+                {t('راوي - قصص أطفال مخصصة بالذكاء الاصطناعي', 'Rawy: Personalized AI Storybooks')}
+              </span>
+              <h1 className="text-[40px] md:text-[48px] text-[#001a40] apple-display-heading leading-tight">
+                {isAr ? (
+                  <>راوي: اجعل طفلك <span className="relative inline-block text-[#F78F50]">البطل<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> في مغامرته الخاصة.</>
+                ) : (
+                  <>Rawy: Make Your Child the <span className="relative inline-block text-[#F78F50]">Hero<svg className="absolute -bottom-1 left-0 w-full h-2 text-[#F78F50]/40" preserveAspectRatio="none" viewBox="0 0 100 10"><path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4"></path></svg></span> of Their Own Story.</>
+                )}
+              </h1>
+            </div>
+            <p className="text-[16px] md:text-[18px] font-medium leading-[1.6] text-[#554339] max-w-xl apple-body-text">
+              {t(
+                'راوي (Rawy) هي منصة مخصصة لإنشاء كتب وقصص الأطفال المصورة بالذكاء الاصطناعي. ارفع صورة طفلك واكتب اسمه لتصنع له كتاباً مصوراً فريداً عالي الجودة. يقوم نظامنا المبتكر بتحويل ملامح طفلك إلى رسومات كرتونية ساحرة داخل مغامرات شيقة تطابق ملامحه.',
+                'Rawy is a personalized storybook platform that uses AI to customize illustrations and stories featuring your child as the main character. Simply enter their name and upload a photo to generate a print-ready custom hardcover adventure.'
+              )}
+            </p>
+            <p className="text-[12px] text-[#554339]/60 max-w-xl text-center md:text-left leading-relaxed">
+              {t(
+                'خصوصية بياناتك مضمونة: نطلب اسم طفلك وعمره وصورته الشخصية فقط لإنشاء وتخصيص رسومات وقصص كتابك المطبوع بشكل آمن بالكامل دون مشاركتها مع أي جهات خارجية.',
+                'Your privacy is guaranteed: We collect your child\'s name, age, and photo reference solely to personalize the illustrations and custom story texts for your book. All uploads are processed securely and never sold or shared.'
+              )}
+            </p>
+            <button 
+              onClick={onStart}
+              className="text-[24px] font-bold py-4 px-10 rounded-full shadow-sm hover:shadow-[0px_10px_25px_rgba(247,143,80,0.45)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center gap-3 relative overflow-hidden group bg-[#F78F50] text-white" 
+              id="btn_start_journey"
+            >
+              <span className="absolute inset-0 bg-white/10 blur-md top-0 h-1/2 rounded-t-full pointer-events-none"></span>
+              <span>{t('ابتدئ مغامرتك الآن', 'Create a Story Now')}</span>
+            </button>
+          </div>
 
-        {/* 3D Storybook Showcase (Front and Center) */}
-        <div 
-          className="w-full max-w-[340px] sm:max-w-md md:max-w-lg mb-8 relative group cursor-pointer"
-          onClick={onStart}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          {/* Ambient Lighting & Shadow */}
-          <div className="absolute inset-0 bg-black/25 rounded-3xl blur-2xl transform translate-y-6 scale-95 transition-all group-hover:scale-100 group-hover:blur-3xl group-hover:bg-[#F78F50]/20"></div>
-
-          {/* Book Container with 3D Depth */}
-          <div className="relative aspect-square w-full rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border-4 md:border-[6px] border-white/90 bg-slate-100 transition-transform duration-500 group-hover:scale-[1.02]">
-            
-            {/* Book Spine Crease Shadow (3D Effect) */}
-            <div className={`absolute top-0 bottom-0 ${isAr ? 'right-0 border-r-[10px]' : 'left-0 border-l-[10px]'} border-black/25 z-20 pointer-events-none w-3 bg-gradient-to-r ${isAr ? 'from-transparent to-black/30' : 'from-black/30 to-transparent'}`}></div>
-
-            {/* Slides */}
-            {COVER_METADATA.map((cover, index) => (
-              <div 
-                key={index} 
-                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                  index === currentSlide ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
-                }`}
-              >
-                <img 
-                  alt={isAr ? cover.title.ar : cover.title.en} 
-                  className="w-full h-full object-cover select-none" 
-                  src={cover.src} 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/10"></div>
-                
-                {/* Book Title Overlay */}
-                <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 sm:pb-10 px-4 text-center text-white">
-                  <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest text-amber-200 mb-2 border border-white/20">
-                    {lang.customStoryBadge}
-                  </span>
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-black drop-shadow-md">
-                    {isAr ? cover.title.ar : cover.title.en}
-                  </h2>
-                  <p className="text-xs sm:text-sm font-medium text-white/90 italic drop-shadow-sm mt-0.5">
-                    {isAr ? cover.subtitle.ar : cover.subtitle.en}
-                  </p>
-                </div>
+          {/* Hero Image / Illustration Area */}
+          <div className="flex-grow w-full max-w-md md:max-w-xl relative" id="hero_carousel">
+            <div className="relative group overflow-visible w-full">
+              
+              {/* Book Shadow/Depth (Global) */}
+              <div className="absolute inset-0 bg-black/20 rounded-r-2xl blur-xl transform translate-x-4 translate-y-4"></div>
+              
+              {/* Slides Container */}
+              <div className="relative w-full aspect-square overflow-hidden rounded-r-2xl shadow-2xl bg-slate-100/50">
+                {COVER_METADATA.map((cover, index) => (
+                  <div 
+                    key={index} 
+                    className={`transition-all duration-700 ease-in-out absolute inset-0 w-full h-full ${currentSlide === index ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+                  >
+                    <div className={`relative w-full h-full bg-white border-l-8 ${cover.border} overflow-hidden`}>
+                      <img 
+                        alt={language === 'ar' ? cover.title.ar : cover.title.en} 
+                        className="absolute inset-0 w-full h-full object-cover" 
+                        src={cover.src} 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20"></div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-end pb-12 px-6 text-center text-white">
+                        <h2 className="text-3xl md:text-4xl font-extrabold mb-2 drop-shadow-lg">
+                          {language === 'ar' ? cover.title.ar : cover.title.en}
+                        </h2>
+                        <p className="text-lg md:text-xl italic opacity-90 drop-shadow-md">
+                          {language === 'ar' ? cover.subtitle.ar : cover.subtitle.en}
+                        </p>
+                      </div>
+                      <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-r from-black/20 to-transparent"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* Slide Navigation Dots */}
-          <div className="flex justify-center gap-1.5 mt-4">
-            {COVER_METADATA.map((_, index) => (
-              <button 
-                key={index}
-                onClick={(e) => { e.stopPropagation(); setCurrentSlide(index); }} 
-                className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === index ? 'w-6 bg-[#F78F50]' : 'w-1.5 bg-brand-navy/20 hover:bg-brand-navy/40'}`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
-        </div>
+              {/* Navigation Dots */}
+              <div className="flex justify-center gap-2 mt-8 flex-wrap relative z-20">
+                {COVER_METADATA.map((_, index) => (
+                  <button 
+                    key={index}
+                    onClick={() => setCurrentSlide(index)} 
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${currentSlide === index ? 'bg-[#F78F50] w-6' : 'bg-slate-300'}`}
+                  ></button>
+                ))}
+              </div>
 
-        {/* Prominent, Unmissable CTA Button (Thumb Zone) */}
-        <div className="flex flex-col items-center gap-4 w-full max-w-md">
-          <button 
-            onClick={onStart}
-            className="w-full text-lg sm:text-xl md:text-2xl font-black py-4 sm:py-5 px-8 rounded-full shadow-[0_12px_30px_rgba(247,143,80,0.4)] hover:shadow-[0_16px_40px_rgba(247,143,80,0.55)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 ease-out flex items-center justify-center gap-2 relative overflow-hidden group bg-[#F78F50] text-white" 
-            id="btn_start_journey"
-          >
-            {/* Shimmer Highlight */}
-            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></span>
-            <span>{lang.ctaButton}</span>
-            <span className="material-symbols-outlined font-black text-xl md:text-2xl">
-              {isAr ? 'arrow_back' : 'arrow_forward'}
-            </span>
-          </button>
-
-          {/* 3 Trust Micro-Badges */}
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[11px] sm:text-xs font-bold text-brand-navy/70 pt-1">
-            <div className="flex items-center gap-1">
-              <span>⚡</span>
-              <span>{lang.badge1}</span>
-            </div>
-            <div className="w-1 h-1 rounded-full bg-brand-navy/20 hidden sm:block"></div>
-            <div className="flex items-center gap-1">
-              <span>📖</span>
-              <span>{lang.badge2}</span>
-            </div>
-            <div className="w-1 h-1 rounded-full bg-brand-navy/20 hidden sm:block"></div>
-            <div className="flex items-center gap-1">
-              <span>🚚</span>
-              <span>{lang.badge3}</span>
             </div>
           </div>
         </div>
-
       </main>
 
       {/* Footer with legal links required by Google verification */}
-      <footer className="w-full py-4 mt-6 border-t border-brand-navy/5 relative z-10 bg-white/40 backdrop-blur-sm">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-semibold text-brand-navy/40">
+      <footer className="w-full py-6 mt-12 border-t border-brand-navy/5 relative z-10 bg-white/30 backdrop-blur-sm">
+        <div className="max-w-[1200px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-brand-navy/40">
           <p>© 2026 Rawy. All rights reserved. Powered by Albumii.</p>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-6">
             <a href="/policy.html" target="_blank" rel="noopener noreferrer" className="hover:text-[#F78F50] transition-colors">
-              {lang.privacyPolicy}
+              {t('سياسة الخصوصية', 'Privacy Policy')}
             </a>
             <a href="/tos.html" target="_blank" rel="noopener noreferrer" className="hover:text-[#F78F50] transition-colors">
-              {lang.termsOfService}
+              {t('شروط الخدمة', 'Terms of Service')}
             </a>
           </div>
         </div>
