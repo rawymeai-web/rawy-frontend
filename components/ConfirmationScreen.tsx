@@ -15,7 +15,9 @@ interface ConfirmationScreenProps {
 }
 
 const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, onRestart, language, shippingDetails, storyData, currency, totalPrice, isManualPayment = false }) => {
+  const [copied, setCopied] = useState(false);
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
+  const storyUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/?story=${encodeURIComponent(orderNumber)}`;
 
   React.useEffect(() => {
     // Track Purchase event on mount
@@ -124,11 +126,55 @@ ${t('فريق Rawy', 'The Rawy Team')}
         {isManualPayment && (
           <div className="bg-[#006B5D]/5 border border-[#006B5D]/10 rounded-2xl p-4 text-sm text-[#006B5D] max-w-md mx-auto text-center font-medium leading-relaxed">
             {t(
-              'ℹ️ بمجرد استلام الرابط وإتمام الدفع، سيتم تفعيل خط الإنتاج تلقائيًا وتلقي إشعارات 진행 أولاً بأول.',
+              'ℹ️ بمجرد استلام الرابط وإتمام الدفع، سيتم تفعيل خط الإنتاج تلقائيًا وتلقي إشعارات أولاً بأول.',
               'ℹ️ Once you pay via the sent link, your order will automatically advance to production, and you will receive regular updates.'
             )}
           </div>
         )}
+
+        {/* Public Share Story Card */}
+        <div className="p-6 bg-white/80 border border-brand-orange/20 rounded-3xl space-y-3 max-w-md mx-auto text-center shadow-md">
+          <p className="text-xs font-black text-brand-orange uppercase tracking-wider">
+            {t('✨ شارك القصة مع العائلة والأصدقاء', '✨ Share Story with Family & Friends')}
+          </p>
+          <p className="text-xs text-brand-navy/70 leading-relaxed">
+            {t('يمكن لأي شخص قراءة القصة وتصفح صفحاتها مجاناً بدون تسجيل الدخول 📖', 'Anyone with the link can flip through and read the story for free without logging in 📖')}
+          </p>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={() => {
+                const text = encodeURIComponent(
+                  t(
+                    `✨ اقرأ قصة "${storyData?.title || 'طفلي'}" المخصصة على راوي 📖:\n${storyUrl}`,
+                    `✨ Read my child's custom storybook "${storyData?.title || 'Personalized'}" on Rawy 📖:\n${storyUrl}`
+                  )
+                );
+                window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+              }}
+              className="flex-1 py-2.5 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm transition-all"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M16.75 13.96c.27.42.36.94.11 1.46l-.11.23c-.27.53-.76 1.03-1.24 1.22-.49.19-1.22.38-1.7.19-.48-.19-1.34-.67-2.3-1.14-.95-.48-2.02-1.34-2.82-2.3-1.05-1.24-1.52-2.67-1.43-3.72.09-1.05.67-1.81 1.24-2.19.58-.38 1.22-.58 1.7-.58.26 0 .51.1.75.29l.11.09c.49.48.58 1.22.58 1.46 0 .23-.09.48-.28.72l-.11.13c-.23.28-.47.52-.47.62 0 .09.1.18.28.37.19.19.38.37.67.66.28.28.47.47.76.76.28.28.47.47.56.47.09 0 .28-.19.56-.47.28-.28.47-.47.47-.47.23-.28.47-.47.75-.47.28 0 .57.09.76.19zM12 2a10 10 0 100 20 10 10 0 000-20z" /></svg>
+              <span>WhatsApp</span>
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(storyUrl);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 3000);
+                } catch (e) {
+                  prompt(t('انسخ الرابط:', 'Copy link:'), storyUrl);
+                }
+              }}
+              className={`py-2.5 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm transition-all ${
+                copied ? 'bg-emerald-600 text-white' : 'bg-brand-navy text-white hover:bg-brand-navy/90'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">{copied ? 'check' : 'content_copy'}</span>
+              <span>{copied ? t('تم النسخ!', 'Copied!') : t('نسخ الرابط', 'Copy Link')}</span>
+            </button>
+          </div>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
           {!isManualPayment && (

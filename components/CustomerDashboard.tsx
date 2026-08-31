@@ -28,6 +28,7 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
     const [orders, setOrders] = useState<AdminOrder[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
+    const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
 
     useEffect(() => {
         const initDashboard = async () => {
@@ -245,6 +246,33 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                                                     <span className="material-symbols-outlined text-sm">auto_stories</span>
                                                     {t('تصفح وقراءة الكتاب 📖', 'Read & Flip Storybook 📖')}
                                                 </Button>
+                                            )}
+                                            {hasPreview && (
+                                                <button
+                                                    onClick={async () => {
+                                                        const url = `${window.location.origin}/?story=${encodeURIComponent(order.orderNumber)}`;
+                                                        try {
+                                                            await navigator.clipboard.writeText(url);
+                                                            setCopiedOrderId(order.orderNumber);
+                                                            setTimeout(() => setCopiedOrderId(null), 3000);
+                                                        } catch (e) {
+                                                            prompt(t('انسخ رابط القصة:', 'Copy story link:'), url);
+                                                        }
+                                                    }}
+                                                    title={t('مشاركة رابط القصة', 'Share Story Link')}
+                                                    className={`p-3 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs font-bold shadow-sm ${
+                                                        copiedOrderId === order.orderNumber 
+                                                            ? 'bg-emerald-600 text-white' 
+                                                            : 'bg-gray-100 hover:bg-gray-200 text-brand-navy'
+                                                    }`}
+                                                >
+                                                    <span className="material-symbols-outlined text-base">
+                                                        {copiedOrderId === order.orderNumber ? 'check' : 'share'}
+                                                    </span>
+                                                    <span className="hidden sm:inline">
+                                                        {copiedOrderId === order.orderNumber ? t('تم النسخ!', 'Copied!') : t('مشاركة', 'Share')}
+                                                    </span>
+                                                </button>
                                             )}
                                             {(!order.storyData?.isPhysicalPrint) && (
                                                 <Button 

@@ -188,6 +188,8 @@ export const backendApi = {
     
     getOrderDetails: (orderId: string) => fetchBackend<any>(`/orders/${orderId}`),
 
+    getPublicStory: (storyId: string) => fetchBackend<{ success: boolean; story: any }>(`/orders/public-story/${storyId}`),
+
     // Admin Tools
     triggerCron: () => fetchBackend<{ executedTasks: number; failedTasks: number }>('/cron', {
         method: 'GET'

@@ -294,6 +294,8 @@ export interface PreviewScreenProps {
     language: Language;
     onBack: () => void;
     isPurchased?: boolean;
+    isPublicShared?: boolean;
+    onCreateNewStory?: () => void;
 }
 
 const PreviewScreen: React.FC<PreviewScreenProps> = (props) => {
@@ -506,20 +508,30 @@ const PreviewScreen: React.FC<PreviewScreenProps> = (props) => {
                         </button>
                     </div>
 
-                    <div className="flex gap-2.5 w-full md:w-auto">
+                    {props.isPublicShared ? (
                         <button 
-                            onClick={props.onRestart} 
-                            className="flex-1 md:flex-none px-4 md:px-7 py-2.5 md:py-3.5 rounded-xl md:rounded-full font-bold text-brand-navy border border-brand-navy/15 hover:bg-white transition-all uppercase text-[10px] md:text-[11px] tracking-wider"
+                            onClick={props.onCreateNewStory || props.onRestart} 
+                            className="w-full md:w-auto px-6 md:px-8 py-2.5 md:py-3.5 rounded-xl md:rounded-full font-black text-white bg-brand-orange shadow-lg shadow-brand-orange/30 hover:scale-105 transition-all uppercase text-[11px] md:text-xs tracking-wider flex items-center justify-center gap-2"
                         >
-                            {t('إعادة البداية', 'Restart')}
+                            <span className="material-symbols-outlined text-base">auto_stories</span>
+                            <span>{t('اصنع قصة لطفلك الآن ✨', 'Make a Story for Your Child ✨')}</span>
                         </button>
-                        <button 
-                            onClick={props.onOrder} 
-                            className="flex-[1.5] md:flex-none px-5 md:px-8 py-2.5 md:py-3.5 rounded-xl md:rounded-full font-black text-white bg-brand-orange shadow-lg shadow-brand-orange/30 hover:scale-102 transition-all uppercase text-[10px] md:text-[11px] tracking-wider"
-                        >
-                            {t('اطلب كتابك الآن!', 'Print My Book!')}
-                        </button>
-                    </div>
+                    ) : (
+                        <div className="flex gap-2.5 w-full md:w-auto">
+                            <button 
+                                onClick={props.onRestart} 
+                                className="flex-1 md:flex-none px-4 md:px-7 py-2.5 md:py-3.5 rounded-xl md:rounded-full font-bold text-brand-navy border border-brand-navy/15 hover:bg-white transition-all uppercase text-[10px] md:text-[11px] tracking-wider"
+                            >
+                                {t('إعادة البداية', 'Restart')}
+                            </button>
+                            <button 
+                                onClick={props.onOrder} 
+                                className="flex-[1.5] md:flex-none px-5 md:px-8 py-2.5 md:py-3.5 rounded-xl md:rounded-full font-black text-white bg-brand-orange shadow-lg shadow-brand-orange/30 hover:scale-102 transition-all uppercase text-[10px] md:text-[11px] tracking-wider"
+                            >
+                                {t('اطلب كتابك الآن!', 'Print My Book!')}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -663,7 +675,37 @@ const PreviewScreen: React.FC<PreviewScreenProps> = (props) => {
                     )}
                 </AnimatePresence>
 
-                <div className="mt-20 md:mt-32">
+                {/* Viral CTA Banner for Public Readers */}
+                {props.isPublicShared && (
+                    <div className="mt-16 md:mt-24 p-8 md:p-14 bg-gradient-to-br from-brand-navy via-brand-navy to-[#182a52] text-white rounded-[3rem] shadow-2xl border-4 border-brand-orange/30 text-center space-y-6 max-w-4xl mx-auto relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-orange/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+                        <div className="w-16 h-16 rounded-3xl bg-brand-orange/20 border border-brand-orange/30 text-brand-orange flex items-center justify-center mx-auto shadow-inner">
+                            <span className="material-symbols-outlined text-3xl">auto_stories</span>
+                        </div>
+                        <div className="space-y-3 relative z-10">
+                            <h3 className="text-2xl md:text-4xl font-black uppercase tracking-tight">
+                                {t('اجعل طفلك بطل قصته الخاصة!', 'Make Your Child the Hero of Their Own Story!')}
+                            </h3>
+                            <p className="text-sm md:text-base text-white/80 max-w-xl mx-auto leading-relaxed">
+                                {t(
+                                    'حوّل صورة واسم طفلك إلى كتاب حقيقي ورسوم متحركة ساحرة تناسب عمره وشخصيته ✨',
+                                    'Turn your child’s name and photo into a real personalized storybook in minutes ✨'
+                                )}
+                            </p>
+                        </div>
+                        <div className="pt-2 relative z-10">
+                            <button
+                                onClick={props.onCreateNewStory || props.onRestart}
+                                className="px-10 py-5 rounded-2xl bg-brand-orange text-white text-sm font-black uppercase tracking-widest hover:scale-105 shadow-xl shadow-brand-orange/40 transition-all inline-flex items-center gap-3 active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-xl">auto_stories</span>
+                                <span>{t('🚀 ابدأ قصة طفلك الآن', '🚀 Start Your Child\'s Story Now')}</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div className="mt-16 md:mt-24">
                     <Suspense fallback={<Spinner />}>
                         <ShareComponent storyData={props.storyData} language={props.language} />
                     </Suspense>

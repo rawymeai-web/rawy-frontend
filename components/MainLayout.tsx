@@ -50,6 +50,7 @@ const MainLayout: React.FC = () => {
     const [isManualPayment, setIsManualPayment] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [isContactOpen, setIsContactOpen] = useState(false);
+    const [isPublicSharedStory, setIsPublicSharedStory] = useState(false);
     const [previewReturnScreen, setPreviewReturnScreen] = useState<string>('customerDashboard');
     const [authRedirectScreen, setAuthRedirectScreen] = useState<string | null>(() => {
         try {
@@ -117,6 +118,34 @@ const MainLayout: React.FC = () => {
         });
 
         return () => subscription.unsubscribe();
+    }, []);
+
+    // Handle direct public story sharing via URL (?story=RWY-... or ?read=...)
+    useEffect(() => {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedStoryId = urlParams.get('story') || urlParams.get('read') || urlParams.get('orderId');
+            if (sharedStoryId) {
+                console.log("Loading public shared story:", sharedStoryId);
+                backendApi.getPublicStory(sharedStoryId)
+                    .then((res) => {
+                        if (res && res.success && res.story) {
+                            updateStory(res.story);
+                            setIsPublicSharedStory(true);
+                            setPreviewReturnScreen('welcome');
+                            if (res.story.language) {
+                                setLanguage(res.story.language);
+                            }
+                            setScreen('preview');
+                        }
+                    })
+                    .catch((err) => {
+                        console.warn("Public story load error:", err);
+                    });
+            }
+        } catch (e) {
+            console.error("Failed to parse public story params:", e);
+        }
     }, []);
 
     useEffect(() => {
@@ -391,13 +420,29 @@ const MainLayout: React.FC = () => {
             case 'preview':
                 content = <PreviewScreen 
                     storyData={storyData} 
+                    isPublicShared={isPublicSharedStory}
+                    onCreateNewStory={() => {
+                        setIsPublicSharedStory(false);
+                        resetStory();
+                        setScreen('personalization');
+                    }}
                     onOrder={() => setScreen('confirmation')} 
                     onDownloadPreview={() => { }} 
-                    onRestart={() => { resetStory(); }} 
+                    onRestart={() => { 
+                        setIsPublicSharedStory(false);
+                        resetStory(); 
+                    }} 
                     onTitleChange={(t) => updateStory({ title: t })} 
                     onRegenerate={() => { setScreen('unified-generation'); startWorkflow(); }} 
                     language={language} 
-                    onBack={() => setScreen(previewReturnScreen || (storyData.orderId ? 'customerDashboard' : 'welcome'))} 
+                    onBack={() => {
+                        if (isPublicSharedStory) {
+                            setIsPublicSharedStory(false);
+                            setScreen('welcome');
+                        } else {
+                            setScreen(previewReturnScreen || (storyData.orderId ? 'customerDashboard' : 'welcome'));
+                        }
+                    }} 
                 />;
                 break;
             case 'checkout':
