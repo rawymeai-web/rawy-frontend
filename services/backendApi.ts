@@ -70,9 +70,51 @@ async function fetchBackend<T>(endpoint: string, options: RequestInit = {}): Pro
     }
 }
 
+const apiMemoryCache = new Map<string, { data: any; expiry: number }>();
+
+/**
+ * Intelligent In-Memory + localStorage SWR Caching Layer for GET endpoints
+ */
+async function fetchCachedBackend<T>(endpoint: string, ttlMs: number = 10 * 60 * 1000): Promise<T> {
+    const cacheKey = `rawy_cache_${endpoint}`;
+    const now = Date.now();
+
+    // 1. In-memory check (0ms)
+    if (apiMemoryCache.has(cacheKey)) {
+        const entry = apiMemoryCache.get(cacheKey)!;
+        if (entry.expiry > now) {
+            return entry.data as T;
+        }
+    }
+
+    // 2. LocalStorage check (1ms)
+    try {
+        const stored = localStorage.getItem(cacheKey);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.expiry > now) {
+                apiMemoryCache.set(cacheKey, parsed);
+                return parsed.data as T;
+            }
+        }
+    } catch (e) {}
+
+    // 3. Network fetch
+    const freshData = await fetchBackend<T>(endpoint, { method: 'GET' });
+
+    // 4. Save to caches
+    const cacheEntry = { data: freshData, expiry: now + ttlMs };
+    apiMemoryCache.set(cacheKey, cacheEntry);
+    try {
+        localStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
+    } catch (e) {}
+
+    return freshData;
+}
+
 export const backendApi = {
-    // Catalog
-    getCatalog: () => fetchBackend('/catalog'),
+    // Catalog (Cached for 30 minutes)
+    getCatalog: () => fetchCachedBackend('/catalog', 30 * 60 * 1000),
 
     // Generation
     generateDna: (payload: any) => {
@@ -194,7 +236,7 @@ export const backendApi = {
     
     getOrderDetails: (orderId: string) => fetchBackend<any>(`/orders/${orderId}`),
 
-    getPublicStory: (storyId: string) => fetchBackend<{ success: boolean; story: any }>(`/orders/public-story/${storyId}`),
+    getPublicStory: (storyId: string) => fetchCachedBackend<{ success: boolean; story: any }>(`/orders/public-story/${storyId}`, 15 * 60 * 1000),
 
     // Admin Tools
     triggerCron: () => fetchBackend<{ executedTasks: number; failedTasks: number }>('/cron', {

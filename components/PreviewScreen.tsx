@@ -331,6 +331,26 @@ const PreviewScreen: React.FC<PreviewScreenProps> = (props) => {
         return <StorybookSkeleton language={props.language} onBack={props.onBack} />;
     }
 
+    // Preload all story spread images into browser cache for instant flip transitions
+    useEffect(() => {
+        if (!props.storyData) return;
+        const urlsToPreload: string[] = [];
+        if (props.storyData.coverImageUrl) urlsToPreload.push(props.storyData.coverImageUrl);
+        if (Array.isArray(props.storyData.spreads)) {
+            props.storyData.spreads.forEach((s: any) => {
+                if (s.illustrationUrl) urlsToPreload.push(s.illustrationUrl);
+                if (s.imageUrl) urlsToPreload.push(s.imageUrl);
+            });
+        }
+
+        urlsToPreload.forEach(url => {
+            if (url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('blob:'))) {
+                const img = new Image();
+                img.src = url;
+            }
+        });
+    }, [props.storyData]);
+
     const goNext = () => {
         if (viewIndex < views.length - 1) {
             setDirection(1);
