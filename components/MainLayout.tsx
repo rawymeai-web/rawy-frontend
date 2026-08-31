@@ -123,8 +123,26 @@ const MainLayout: React.FC = () => {
     // Handle direct public story sharing via URL (?story=RWY-... or ?read=...)
     useEffect(() => {
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const sharedStoryId = urlParams.get('story') || urlParams.get('read') || urlParams.get('orderId');
+            const getSharedStoryParam = () => {
+                // 1. Check window.location.search (?story=...)
+                const searchParams = new URLSearchParams(window.location.search);
+                let val = searchParams.get('story') || searchParams.get('read') || searchParams.get('orderId');
+                if (val) return val;
+
+                // 2. Check window.location.hash (#?story=... or #story=...)
+                if (window.location.hash) {
+                    const hash = window.location.hash;
+                    const hashQueryIndex = hash.indexOf('?');
+                    if (hashQueryIndex !== -1) {
+                        const hashParams = new URLSearchParams(hash.substring(hashQueryIndex));
+                        val = hashParams.get('story') || hashParams.get('read') || hashParams.get('orderId');
+                        if (val) return val;
+                    }
+                }
+                return null;
+            };
+
+            const sharedStoryId = getSharedStoryParam();
             if (sharedStoryId) {
                 console.log("Loading public shared story:", sharedStoryId);
                 backendApi.getPublicStory(sharedStoryId)
