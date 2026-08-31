@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import type { Language, ShippingDetails, StoryData } from '../types';
 import { convertPrice, type Currency } from '../services/currencyService';
