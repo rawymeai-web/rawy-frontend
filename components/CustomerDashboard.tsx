@@ -24,32 +24,63 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
     onBack,
     onStartAdventure
 }) => {
-    const [activeSub, setActiveSub] = useState<Subscription | null>(null);
-    const [orders, setOrders] = useState<AdminOrder[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [activeSub, setActiveSub] = useState<Subscription | null>(() => {
+        try {
+            const cached = localStorage.getItem('rawy_cached_sub');
+            return cached ? JSON.parse(cached) : null;
+        } catch (e) {
+            return null;
+        }
+    });
+    const [orders, setOrders] = useState<AdminOrder[]>(() => {
+        try {
+            const cached = localStorage.getItem('rawy_cached_orders');
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            return [];
+        }
+    });
+    const [isLoading, setIsLoading] = useState(() => {
+        try {
+            const cached = localStorage.getItem('rawy_cached_orders');
+            return !cached || JSON.parse(cached).length === 0;
+        } catch (e) {
+            return true;
+        }
+    });
     const [user, setUser] = useState<any>(null);
     const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
 
     useEffect(() => {
+        let isMounted = true;
         const initDashboard = async () => {
             try {
-                setIsLoading(true);
                 const currentUser = await authService.getUser();
+                if (!isMounted) return;
                 setUser(currentUser);
                 
                 if (currentUser) {
                     const identifier = currentUser.email || currentUser.id;
                     const data = await backendApi.getCustomerDashboard(identifier);
-                    setActiveSub(data?.subscription || null);
-                    setOrders(data?.orders || []);
+                    if (!isMounted) return;
+                    
+                    if (data) {
+                        setActiveSub(data.subscription || null);
+                        setOrders(data.orders || []);
+                        try {
+                            localStorage.setItem('rawy_cached_sub', JSON.stringify(data.subscription || null));
+                            localStorage.setItem('rawy_cached_orders', JSON.stringify(data.orders || []));
+                        } catch (e) {}
+                    }
                 }
             } catch (err) {
                 console.error("Dashboard failed to load", err);
             } finally {
-                setIsLoading(false);
+                if (isMounted) setIsLoading(false);
             }
         };
         initDashboard();
+        return () => { isMounted = false; };
     }, []);
 
     const getStatusBadge = (dbStatus: DbOrderStatus | string) => {

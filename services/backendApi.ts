@@ -29,13 +29,19 @@ async function fetchBackend<T>(endpoint: string, options: RequestInit = {}): Pro
     try {
         console.log(`📡 [API] Request => ${options.method || 'GET'} ${url} ${payloadStr}`);
         
+        // Timeout protection (10 seconds max per request)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const response = await fetch(url, {
             ...options,
+            signal: options.signal || controller.signal,
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers,
             },
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             // Server responded, but with an error status (e.g. 500 or 400)
