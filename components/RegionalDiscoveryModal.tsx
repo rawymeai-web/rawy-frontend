@@ -169,8 +169,10 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
         onLanguageChange(selectedLang);
         onCurrencyChange(selectedCurrency);
         try {
+            localStorage.setItem('rawy_region_confirmed', 'true');
+            localStorage.setItem('rawy_user_preferences_set', 'true');
+            localStorage.setItem('has_completed_welcome', 'true');
             sessionStorage.setItem('rawy_region_confirmed', 'true');
-            localStorage.setItem('rawy_region_discovered', 'true');
         } catch (e) {}
         setInternalIsOpen(false);
         onClose?.();
@@ -178,6 +180,8 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
 
     const handleClose = () => {
         try {
+            localStorage.setItem('rawy_region_confirmed', 'true');
+            localStorage.setItem('rawy_user_preferences_set', 'true');
             sessionStorage.setItem('rawy_region_confirmed', 'true');
         } catch (e) {}
         setInternalIsOpen(false);

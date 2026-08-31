@@ -369,6 +369,11 @@ const MainLayout: React.FC = () => {
             case 'welcome':
             case 'language': // Fallback mapping language to welcome
                 content = <WelcomeScreen onStart={() => { 
+                    try {
+                        localStorage.setItem('has_completed_welcome', 'true');
+                        localStorage.setItem('rawy_user_preferences_set', 'true');
+                        localStorage.setItem('rawy_region_confirmed', 'true');
+                    } catch (e) {}
                     resetStory(); 
                     setScreen('personalization'); 
                 }} onBack={() => { }} language={language} setLanguage={setLanguage} />;

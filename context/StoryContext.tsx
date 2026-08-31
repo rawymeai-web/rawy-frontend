@@ -90,13 +90,35 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
     };
 
-    const [currency, setCurrency] = useState<Currency>(currencies[0]);
+    // Helper to detect if user opened a direct shared story link (?story=... or ?read=...)
+    const hasSharedStoryInUrl = () => {
+        if (typeof window === 'undefined') return false;
+        try {
+            const search = window.location.search || '';
+            const hash = window.location.hash || '';
+            return search.includes('story=') || search.includes('read=') || search.includes('preview=') || search.includes('orderId=') ||
+                   hash.includes('story=') || hash.includes('read=') || hash.includes('preview=') || hash.includes('orderId=');
+        } catch (e) {
+            return false;
+        }
+    };
 
-    // Default to 'welcome' as language is now handled on the welcome screen
+    // Default screen determination:
+    // 1. Direct shared story links jump straight to 'preview'
+    // 2. Returning users who completed onboarding jump straight to 'personalization' (or saved screen)
+    // 3. Brand new first-time users see 'welcome'
     const [screen, setScreen] = useState<Screen>(() => {
         try {
+            if (hasSharedStoryInUrl()) return 'preview';
+
+            const hasCompletedWelcome = localStorage.getItem('has_completed_welcome') === 'true' ||
+                                        localStorage.getItem('rawy_user_preferences_set') === 'true' ||
+                                        localStorage.getItem('rawy_region_confirmed') === 'true';
             const saved = localStorage.getItem('currentScreen');
-            return (saved as Screen) || 'welcome';
+
+            if (saved && saved !== 'welcome' && saved !== 'language') return saved as Screen;
+            if (hasCompletedWelcome) return 'personalization';
+            return 'welcome';
         } catch (e) {
             return 'welcome';
         }
@@ -104,12 +126,20 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [isOrderStatusModalOpen, setOrderStatusModalOpen] = useState(false);
+
+    // Regional discovery modal (Language / Country / Currency setup)
+    // NEVER show on shared story links, and only show ONCE for first-time visitors
     const [isRegionModalOpen, setRegionModalOpen] = useState<boolean>(() => {
         try {
-            const hasConfirmed = sessionStorage.getItem('rawy_region_confirmed');
+            if (hasSharedStoryInUrl()) return false;
+
+            const hasConfirmed = localStorage.getItem('rawy_region_confirmed') === 'true' || 
+                                 localStorage.getItem('rawy_user_preferences_set') === 'true' ||
+                                 localStorage.getItem('has_completed_welcome') === 'true' ||
+                                 sessionStorage.getItem('rawy_region_confirmed') === 'true';
             return !hasConfirmed;
         } catch (e) {
-            return true;
+            return false;
         }
     });
 
