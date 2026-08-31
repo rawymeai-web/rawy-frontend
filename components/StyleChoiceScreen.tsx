@@ -213,20 +213,13 @@ const StyleChoiceScreen: React.FC<StyleChoiceScreenProps> = ({ onNext, onBack, s
                                 )}
                             </div>
 
-                            {/* Card Footer: Title, Tag & Subtitle */}
-                            <div className="space-y-2 px-1">
-                                <div className="flex items-center justify-between gap-2">
-                                    <h3 className={`text-lg sm:text-xl font-black tracking-tight transition-colors ${
-                                        isSelected ? 'text-brand-orange' : 'text-brand-navy group-hover:text-brand-orange'
-                                    }`}>
-                                        {style.name}
-                                    </h3>
-                                    {style.category && (
-                                        <span className="px-2.5 py-0.5 bg-brand-navy/5 text-brand-navy/60 text-[10px] font-black uppercase tracking-wider rounded-lg shrink-0">
-                                            {style.category}
-                                        </span>
-                                    )}
-                                </div>
+                            {/* Card Footer: Title & Subtitle */}
+                            <div className="space-y-1.5 px-1">
+                                <h3 className={`text-lg sm:text-xl font-black tracking-tight transition-colors ${
+                                    isSelected ? 'text-brand-orange' : 'text-brand-navy group-hover:text-brand-orange'
+                                }`}>
+                                    {style.name}
+                                </h3>
                                 <p className="text-xs text-brand-navy/70 line-clamp-2 leading-relaxed font-medium">
                                     {getVibeSubtitle(style.prompt)}
                                 </p>
@@ -308,11 +301,6 @@ const StyleChoiceScreen: React.FC<StyleChoiceScreenProps> = ({ onNext, onBack, s
                                         <span className="px-3 py-1 bg-brand-orange/10 text-brand-orange font-black text-xs uppercase tracking-wider rounded-full">
                                             {t('عن هذا الأسلوب', 'Style Breakdown')}
                                         </span>
-                                        {infoModalStyle.category && (
-                                            <span className="px-3 py-1 bg-brand-navy/5 text-brand-navy/70 font-bold text-xs uppercase tracking-wider rounded-full">
-                                                {infoModalStyle.category}
-                                            </span>
-                                        )}
                                     </div>
                                     <p className="text-sm sm:text-base text-brand-navy/80 leading-relaxed font-medium bg-[#FFF9F0] p-5 rounded-2xl border border-brand-orange/15">
                                         {infoModalStyle.prompt}
