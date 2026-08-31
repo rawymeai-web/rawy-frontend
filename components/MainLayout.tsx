@@ -97,13 +97,17 @@ const MainLayout: React.FC = () => {
                 setScreen(prev => {
                     if (prev === 'auth') {
                         if (authRedirectScreenRef.current) {
-                            const next = authRedirectScreenRef.current;
+                            const next = authRedirectScreenRef.current as any;
                             setTimeout(() => setAuthRedirectScreen(null), 0);
                             return next;
                         }
                         // If they have story data (theme selected), go to checkout
+                        // If they have personalization, go to styleChoice (before theme)
                         // Otherwise (they just wanted to see orders), go to dashboard
-                        return (storyDataRef.current.theme) ? 'checkout' : 'customerDashboard';
+                        if (storyDataRef.current.theme) return 'checkout';
+                        if (storyDataRef.current.selectedStyleNames && storyDataRef.current.selectedStyleNames.length > 0) return 'theme';
+                        if (storyDataRef.current.mainCharacter?.name || storyDataRef.current.childName) return 'styleChoice';
+                        return 'customerDashboard';
                     }
                     return prev;
                 });
@@ -319,19 +323,25 @@ const MainLayout: React.FC = () => {
             case 'language': // Fallback mapping language to welcome
                 content = <WelcomeScreen onStart={() => { 
                     resetStory(); 
-                    if (user) {
-                        setScreen('personalization'); 
-                    } else {
-                        setAuthRedirectScreen('personalization');
-                        setScreen('auth');
-                    }
+                    setScreen('personalization'); 
                 }} onBack={() => { }} language={language} setLanguage={setLanguage} />;
                 break;
             case 'personalization':
-                content = <PersonalizationScreen onNext={(data) => { updateStory(data); setScreen('styleChoice'); }} onBack={() => setScreen('welcome')} storyData={storyData} language={language} />;
+                content = <PersonalizationScreen onNext={(data) => { 
+                    updateStory(data); 
+                    setScreen('styleChoice'); 
+                }} onBack={() => setScreen('welcome')} storyData={storyData} language={language} />;
                 break;
             case 'styleChoice':
-                content = <StyleChoiceScreen onNext={(data) => { updateStory(data); setScreen('theme'); }} onBack={() => setScreen('personalization')} storyData={storyData} language={language} />;
+                content = <StyleChoiceScreen onNext={(data) => { 
+                    updateStory(data); 
+                    if (user) {
+                        setScreen('theme'); 
+                    } else {
+                        setAuthRedirectScreen('theme');
+                        setScreen('auth');
+                    }
+                }} onBack={() => setScreen('personalization')} storyData={storyData} language={language} />;
                 break;
             case 'theme':
                 content = <ThemeScreen onNext={(data) => { updateStory(data); setScreen('styleSelection'); }} onBack={() => setScreen('styleChoice')} storyData={storyData} language={language} />;
@@ -475,7 +485,36 @@ const MainLayout: React.FC = () => {
                 }
                 break;
             case 'auth':
-                content = <AuthScreen language={language} onBack={() => setScreen('welcome')} onSuccess={setUser} />;
+                content = <AuthScreen 
+                    language={language} 
+                    onBack={() => {
+                        if (authRedirectScreen === 'theme') {
+                            setScreen('styleChoice');
+                        } else if (authRedirectScreen === 'styleChoice') {
+                            setScreen('personalization');
+                        } else if (authRedirectScreen) {
+                            setScreen(authRedirectScreen as any);
+                        } else {
+                            setScreen('welcome');
+                        }
+                    }} 
+                    onSuccess={(newUser) => {
+                        setUser(newUser);
+                        if (authRedirectScreen) {
+                            const next = authRedirectScreen as any;
+                            setAuthRedirectScreen(null);
+                            setScreen(next);
+                        } else if (storyData.theme) {
+                            setScreen('checkout');
+                        } else if (storyData.selectedStyleNames && storyData.selectedStyleNames.length > 0) {
+                            setScreen('theme');
+                        } else if (storyData.mainCharacter?.name || storyData.childName) {
+                            setScreen('styleChoice');
+                        } else {
+                            setScreen('customerDashboard');
+                        }
+                    }} 
+                />;
                 break;
 ;
             default:

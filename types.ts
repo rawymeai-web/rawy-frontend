@@ -17,7 +17,8 @@ export type Screen =
   | 'confirmation'
   | 'admin'
   | 'customerDashboard'
-  | 'orderStatus';
+  | 'orderStatus'
+  | 'auth';
 
 export type Language = 'ar' | 'en' | 'de' | 'es' | 'fr' | 'pt' | 'it' | 'ru' | 'ja' | 'tr' | 'zh';
 
