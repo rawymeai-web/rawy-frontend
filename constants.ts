@@ -19,9 +19,6 @@ export const ART_STYLE_OPTIONS = [
   // --- PAINTERLY & ARTISTIC ---
   { name: 'Digital Watercolor', category: 'painterly', prompt: 'A beautiful and whimsical digital watercolor style. Features soft, dreamy washes with light color bleeding and a textured paper feel. Edges are loose and organic.', sampleUrl: '/style-previews/digital_watercolor.png' },
   { name: 'Gouache Art', category: 'painterly', prompt: 'A charming mixed-media style combining flat, opaque gouache blocks of color with colored pencil details for texture and shading. Handcrafted and organic.', sampleUrl: '/style-previews/mixed_media_gouache.png' },
-
-  // --- PREMIUM DYNAMIC STYLE (LIMITED TIME) ---
-  { name: '✨ Portals of Wonder ✨', category: 'premium', prompt: 'PORTALS_OF_WONDER_DYNAMIC', sampleUrl: '/style-previews/portals_of_wonder.png', isLimitedTime: true },
 ];
 
 export const INITIAL_THEMES: StoryTheme[] = [
