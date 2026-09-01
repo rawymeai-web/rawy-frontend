@@ -90,6 +90,26 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
     };
 
+    const [currency, setCurrencyState] = useState<Currency>(() => {
+        try {
+            const savedCurrCode = localStorage.getItem('preferred_currency');
+            if (savedCurrCode) {
+                const found = currencies.find(c => c.code === savedCurrCode);
+                if (found) return found;
+            }
+            return currencies[0];
+        } catch (e) {
+            return currencies[0];
+        }
+    });
+
+    const setCurrency = (curr: Currency) => {
+        setCurrencyState(curr);
+        try {
+            localStorage.setItem('preferred_currency', curr.code);
+        } catch (e) {}
+    };
+
     // Helper to detect if user opened a direct shared story link (?story=... or ?read=...)
     const hasSharedStoryInUrl = () => {
         if (typeof window === 'undefined') return false;
