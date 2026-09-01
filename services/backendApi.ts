@@ -12,7 +12,7 @@ export interface ApiResponse<T> {
 /**
  * Centralized API handler for frontend to backend communication
  */
-async function fetchBackend<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function fetchBackend<T>(endpoint: string, options: RequestInit & { timeoutMs?: number } = {}): Promise<T> {
     const url = `${BACKEND_URL}${endpoint}`;
     
     // Diagnostic Payload Analyzer
@@ -25,13 +25,18 @@ async function fetchBackend<T>(endpoint: string, options: RequestInit = {}): Pro
             payloadStr = `[Payload: ${(payloadBytes / 1024).toFixed(1)} KB]`;
         }
     }
+
+    // Dynamic intelligent timeout:
+    // AI generation (DNA, image preview, story generation, editing) takes 15-90s -> 180s (3 min) timeout
+    // Standard data fetches (catalog, orders, draft updates) -> 30s timeout
+    const isGeneration = endpoint.startsWith('/generate') || endpoint.includes('preview') || endpoint.includes('dna') || endpoint.includes('image');
+    const timeoutMs = options.timeoutMs || (isGeneration ? 180000 : 30000);
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
-        console.log(`📡 [API] Request => ${options.method || 'GET'} ${url} ${payloadStr}`);
-        
-        // Timeout protection (10 seconds max per request)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        console.log(`📡 [API] Request => ${options.method || 'GET'} ${url} ${payloadStr} (timeout: ${timeoutMs / 1000}s)`);
 
         const response = await fetch(url, {
             ...options,
@@ -61,6 +66,12 @@ async function fetchBackend<T>(endpoint: string, options: RequestInit = {}): Pro
         return await response.json();
         
     } catch (networkError: any) {
+        clearTimeout(timeoutId);
+
+        if (networkError.name === 'AbortError' || networkError.message?.includes('aborted')) {
+            throw new Error(`AI Generation took longer than ${timeoutMs / 1000}s. Please verify your connection or try again.`);
+        }
+
         // Network-level drops (CORS, 413 abrupt closure, invalid URL)
         if (networkError.name === 'TypeError' || networkError.message === 'Failed to fetch') {
             const extraHint = payloadStr.includes('MB') ? " (POSSIBLE VERCEL 4.5MB PAYLOAD LIMIT REACHED)" : " (POSSIBLE CORS OR TIMEOUT)";
