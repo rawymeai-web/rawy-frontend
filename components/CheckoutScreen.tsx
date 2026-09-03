@@ -79,26 +79,29 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   }, [storyData]);
 
   const pricing = useMemo(() => {
-    // Single Storybook is an all-inclusive flat rate (no unexpected add-on surcharges for hero/theme)
-    const singleDigitalTotal = 5.000;
+    const digitalBase = 5.000;
+    const heroAddon = storyData.useSecondCharacter ? 1.500 : 0;
+    const themeAddon = storyData.isCustomTheme ? 0.500 : 0;
+    
+    const aLaCarteDigitalTotal = digitalBase + heroAddon + themeAddon;
     
     let subTotal = 0;
     if (planType === 'monthly') subTotal = 4.500;
-    else if (planType === 'yearly') subTotal = 39.000;
-    else subTotal = singleDigitalTotal;
+    else if (planType === 'yearly') subTotal = 48.000;
+    else subTotal = aLaCarteDigitalTotal;
 
     const finalDigital = storyData.isPrintUpsell ? 0 : subTotal;
     const physicalPrice = isPhysicalAddon ? 18.500 : 0;
     const shipping = isPhysicalAddon ? SHIPPING_RATES[details.region as keyof typeof SHIPPING_RATES || 'kuwait'] : 0;
     
     return {
-      aLaCarteDigitalTotal: singleDigitalTotal,
+      aLaCarteDigitalTotal,
       currentDigital: finalDigital,
       physical: physicalPrice,
       shipping,
       total: finalDigital + physicalPrice + shipping
     };
-  }, [planType, isPhysicalAddon, details.region, storyData.isPrintUpsell, currency]);
+  }, [planType, isPhysicalAddon, details.region, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, currency]);
 
   React.useEffect(() => {
     if (storyData.isPhysicalPrint) {
@@ -208,9 +211,44 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { id: 'one_time', name: t('قصة واحدة لمرة واحدة', 'Single Storybook'), price: pricing.aLaCarteDigitalTotal, sub: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase') },
-                  { id: 'monthly', name: t('الباقة الشهرية', 'Monthly Club'), price: 4.500, sub: t('قصتان شهرياً (وفر 55%)', '2 Books/mo (Save 55%)'), badge: t('الأكثر شعبية', 'POPULAR') },
-                  { id: 'yearly', name: t('الباقة السنوية', 'Yearly Club'), price: 39.000, sub: t('24 قصة بالسنة (أفضل قيمة)', '24 Books/yr (Best Value)'), badge: t('أفضل توفير', 'BEST VALUE') }
+                  { 
+                    id: 'one_time', 
+                    name: t('قصة واحدة لمرة واحدة', 'Single Storybook'), 
+                    mainPrice: convertPrice(pricing.aLaCarteDigitalTotal, currency),
+                    priceUnit: '',
+                    sub: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase'),
+                    perks: [
+                      t('📖 قصة رقمية تفاعلية بجودة HD', '📖 HD Interactive Storybook'),
+                      storyData.useSecondCharacter ? t('👥 يشمل بطل ثانٍ (+1.5 د.ك)', '👥 Includes 2nd Hero (+1.5 KD)') : null,
+                      storyData.isCustomTheme ? t('🎉 يشمل مناسبة خاصة (+0.5 د.ك)', '🎉 Includes Special Event (+0.5 KD)') : null,
+                    ].filter(Boolean) as string[]
+                  },
+                  { 
+                    id: 'monthly', 
+                    name: t('الباقة الشهرية', 'Monthly Club'), 
+                    mainPrice: convertPrice(4.500, currency),
+                    priceUnit: '/' + t('شهر', 'mo'),
+                    sub: t('قصتان شهرياً (وفر أكثر من 55%)', '2 Custom Books / Month'), 
+                    badge: t('الأكثر شعبية', 'POPULAR'),
+                    perks: [
+                      t('✨ بطل ثانٍ مجاناً بكل القصص', '✨ FREE Second Hero on all books'),
+                      t('🎁 تخصيص المناسبات مجاناً', '🎁 FREE Special Events & Themes'),
+                      t('⚡ أولوية التوليد وقراءة تفاعلية 3D', '⚡ Priority AI & Interactive 3D')
+                    ]
+                  },
+                  { 
+                    id: 'yearly', 
+                    name: t('الباقة السنوية', 'Yearly Club'), 
+                    mainPrice: convertPrice(2.000, currency),
+                    priceUnit: '/' + t('كتاب', 'book'),
+                    sub: t(`فقط ${convertPrice(48.000, currency)} سنوياً (24 قصة بالسنة)`, `Billed annually ${convertPrice(48.000, currency)} (24 books/yr)`), 
+                    badge: t('أفضل توفير', 'BEST VALUE'),
+                    perks: [
+                      t('👑 أعلى نسبة توفير (فقط 2 د.ك للكتاب)', '👑 Maximum Savings (Only 2 KD/book)'),
+                      t('✨ بطل ثانٍ ومناسبات مجاناً بجميع الـ 24 قصة', '✨ FREE 2nd Hero & Events for 24 books'),
+                      t('🚀 وصول حصري لجميع أساليب الرسم الجديدة', '🚀 VIP Access to all new styles')
+                    ]
+                  }
                 ].map((p) => {
                   const isSelected = planType === p.id;
                   return (
@@ -243,10 +281,19 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                         {p.name}
                       </span>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-black text-brand-navy">{convertPrice(p.price, currency)}</span>
-                        {p.id !== 'one_time' && <span className="text-[10px] font-bold text-gray-400">/{p.id === 'monthly' ? t('شهر', 'mo') : t('سنة', 'yr')}</span>}
+                        <span className="text-2xl font-black text-brand-navy">{p.mainPrice}</span>
+                        {p.priceUnit && <span className="text-xs font-bold text-gray-500">{p.priceUnit}</span>}
                       </div>
-                      <span className={`text-[10px] font-bold leading-tight ${isSelected ? 'text-brand-navy/80' : 'text-gray-400'}`}>{p.sub}</span>
+                      <span className={`text-[10px] font-bold leading-tight ${isSelected ? 'text-brand-navy/90' : 'text-gray-400'}`}>{p.sub}</span>
+
+                      {/* Plan Perks */}
+                      <div className="mt-2 pt-2 border-t border-gray-100 space-y-1.5 text-left rtl:text-right">
+                        {p.perks.map((perk, pIdx) => (
+                          <div key={pIdx} className="text-[10px] font-bold text-brand-navy/80 flex items-center gap-1">
+                            <span>{perk}</span>
+                          </div>
+                        ))}
+                      </div>
                     </button>
                   );
                 })}
