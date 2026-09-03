@@ -79,29 +79,26 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   }, [storyData]);
 
   const pricing = useMemo(() => {
-    const digitalBase = 5.000;
-    const heroAddon = storyData.useSecondCharacter ? 2.000 : 0;
-    const themeAddon = storyData.isCustomTheme ? 1.000 : 0;
-    
-    const aLaCarteDigitalTotal = digitalBase + heroAddon + themeAddon;
+    // Single Storybook is an all-inclusive flat rate (no unexpected add-on surcharges for hero/theme)
+    const singleDigitalTotal = 5.000;
     
     let subTotal = 0;
     if (planType === 'monthly') subTotal = 4.500;
     else if (planType === 'yearly') subTotal = 39.000;
-    else subTotal = aLaCarteDigitalTotal;
+    else subTotal = singleDigitalTotal;
 
     const finalDigital = storyData.isPrintUpsell ? 0 : subTotal;
-    const physicalPrice = isPhysicalAddon ? 21.000 : 0;
+    const physicalPrice = isPhysicalAddon ? 18.500 : 0;
     const shipping = isPhysicalAddon ? SHIPPING_RATES[details.region as keyof typeof SHIPPING_RATES || 'kuwait'] : 0;
     
     return {
-      aLaCarteDigitalTotal,
+      aLaCarteDigitalTotal: singleDigitalTotal,
       currentDigital: finalDigital,
       physical: physicalPrice,
       shipping,
       total: finalDigital + physicalPrice + shipping
     };
-  }, [planType, isPhysicalAddon, details.region, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, currency]);
+  }, [planType, isPhysicalAddon, details.region, storyData.isPrintUpsell, currency]);
 
   React.useEffect(() => {
     if (storyData.isPhysicalPrint) {
@@ -211,31 +208,48 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { id: 'one_time', name: t('شراء لمرة واحدة', 'A La Carte'), price: pricing.aLaCarteDigitalTotal, sub: t('كتاب واحد', 'Single Book') },
-                  { id: 'monthly', name: t('الباقة الشهرية', 'Monthly'), price: 4.500, sub: t('كتابين/شهر', '2 Books/mo'), badge: t('الأكثر شعبية', 'POPULAR') },
-                  { id: 'yearly', name: t('الباقة السنوية', 'Yearly'), price: 39.000, sub: t('24 كتاب/سنة', '24 Books/yr'), badge: t('أفضل قيمة', 'BEST VALUE') }
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setPlanType(p.id as any)}
-                    className={`relative p-6 rounded-3xl text-left transition-all border-2 flex flex-col gap-2 ${
-                      planType === p.id 
-                      ? 'border-brand-coral bg-white shadow-xl shadow-brand-coral/5 scale-[1.02]' 
-                      : 'border-gray-100 bg-white/50 hover:border-gray-200'
-                    }`}
-                  >
-                    {p.badge && (
-                      <span className="absolute -top-3 left-4 bg-brand-navy text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                        {p.badge}
+                  { id: 'one_time', name: t('قصة واحدة لمرة واحدة', 'Single Storybook'), price: pricing.aLaCarteDigitalTotal, sub: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase') },
+                  { id: 'monthly', name: t('الباقة الشهرية', 'Monthly Club'), price: 4.500, sub: t('قصتان شهرياً (وفر 55%)', '2 Books/mo (Save 55%)'), badge: t('الأكثر شعبية', 'POPULAR') },
+                  { id: 'yearly', name: t('الباقة السنوية', 'Yearly Club'), price: 39.000, sub: t('24 قصة بالسنة (أفضل قيمة)', '24 Books/yr (Best Value)'), badge: t('أفضل توفير', 'BEST VALUE') }
+                ].map((p) => {
+                  const isSelected = planType === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPlanType(p.id as any)}
+                      className={`relative p-6 rounded-3xl text-left rtl:text-right transition-all border-2 flex flex-col gap-2 cursor-pointer ${
+                        isSelected 
+                        ? 'border-brand-coral bg-white shadow-2xl ring-4 ring-brand-coral/20 scale-[1.03] z-10' 
+                        : 'border-gray-200/80 bg-white/60 hover:bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      {/* Selected Checkmark Badge */}
+                      {isSelected && (
+                        <div className="absolute top-3.5 right-3.5 rtl:right-auto rtl:left-3.5 bg-brand-coral text-white rounded-full p-1 shadow-md flex items-center justify-center animate-pop">
+                          <span className="material-symbols-outlined text-sm font-black">check</span>
+                        </div>
+                      )}
+
+                      {p.badge && (
+                        <span className={`absolute -top-3 left-4 rtl:left-auto rtl:right-4 text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm ${
+                          isSelected ? 'bg-brand-coral text-white' : 'bg-brand-navy text-white'
+                        }`}>
+                          {p.badge}
+                        </span>
+                      )}
+
+                      <span className={`text-xs font-black uppercase tracking-wider ${isSelected ? 'text-brand-coral' : 'text-gray-500'}`}>
+                        {p.name}
                       </span>
-                    )}
-                    <span className={`text-xs font-black uppercase tracking-widest ${planType === p.id ? 'text-brand-coral' : 'text-gray-400'}`}>
-                      {p.name}
-                    </span>
-                    <span className="text-2xl font-black text-brand-navy">{convertPrice(p.price, currency)}</span>
-                    <span className="text-[10px] font-bold text-gray-400">{p.sub}</span>
-                  </button>
-                ))}
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-black text-brand-navy">{convertPrice(p.price, currency)}</span>
+                        {p.id !== 'one_time' && <span className="text-[10px] font-bold text-gray-400">/{p.id === 'monthly' ? t('شهر', 'mo') : t('سنة', 'yr')}</span>}
+                      </div>
+                      <span className={`text-[10px] font-bold leading-tight ${isSelected ? 'text-brand-navy/80' : 'text-gray-400'}`}>{p.sub}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

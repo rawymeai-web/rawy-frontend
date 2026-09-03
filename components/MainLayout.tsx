@@ -26,6 +26,8 @@ import { useStory } from '../context/StoryContext';
 import { useWorkflow } from '../context/WorkflowContext';
 import { type StoryData } from '../types';
 import { RegionalDiscoveryModal } from './RegionalDiscoveryModal';
+import { FAQModal } from './FAQModal';
+import { AboutUsModal } from './AboutUsModal';
 
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from './PageTransition';
@@ -50,8 +52,18 @@ const MainLayout: React.FC = () => {
     const [isManualPayment, setIsManualPayment] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [isContactOpen, setIsContactOpen] = useState(false);
+    const [isAboutUsOpen, setIsAboutUsOpen] = useState(false);
+    const [isFAQOpen, setIsFAQOpen] = useState(false);
     const [isPublicSharedStory, setIsPublicSharedStory] = useState(false);
     const [previewReturnScreen, setPreviewReturnScreen] = useState<string>('customerDashboard');
+
+    // Automatically scroll to the top of the page on every screen change
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
+    }, [screen]);
+
     const [authRedirectScreen, setAuthRedirectScreen] = useState<string | null>(() => {
         try {
             return localStorage.getItem('authRedirectScreen') || null;
@@ -620,10 +632,14 @@ const MainLayout: React.FC = () => {
                 language={language} 
                 onCheckOrderStatus={() => setScreen('customerDashboard')} 
                 onContactUs={() => setIsContactOpen(true)}
+                onAboutUs={() => setIsAboutUsOpen(true)}
+                onFAQ={() => setIsFAQOpen(true)}
             />
             <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} totalAmount={convertPrice(paymentAmount, currency)} orderId={storyData.orderId || ''} language={language} />
             <OrderStatusModal isOpen={isOrderStatusModalOpen} onClose={() => setOrderStatusModalOpen(false)} language={language} />
             <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} language={language} />
+            <AboutUsModal isOpen={isAboutUsOpen} onClose={() => setIsAboutUsOpen(false)} language={language} />
+            <FAQModal isOpen={isFAQOpen} onClose={() => setIsFAQOpen(false)} language={language} />
             <RegionalDiscoveryModal 
                 isOpen={isRegionModalOpen}
                 onClose={() => setRegionModalOpen(false)}

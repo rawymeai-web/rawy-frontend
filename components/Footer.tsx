@@ -5,18 +5,20 @@ interface FooterProps {
     language: Language;
     onCheckOrderStatus: () => void;
     onContactUs: () => void;
+    onAboutUs?: () => void;
+    onFAQ?: () => void;
 }
 
-const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus, onContactUs }) => {
+const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus, onContactUs, onAboutUs, onFAQ }) => {
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
     const links = [
         { href: '#', ar: 'اتصل بنا', en: 'Contact Us', onClick: onContactUs },
         { href: '#', ar: 'طلباتي', en: 'My Order', onClick: onCheckOrderStatus },
+        { href: '#', ar: 'من نحن', en: 'About Us', onClick: onAboutUs },
+        { href: '#', ar: 'الأسئلة الشائعة', en: 'FAQ', onClick: onFAQ },
         { href: '/policy.html', ar: 'سياسة الخصوصية', en: 'Privacy Policy', isExternal: true },
         { href: '/tos.html', ar: 'شروط الخدمة', en: 'Terms of Service', isExternal: true },
-        { href: '#', ar: 'من نحن', en: 'About Us', isExternal: true },
-        { href: '#', ar: 'الأسئلة الشائعة', en: 'FAQ' },
     ];
 
     return (

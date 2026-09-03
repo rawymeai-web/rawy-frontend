@@ -12,7 +12,7 @@ interface PaymentModalProps {
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentSuccess, totalAmount, orderId, language }) => {
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'manual'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'manual'>('manual');
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!isOpen) return null;
@@ -28,7 +28,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
         console.log(`[PaymentModal] Initializing Stripe checkout for order: ${orderId}...`);
         
         // Call backend to create checkout session
-        // Note: Backend URL defaults to the relative pathname or full API route
         const res = await fetch(`/api/orders/checkout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -45,8 +44,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
       } catch (err: any) {
         console.error("Stripe Redirect Error:", err);
         alert(t(
-          `خطأ في الاتصال ببوابة الدفع: ${err.message || 'يرجى المحاولة مرة أخرى.'}`,
-          `Payment Gateway Connection Error: ${err.message || 'Please try again.'}`
+          `خطأ في الاتصال ببوابة الدفع: ${err.message || 'يرجى المحاولة مرة أخرى أو اختيار الدفع عبر الرابط.'}`,
+          `Payment Gateway Connection Error: ${err.message || 'Please try again or use Payment Link.'}`
         ));
         setIsProcessing(false);
       }
@@ -55,7 +54,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
       setTimeout(() => {
         setIsProcessing(false);
         onPaymentSuccess(true); // Pass true to notify parent this is a manual link payment
-      }, 1500);
+      }, 1200);
     }
   };
 
@@ -66,7 +65,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
       role="dialog"
     >
       <div
-        className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md border border-gray-100 animate-fade-in-up"
+        className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-lg border border-gray-100 animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
         style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}
       >
@@ -84,45 +83,23 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Summary Box */}
-          <div className="bg-[#FFF9F0] border border-[#F78F50]/10 rounded-2xl p-4 flex justify-between items-center">
-            <span className="text-sm font-semibold text-gray-600">{t('المبلغ الإجمالي:', 'Total Amount:')}</span>
-            <span className="text-xl font-bold text-brand-coral">{totalAmount}</span>
+          <div className="bg-[#FFF9F0] border border-[#F78F50]/15 rounded-2xl p-4 flex justify-between items-center">
+            <div>
+              <span className="text-xs font-bold text-gray-500 block uppercase tracking-wider">{t('المبلغ الإجمالي:', 'Total Amount:')}</span>
+              <span className="text-xs font-semibold text-brand-navy/60">{t('رقم الطلب:', 'Order ID:')} {orderId}</span>
+            </div>
+            <span className="text-2xl font-black text-brand-coral">{totalAmount}</span>
           </div>
 
           {/* Payment Method Selection */}
           <div className="space-y-3">
-            {/* Stripe Option */}
-            <label className={`flex items-start p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
-              paymentMethod === 'stripe' 
-                ? 'border-brand-coral bg-[#F78F50]/5 shadow-[0px_4px_12px_rgba(247,143,80,0.05)]' 
-                : 'border-gray-200 hover:border-gray-300'
-            }`}>
-              <input 
-                type="radio" 
-                name="payment_method" 
-                value="stripe"
-                checked={paymentMethod === 'stripe'}
-                onChange={() => setPaymentMethod('stripe')}
-                className="mt-1 accent-brand-coral"
-                disabled={isProcessing}
-              />
-              <div className={`${language === 'ar' ? 'mr-3' : 'ml-3'}`}>
-                <span className="block font-bold text-brand-navy text-base">
-                  {t('الدفع بالبطاقة (كي نت / فيزا / ماستر)', 'Pay by Card (KNET / Visa / Master)')}
-                </span>
-                <span className="block text-xs text-gray-500 mt-1">
-                  {t('دفع آمن وفوري عبر بوابة Stripe.', 'Secure and instant payment via Stripe.')}
-                </span>
-              </div>
-            </label>
-
-            {/* Manual Link Option */}
-            <label className={`flex items-start p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+            {/* Primary Recommended: Official Link (KNET / Apple Pay) */}
+            <label className={`relative flex items-start p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
               paymentMethod === 'manual' 
-                ? 'border-brand-teal bg-[#006B5D]/5 shadow-[0px_4px_12px_rgba(0,107,93,0.05)]' 
-                : 'border-gray-200 hover:border-gray-300'
+                ? 'border-brand-teal bg-[#006B5D]/5 shadow-lg ring-2 ring-brand-teal/20' 
+                : 'border-gray-200 hover:border-gray-300 bg-white'
             }`}>
               <input 
                 type="radio" 
@@ -133,13 +110,51 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
                 className="mt-1 accent-brand-teal"
                 disabled={isProcessing}
               />
-              <div className={`${language === 'ar' ? 'mr-3' : 'ml-3'}`}>
-                <span className="block font-bold text-brand-navy text-base">
-                  {t('طلب رابط دفع يدوي (واتساب / إيميل)', 'Request Manual Payment Link (WhatsApp/Email)')}
-                </span>
-                <span className="block text-xs text-gray-500 mt-1">
-                  {t('سنرسل لك رابط دفع من حسابنا البنكي يدويًا لاحقًا.', 'We will manually send you a payment link from our bank later.')}
-                </span>
+              <div className={`${language === 'ar' ? 'mr-3' : 'ml-3'} flex-1`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-black text-brand-navy text-base flex items-center gap-1.5">
+                    <span>⚡ {t('رابط دفع بنكي مباشر (كي نت / أبل باي)', 'Direct Payment Link (KNET / Apple Pay)')}</span>
+                  </span>
+                  <span className="bg-brand-teal text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    {t('الموصى به 🇰🇼', 'RECOMMENDED')}
+                  </span>
+                </div>
+                <p className="text-xs text-brand-navy/70 mt-1.5 leading-relaxed font-medium">
+                  {t(
+                    'سنرسل لك رابط دفع رسمي عبر الواتساب والرسائل فوراً للدفع عبر كي نت (KNET) أو أبل باي (Apple Pay) بأمان.',
+                    'We will send an instant official payment link via WhatsApp/SMS to pay securely with KNET or Apple Pay.'
+                  )}
+                </p>
+              </div>
+            </label>
+
+            {/* Secondary Option: Stripe Sandbox (Testing Mode) */}
+            <label className={`flex items-start p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+              paymentMethod === 'stripe' 
+                ? 'border-brand-coral bg-[#F78F50]/5 shadow-md ring-2 ring-brand-coral/20' 
+                : 'border-gray-200/70 hover:border-gray-300 bg-gray-50/50'
+            }`}>
+              <input 
+                type="radio" 
+                name="payment_method" 
+                value="stripe"
+                checked={paymentMethod === 'stripe'}
+                onChange={() => setPaymentMethod('stripe')}
+                className="mt-1 accent-brand-coral"
+                disabled={isProcessing}
+              />
+              <div className={`${language === 'ar' ? 'mr-3' : 'ml-3'} flex-1`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-gray-700 text-sm">
+                    💳 {t('بطاقة ائتمانية (بوابة تجريبية)', 'Credit Card (Sandbox Gateway)')}
+                  </span>
+                  <span className="bg-amber-100 text-amber-800 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    {t('تجريبي / Sandbox', 'DEV SANDBOX')}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  {t('بوابة اختبار تجريبية للمطورين. للدفع الفعلي يرجى اختيار رابط الدفع أعلاه.', 'Sandbox testing gateway for developers. For live payments, choose Payment Link above.')}
+                </p>
               </div>
             </label>
           </div>
