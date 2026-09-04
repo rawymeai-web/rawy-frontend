@@ -142,6 +142,9 @@ export const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ order, onC
                   <DetailItem label={t('البريد الإلكتروني', 'Email')} value={order.shippingDetails.email} />
                   <DetailItem label={t('الهاتف', 'Phone')} value={order.shippingDetails.phone} />
                   <DetailItem label={t('العنوان', 'Address')} value={`${order.shippingDetails.address}, ${order.shippingDetails.city}`} />
+                  {order.shippingDetails.shippingMethod && (
+                    <DetailItem label={t('طريقة الشحن', 'Shipping Speed')} value={order.shippingDetails.shippingMethod === 'express' ? t('توصيل سريع ⚡', 'Express ⚡') : t('توصيل قياسي 📦', 'Standard 📦')} />
+                  )}
                 </DetailSection>
               </div>
 

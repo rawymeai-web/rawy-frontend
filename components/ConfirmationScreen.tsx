@@ -108,6 +108,17 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, on
             <span className="font-black text-brand-coral">{convertPrice(totalPrice, currency)}</span>
           </div>
 
+          {shippingDetails?.isPhysicalDelivery && (
+            <div className="flex justify-between items-center text-xs text-brand-navy font-bold pt-1 border-t border-[#F78F50]/10">
+              <span>🚚 {t('طريقة وسرعة التوصيل', 'Delivery Method')}</span>
+              <span className="font-black text-brand-teal">
+                {shippingDetails.shippingMethod === 'express' 
+                  ? t('⚡ توصيل سريع (إكسبرس)', '⚡ Express Delivery') 
+                  : t('📦 توصيل قياسي', '📦 Standard Delivery')}
+              </span>
+            </div>
+          )}
+
           {shippingDetails?.isGiftWrapping && (
             <div className="flex justify-between items-center text-xs text-brand-coral font-bold pt-1 border-t border-[#F78F50]/10">
               <span>🎁 {t('تغليف هدايا فاخر', 'Premium Gift Wrapping')}</span>

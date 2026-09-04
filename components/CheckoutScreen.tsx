@@ -26,6 +26,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   const isPhysicalInitial = !!storyData.isPhysicalPrint;
   const [isPhysicalAddon, setIsPhysicalAddon] = useState(isPhysicalInitial);
   const [physicalBookCount, setPhysicalBookCount] = useState(1);
+  const [shippingMethod, setShippingMethod] = useState<'standard' | 'express'>('standard');
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [isGiftWrapping, setIsGiftWrapping] = useState(false);
   const [isGiftCard, setIsGiftCard] = useState(false);
@@ -48,7 +49,8 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     floorApt: '',
     postalCode: '',
     deliveryNotes: '',
-    isPhysicalDelivery: isPhysicalInitial
+    isPhysicalDelivery: isPhysicalInitial,
+    shippingMethod: 'standard'
   });
   
   const [planType, setPlanType] = useState<'one_time' | 'monthly' | 'yearly'>('monthly');
@@ -93,8 +95,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     const physicalUnitPrice = isYearlySubscriber ? basePhysicalUnitPrice * 0.85 : basePhysicalUnitPrice; // 17.850 KD for yearly
     const physicalPrice = isPhysicalAddon ? physicalUnitPrice * physicalBookCount : 0;
     
-    // Dynamic Shipping Rate per country, free for 2+ books
-    const shipping = isPhysicalAddon ? getCountryShippingRate(details.country || 'KW', physicalBookCount) : 0;
+    // Dynamic Shipping Rate per country (Standard), free for 2+ books
+    const standardShipping = isPhysicalAddon ? getCountryShippingRate(details.country || 'KW', physicalBookCount) : 0;
+    // Express delivery is a fixed +2.000 KD surcharge above standard rate
+    const expressShippingAddon = isPhysicalAddon && shippingMethod === 'express' ? 2.000 : 0;
+    const shipping = standardShipping + expressShippingAddon;
     
     // Gift Add-ons (Only applicable if Physical Hardcover Print is selected)
     const giftWrappingPrice = isPhysicalAddon && isGiftWrapping ? 2.000 : 0;
@@ -113,6 +118,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       physicalUnitPrice,
       basePhysicalUnitPrice,
       isYearlySubscriber,
+      standardShipping,
+      expressShippingAddon,
+      shippingMethod,
       shipping,
       giftWrapping: giftWrappingPrice,
       giftCard: giftCardPrice,
@@ -125,7 +133,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       monthlyDiscountPercent,
       yearlyDiscountPercent
     };
-  }, [planType, isPhysicalAddon, physicalBookCount, details.country, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, isGiftWrapping, isGiftCard, currency]);
+  }, [planType, isPhysicalAddon, physicalBookCount, shippingMethod, details.country, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, isGiftWrapping, isGiftCard, currency]);
 
   React.useEffect(() => {
     if (storyData.isPhysicalPrint) {
@@ -168,9 +176,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   };
 
   const proceedDirectly = (selectedPlan: 'one_time' | 'monthly' | 'yearly' = planType) => {
-    const finalDetails = {
+    const finalDetails: ShippingDetails = {
       ...details,
       isPhysicalDelivery: isPhysicalAddon,
+      shippingMethod: isPhysicalAddon ? shippingMethod : 'standard',
+      shippingCost: isPhysicalAddon ? pricing.shipping : 0,
       isGiftWrapping: isPhysicalAddon ? isGiftWrapping : false,
       isGiftCard: isPhysicalAddon ? isGiftCard : false,
       giftMessage: (isPhysicalAddon && isGiftCard) ? giftMessage : '',
@@ -473,27 +483,99 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
               )}
             </div>
 
-            {/* Dynamic Shipping Preview (per country) */}
+            {/* Dynamic Shipping & Speed Options (Standard vs Express) */}
             {isPhysicalAddon && (
-              <div className="p-4 bg-white/80 rounded-2xl border border-brand-teal/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{currentCountry.flag}</span>
-                  <span className="font-bold text-brand-navy">
-                    {t('الشحن إلى', 'Shipping to')} {currentCountry.name[language]}:
-                  </span>
-                  <span className="font-black text-brand-teal">
-                    {pricing.shipping === 0 ? t('شحن مجاني 🎉', 'FREE Shipping 🎉') : '+' + convertPrice(pricing.shipping, currency)}
-                  </span>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-black text-brand-navy">
+                    <span className="text-base">🚚</span>
+                    <span>{t('طريقة وسرعة التوصيل إلى', 'Delivery Speed & Method to')} {currentCountry.name[language]} {currentCountry.flag}:</span>
+                  </div>
+                  {physicalBookCount >= 2 ? (
+                    <span className="bg-emerald-100 text-emerald-800 font-black px-2.5 py-0.5 rounded-full text-[10px]">
+                      {t('🎉 شحن قياسي مجاني', '🎉 Free Standard Delivery')}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400 font-bold hidden sm:inline">
+                      {t('💡 2+ كتب = شحن قياسي مجاني', '💡 2+ copies = Free Standard')}
+                    </span>
+                  )}
                 </div>
-                {physicalBookCount >= 2 ? (
-                  <span className="bg-emerald-100 text-emerald-800 font-black px-3 py-1 rounded-full text-[10px]">
-                    {t('🎉 تم تطبيق الشحن المجاني (لكتابين أو أكثر)', '🎉 Free Shipping Applied (2+ Books)')}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-gray-400 font-bold">
-                    {t('💡 اطلب نسختين مطبوعتين أو أكثر للحصول على شحن مجاني!', '💡 Order 2+ physical copies for FREE shipping!')}
-                  </span>
-                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Standard Delivery */}
+                  <div 
+                    onClick={() => setShippingMethod('standard')}
+                    className={'p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-2.5 ' + (
+                      shippingMethod === 'standard' 
+                        ? 'border-brand-teal bg-brand-teal/5 shadow-sm ring-2 ring-brand-teal/20' 
+                        : 'border-gray-200 bg-white/70 hover:border-gray-300'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl flex-shrink-0">📦</span>
+                        <div>
+                          <span className="font-black text-brand-navy text-xs block">{t('توصيل قياسي', 'Standard Delivery')}</span>
+                          <span className="text-[10px] text-gray-500 font-medium block">{t('خلال ٣ - ٥ أيام عمل', '3 - 5 business days')}</span>
+                        </div>
+                      </div>
+                      <input 
+                        type="radio" 
+                        name="shippingMethod"
+                        checked={shippingMethod === 'standard'}
+                        onChange={() => setShippingMethod('standard')}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-0.5 accent-brand-teal w-4 h-4 cursor-pointer"
+                      />
+                    </div>
+                    <div className="text-left rtl:text-right pt-1 border-t border-gray-100/80 flex items-center justify-between">
+                      <span className="text-[10px] text-gray-400 font-bold">{t('تكلفة الشحن:', 'Shipping rate:')}</span>
+                      <span className="text-xs font-black text-brand-teal">
+                        {pricing.standardShipping === 0 ? t('مجاناً 🎉', 'FREE 🎉') : '+' + convertPrice(pricing.standardShipping, currency)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Express Delivery */}
+                  <div 
+                    onClick={() => setShippingMethod('express')}
+                    className={'p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-2.5 ' + (
+                      shippingMethod === 'express' 
+                        ? 'border-brand-coral bg-brand-coral/5 shadow-sm ring-2 ring-brand-coral/20' 
+                        : 'border-gray-200 bg-white/70 hover:border-gray-300'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl flex-shrink-0">⚡</span>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-brand-navy text-xs">{t('توصيل سريع (إكسبرس)', 'Express Delivery ⚡')}</span>
+                            <span className="bg-amber-100 text-amber-800 text-[9px] font-black px-1.5 py-0.5 rounded-md">
+                              +{convertPrice(2.000, currency)}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-gray-500 font-medium block">{t('خلال ١ - ٢ يوم عمل • أولوية التجهيز', '1 - 2 business days • Priority')}</span>
+                        </div>
+                      </div>
+                      <input 
+                        type="radio" 
+                        name="shippingMethod"
+                        checked={shippingMethod === 'express'}
+                        onChange={() => setShippingMethod('express')}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-0.5 accent-brand-coral w-4 h-4 cursor-pointer"
+                      />
+                    </div>
+                    <div className="text-left rtl:text-right pt-1 border-t border-gray-100/80 flex items-center justify-between">
+                      <span className="text-[10px] text-gray-400 font-bold">{t('تكلفة الشحن السريع:', 'Express rate:')}</span>
+                      <span className="text-xs font-black text-brand-coral">
+                        +{convertPrice(pricing.standardShipping + 2.000, currency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -877,7 +959,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     <span className="font-black text-brand-teal">+{convertPrice(pricing.physical, currency)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-500">{t('الشحن والتوصيل', 'Shipping')}</span>
+                    <span className="font-bold text-gray-500">
+                      {shippingMethod === 'express' 
+                        ? t('الشحن والتوصيل (سريع ⚡)', 'Shipping (Express ⚡)') 
+                        : t('الشحن والتوصيل (قياسي)', 'Shipping (Standard)')}
+                    </span>
                     <span className="font-black text-brand-teal">
                       {pricing.shipping === 0 ? t('مجاناً 🎉', 'FREE 🎉') : '+' + convertPrice(pricing.shipping, currency)}
                     </span>
