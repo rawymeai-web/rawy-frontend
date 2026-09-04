@@ -93,6 +93,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     const physicalUnitPrice = isYearlySubscriber ? basePhysicalUnitPrice * 0.85 : basePhysicalUnitPrice; // 17.850 KD for yearly
     const physicalPrice = isPhysicalAddon ? physicalUnitPrice * physicalBookCount : 0;
     
+    // Dynamic Shipping Rate per country, free for 2+ books
+    const shipping = isPhysicalAddon ? getCountryShippingRate(details.country || 'KW', physicalBookCount) : 0;
+    
     // Gift Add-ons
     const giftWrappingPrice = isGiftWrapping ? 2.000 : 0;
     const giftCardPrice = isGiftCard ? 0.500 : 0;
