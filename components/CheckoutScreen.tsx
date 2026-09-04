@@ -65,17 +65,17 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   }, [storyData]);
 
   const pricing = useMemo(() => {
-    const digitalBase = 5.000;
+    // Base Single Digital Storybook is flat 5.000 KD
+    const singleDigitalBase = 5.000;
     const heroAddon = storyData.useSecondCharacter ? 1.500 : 0;
     const themeAddon = storyData.isCustomTheme ? 0.500 : 0;
+    const singleDigitalTotal = singleDigitalBase + heroAddon + themeAddon;
     
-    // Single Storybook full price including selected add-ons
-    const singleDigitalTotal = digitalBase + heroAddon + themeAddon;
-    
-    // Monthly: 1 book per month @ 2.500 KD ($8.15 USD)
-    const monthlyPrice = 2.500;
-    // Yearly: 12 books per year (1 book/mo) @ $99 USD (approx 30.500 KD / ~2.540 KD per book)
-    const yearlyTotal = 30.500;
+    // Monthly: 1 book per month @ 4.000 KD
+    const monthlyPrice = 4.000;
+    // Yearly: 12 books per year @ 30.000 KD upfront (clean 2.500 KD / book)
+    const yearlyTotal = 30.000;
+    const yearlyPerBook = 2.500;
     
     let subTotal = 0;
     if (planType === 'monthly') subTotal = monthlyPrice;
@@ -84,33 +84,32 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
     const finalDigital = storyData.isPrintUpsell ? 0 : subTotal;
     
-    // 15% discount on physical printed hardcover for subscribers
-    const isSubscriber = planType === 'monthly' || planType === 'yearly';
-    const basePhysicalUnitPrice = 18.500;
-    const physicalUnitPrice = isSubscriber ? basePhysicalUnitPrice * 0.85 : basePhysicalUnitPrice;
+    // Base Hardcover Print price: 21.000 KD. Discount (15%) is ONLY for the Yearly Plan!
+    const basePhysicalUnitPrice = 21.000;
+    const isYearlySubscriber = planType === 'yearly';
+    const physicalUnitPrice = isYearlySubscriber ? basePhysicalUnitPrice * 0.85 : basePhysicalUnitPrice; // 17.850 KD for yearly
     const physicalPrice = isPhysicalAddon ? physicalUnitPrice * physicalBookCount : 0;
     
     // Dynamic Shipping Rate per country, free for 2+ books
     const shipping = isPhysicalAddon ? getCountryShippingRate(details.country || 'KW', physicalBookCount) : 0;
     
-    // Dynamic Discount calculations relative to single book price
-    const monthlyPerBook = monthlyPrice;
-    const yearlyPerBook = yearlyTotal / 12; // 2.54 KD ($8.25 USD)
-    const monthlyDiscountPercent = Math.max(10, Math.round(((singleDigitalTotal - monthlyPerBook) / singleDigitalTotal) * 100));
-    const yearlyDiscountPercent = Math.max(15, Math.round(((singleDigitalTotal - yearlyPerBook) / singleDigitalTotal) * 100));
+    // Discounts relative to base single book
+    const monthlyDiscountPercent = Math.max(10, Math.round(((singleDigitalBase - monthlyPrice) / singleDigitalBase) * 100)); // 20%
+    const yearlyDiscountPercent = Math.max(20, Math.round(((singleDigitalBase - yearlyPerBook) / singleDigitalBase) * 100)); // 50%
 
     return {
+      singleDigitalBase,
       singleDigitalTotal,
       currentDigital: finalDigital,
       physical: physicalPrice,
       physicalUnitPrice,
       basePhysicalUnitPrice,
-      isSubscriber,
+      isYearlySubscriber,
       shipping,
       total: finalDigital + physicalPrice + shipping,
       monthlyPrice,
       yearlyTotal,
-      monthlyPerBook,
+      monthlyPerBook: monthlyPrice,
       yearlyPerBook,
       monthlyDiscountPercent,
       yearlyDiscountPercent
@@ -225,41 +224,41 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                   { 
                     id: 'one_time', 
                     name: t('قصة واحدة لمرة واحدة', 'Single Storybook'), 
-                    pricePerBook: convertPrice(pricing.singleDigitalTotal, currency),
+                    pricePerBook: convertPrice(pricing.singleDigitalBase, currency),
                     strikethroughPrice: null,
                     discountBadge: null,
                     billingSummary: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase (No subscription)'),
                     perks: [
-                      t('📖 قصة رقمية تفاعلية بجودة HD', '📖 HD Interactive Storybook'),
-                      storyData.useSecondCharacter ? t('👥 يشمل بطل ثانٍ (+1.5 د.ك)', '👥 Includes 2nd Hero (+1.5 KD)') : t('👥 بطل ثانٍ (+1.5 د.ك اختياري)', '👥 2nd Hero (+1.5 KD optional)'),
-                      storyData.isCustomTheme ? t('🎉 يشمل مناسبة خاصة (+0.5 د.ك)', '🎉 Includes Special Event (+0.5 KD)') : t('🎉 مناسبة خاصة (+0.5 د.ك اختياري)', '🎉 Special Event (+0.5 KD optional)'),
+                      t('📖 كتاب رقمي تفاعلي عالي الدقة (Softcopy)', 'HD Interactive Digital Softcopy'),
+                      t('📱 قراءة وتصفح 3D غير محدود بأي جهاز', 'Unlimited 3D reading on any device'),
+                      t('⬇ تنزيل فوري لملف الـ PDF للطباعة', 'Instant PDF download anytime'),
                     ]
                   },
                   { 
                     id: 'monthly', 
                     name: t('الباقة الشهرية', 'Monthly Club'), 
                     pricePerBook: convertPrice(pricing.monthlyPerBook, currency),
-                    strikethroughPrice: convertPrice(pricing.singleDigitalTotal, currency),
+                    strikethroughPrice: convertPrice(pricing.singleDigitalBase, currency),
                     discountBadge: t('وفر ' + pricing.monthlyDiscountPercent + '%', 'Save ' + pricing.monthlyDiscountPercent + '%'),
                     billingSummary: t('فاتورة ' + convertPrice(pricing.monthlyPrice, currency) + ' شهرياً (كتاب كل شهر)', 'Billed ' + convertPrice(pricing.monthlyPrice, currency) + '/mo (1 book/mo)'), 
                     badge: t('الأكثر شعبية', 'POPULAR'),
                     perks: [
-                      t('✨ بطل ثانٍ ومناسبات مجاناً', '✨ FREE 2nd Hero & Events'),
-                      t('🎁 خصم 15% على المطبوعة الفاخرة', '🎁 15% OFF Physical Hardcover'),
-                      t('⚡ أولوية التوليد وقراءة تفاعلية 3D', '⚡ Priority AI & Interactive 3D')
+                      t('✨ بطل ثانٍ ومناسبات مجاناً بكل قصة', '✨ FREE 2nd Hero & Events on all books'),
+                      t('📱 كتاب رقمي تفاعلي جديد شهرياً', '📱 1 New Custom 3D book every month'),
+                      t('⚡ أولوية التوليد الذكي السريع', '⚡ Priority High-Speed AI Generation')
                     ]
                   },
                   { 
                     id: 'yearly', 
-                    name: t('الباقة السنوية (99$)', 'Yearly Club ($99)'), 
+                    name: t('الباقة السنوية', 'Yearly Club'), 
                     pricePerBook: convertPrice(pricing.yearlyPerBook, currency),
-                    strikethroughPrice: convertPrice(pricing.singleDigitalTotal, currency),
+                    strikethroughPrice: convertPrice(pricing.singleDigitalBase, currency),
                     discountBadge: t('وفر ' + pricing.yearlyDiscountPercent + '%', 'Save ' + pricing.yearlyDiscountPercent + '%'),
-                    billingSummary: t('تُدفع 99$ (' + convertPrice(pricing.yearlyTotal, currency) + ') سنوياً لـ 12 كتاباً', 'Billed $99/yr (' + convertPrice(pricing.yearlyTotal, currency) + ') for 12 books'), 
+                    billingSummary: t('تُدفع ' + convertPrice(pricing.yearlyTotal, currency) + ' سنوياً لـ 12 كتاباً', 'Billed ' + convertPrice(pricing.yearlyTotal, currency) + '/yr for 12 books'), 
                     badge: t('أفضل توفير', 'BEST VALUE'),
                     perks: [
-                      t('👑 99$ سنوياً لـ 12 كتاباً (فقط 8.25$ للكتاب)', '👑 $99/yr for 12 books ($8.25/book)'),
-                      t('🎁 خصم 15% على جميع الكتب المطبوعة', '🎁 15% OFF all printed books'),
+                      t('👑 أفضل توفير (فقط ' + convertPrice(pricing.yearlyPerBook, currency) + ' للكتاب)', '👑 Best Value (Only ' + convertPrice(pricing.yearlyPerBook, currency) + '/book)'),
+                      t('🎁 خصم 15% على جميع الكتب المطبوعة', '🎁 15% OFF all physical printed books'),
                       t('✨ بطل ثانٍ ومناسبات مجاناً بـ 12 كتاباً', '✨ FREE 2nd Hero & Events for 12 books'),
                       t('🚀 وصول حصري لجميع أساليب الرسم الجديدة', '🚀 VIP Access to all new styles')
                     ]
@@ -339,16 +338,22 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 })}
               </div>
 
-              {/* Physical Printing Disclaimer Notice */}
-              <div className="p-4 bg-amber-50/80 border border-amber-200/60 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed font-medium">
-                <span className="text-base flex-shrink-0">ℹ️</span>
-                <p>
-                  {t(
-                    'تنبيه: تشمل الاشتراكات إصدار الكتب الرقمية التفاعلية عالية الدقة وقراءتها عبر المنصة. طباعة وتوصيل النسخ الورقية الفاخرة (Hardcover) هي خدمة اختيارية إضافية تُحاسب بشكل منفصل مع خصم حصري 15% لأعضاء النادي.',
-                    'Note: Subscriptions cover HD interactive digital storybooks with unlimited access. Premium hardcover printing and delivery are optional add-ons charged separately with an exclusive 15% discount for club members.'
-                  )}
-                </p>
-              </div>
+              {/* Physical Printing Disclaimer Notice - ONLY rendered when subscription is chosen */}
+              {(planType === 'monthly' || planType === 'yearly') && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-amber-50/80 border border-amber-200/60 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed font-medium"
+                >
+                  <span className="text-base flex-shrink-0">ℹ️</span>
+                  <p>
+                    {t(
+                      'تنبيه: تشمل باقات الاشتراك إصدار الكتب الرقمية التفاعلية عالية الدقة وقراءتها عبر المنصة. طباعة وتوصيل النسخ الورقية الفاخرة (Hardcover) هي خدمة اختيارية تُطلب بشكل منفصل (مع خصم 15% حصري لأعضاء الباقة السنوية).',
+                      'Note: Subscriptions cover HD interactive digital storybooks with unlimited access. Premium hardcover printing and delivery are optional add-ons charged separately (with an exclusive 15% discount for yearly club members).'
+                    )}
+                  </p>
+                </motion.div>
+              )}
             </div>
           )}
 
@@ -373,12 +378,12 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-brand-navy">{t('أضف نسخة مطبوعة فاخرة', 'Add Premium HD Hardcover')}</h3>
-                  <p className="text-xs text-gray-500 font-medium">{t('طباعة احترافية بـ 12 لوناً وتجليد مقوى دائم', 'Professional 12-Color HD Print & Archival Binding')}</p>
+                  <p className="text-xs text-gray-500 font-medium">{t('طباعة احترافية بـ 12 لوناً وتجليد مقوى فندقي دائم', 'Professional 12-Color HD Print & Archival Binding')}</p>
                 </div>
               </div>
               <div className="text-left rtl:text-right sm:text-right rtl:sm:text-left">
-                <div className="flex items-center gap-2">
-                  {pricing.isSubscriber && (
+                <div className="flex items-center gap-2 justify-end">
+                  {pricing.isYearlySubscriber && (
                     <span className="text-xs text-gray-400 line-through font-bold">
                       {convertPrice(pricing.basePhysicalUnitPrice, currency)}
                     </span>
@@ -388,7 +393,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                   </div>
                 </div>
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  {pricing.isSubscriber ? t('شامل خصم 15% للأعضاء', 'Includes 15% Member Discount') : t('لكل نسخة مطبوعة', 'per printed book')}
+                  {pricing.isYearlySubscriber ? t('شامل خصم 15% للباقة السنوية 🎉', 'Includes 15% Yearly Discount 🎉') : t('لكل نسخة مطبوعة', 'per printed book')}
                 </div>
               </div>
             </div>
@@ -722,7 +727,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
               <div className="flex justify-between items-center">
                 <span className="font-bold text-gray-500">{t('الباقة المختارة', 'Plan')}</span>
                 <span className="font-black text-brand-navy">
-                  {planType === 'one_time' ? t('قصة واحدة', 'Single Book') : (planType === 'monthly' ? t('الباقة الشهرية', 'Monthly Club') : t('الباقة السنوية (99$)', 'Yearly Club ($99)'))}
+                  {planType === 'one_time' ? t('قصة واحدة', 'Single Book') : (planType === 'monthly' ? t('الباقة الشهرية', 'Monthly Club') : t('الباقة السنوية', 'Yearly Club'))}
                 </span>
               </div>
 
@@ -736,7 +741,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                   <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                     <span className="font-bold text-gray-500">
                       {t('المطبوعة الفاخرة', 'HD Hardcover Print')} ({physicalBookCount}x)
-                      {pricing.isSubscriber && <span className="text-brand-teal text-xs block">{t('(خصم 15% للأعضاء)', '(15% Member Discount)')}</span>}
+                      {pricing.isYearlySubscriber && <span className="text-brand-teal text-xs block">{t('(خصم 15% للباقة السنوية)', '(15% Yearly Discount)')}</span>}
                     </span>
                     <span className="font-black text-brand-teal">+{convertPrice(pricing.physical, currency)}</span>
                   </div>
@@ -755,7 +760,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
               <div>
                 <span className="text-xs font-black text-gray-400 uppercase tracking-wider block">{t('الإجمالي النهائي', 'Total Price')}</span>
                 <span className="text-[10px] text-gray-400 font-bold">
-                  {planType === 'monthly' ? t('يتجدد شهرياً - إلغاء بأي وقت', 'Renews monthly - Cancel anytime') : (planType === 'yearly' ? t('دفعة سنوية 99$ لـ 12 كتاباً', 'Annual payment $99 for 12 books') : t('دفعة لمرة واحدة', 'One-time payment'))}
+                  {planType === 'monthly' ? t('يتجدد شهرياً - إلغاء بأي وقت', 'Renews monthly - Cancel anytime') : (planType === 'yearly' ? t('دفعة سنوية لـ 12 كتاباً', 'Annual payment for 12 books') : t('دفعة لمرة واحدة', 'One-time payment'))}
                 </span>
               </div>
               <span className="text-3xl font-black text-brand-coral">{convertPrice(pricing.total, currency)}</span>
@@ -802,8 +807,8 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
                   {t(
-                    'بدلاً من دفع ' + convertPrice(pricing.singleDigitalTotal, currency) + ' لقصة واحدة فقط، اشترك في باقة النادي الشهرية مقابل ' + convertPrice(pricing.monthlyPrice, currency) + ' شهرياً مع بطل ثانٍ ومناسبات مجاناً وخصم 15% على المطبوعة الفاخرة!',
-                    'Instead of paying ' + convertPrice(pricing.singleDigitalTotal, currency) + ' for just 1 book, join the Monthly Club for only ' + convertPrice(pricing.monthlyPrice, currency) + '/month with FREE 2nd hero & special events + 15% OFF printed hardcovers!'
+                    'بدلاً من دفع ' + convertPrice(pricing.singleDigitalTotal, currency) + ' لقصة واحدة فقط، اشترك في باقة النادي الشهرية مقابل ' + convertPrice(pricing.monthlyPrice, currency) + ' شهرياً مع بطل ثانٍ ومناسبات مجاناً!',
+                    'Instead of paying ' + convertPrice(pricing.singleDigitalTotal, currency) + ' for just 1 book, join the Monthly Club for only ' + convertPrice(pricing.monthlyPrice, currency) + '/month with FREE 2nd hero & special events!'
                   )}
                 </p>
               </div>
@@ -821,7 +826,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                   <span className="text-[10px] font-black text-brand-coral block">{t('عرض النادي ✨', 'Club Offer ✨')}</span>
                   <span className="text-xs font-black text-brand-navy block">{t('كتاب كل شهر', '1 Book / Month')}</span>
                   <span className="text-lg font-black text-brand-coral block">{convertPrice(pricing.monthlyPrice, currency)}</span>
-                  <span className="text-[9px] font-bold text-emerald-700 block">{t('خصم ' + pricing.monthlyDiscountPercent + '% + إضافات مجانية', 'Save ' + pricing.monthlyDiscountPercent + '% + Free Addons')}</span>
+                  <span className="text-[9px] font-bold text-emerald-700 block">{t('وفر مع إضافات مجانية', 'Save with Free Addons')}</span>
                 </div>
               </div>
 
