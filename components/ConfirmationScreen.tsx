@@ -108,6 +108,27 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, on
             <span className="font-black text-brand-coral">{convertPrice(totalPrice, currency)}</span>
           </div>
 
+          {shippingDetails?.isGiftWrapping && (
+            <div className="flex justify-between items-center text-xs text-brand-coral font-bold pt-1 border-t border-[#F78F50]/10">
+              <span>🎁 {t('تغليف هدايا فاخر', 'Premium Gift Wrapping')}</span>
+              <span>{t('مشمول بالطلب ✨', 'Included ✨')}</span>
+            </div>
+          )}
+
+          {shippingDetails?.isGiftCard && (
+            <div className="text-xs text-brand-teal font-bold space-y-1 pt-1 border-t border-[#F78F50]/10">
+              <div className="flex justify-between items-center">
+                <span>💌 {t('بطاقة إهداء مخصصة', 'Personalized Gift Card')}</span>
+                <span>{t('مشمول بالطلب ✨', 'Included ✨')}</span>
+              </div>
+              {shippingDetails.giftMessage && (
+                <div className="p-2.5 bg-white/80 rounded-xl border border-brand-teal/20 text-[11px] text-gray-600 font-normal italic">
+                  "{shippingDetails.giftMessage}"
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-between items-center text-sm">
             <span className="font-semibold text-gray-600">{t('حالة الطلب', 'Order Status')}</span>
             <span className={`font-bold px-3 py-1 rounded-full text-xs ${

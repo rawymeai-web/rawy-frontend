@@ -27,6 +27,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   const [isPhysicalAddon, setIsPhysicalAddon] = useState(isPhysicalInitial);
   const [physicalBookCount, setPhysicalBookCount] = useState(1);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
+  const [isGiftWrapping, setIsGiftWrapping] = useState(false);
+  const [isGiftCard, setIsGiftCard] = useState(false);
+  const [giftMessage, setGiftMessage] = useState('');
 
   const [details, setDetails] = useState<ShippingDetails>({ 
     name: storyData.parentName || '', 
@@ -90,9 +93,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     const physicalUnitPrice = isYearlySubscriber ? basePhysicalUnitPrice * 0.85 : basePhysicalUnitPrice; // 17.850 KD for yearly
     const physicalPrice = isPhysicalAddon ? physicalUnitPrice * physicalBookCount : 0;
     
-    // Dynamic Shipping Rate per country, free for 2+ books
-    const shipping = isPhysicalAddon ? getCountryShippingRate(details.country || 'KW', physicalBookCount) : 0;
-    
+    // Gift Add-ons
+    const giftWrappingPrice = isGiftWrapping ? 2.000 : 0;
+    const giftCardPrice = isGiftCard ? 0.500 : 0;
+    const giftTotal = giftWrappingPrice + giftCardPrice;
+
     // Discounts relative to base single book
     const monthlyDiscountPercent = Math.max(10, Math.round(((singleDigitalBase - monthlyPrice) / singleDigitalBase) * 100)); // 20%
     const yearlyDiscountPercent = Math.max(20, Math.round(((singleDigitalBase - yearlyPerBook) / singleDigitalBase) * 100)); // 50%
@@ -106,7 +111,10 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       basePhysicalUnitPrice,
       isYearlySubscriber,
       shipping,
-      total: finalDigital + physicalPrice + shipping,
+      giftWrapping: giftWrappingPrice,
+      giftCard: giftCardPrice,
+      giftTotal,
+      total: finalDigital + physicalPrice + shipping + giftTotal,
       monthlyPrice,
       yearlyTotal,
       monthlyPerBook: monthlyPrice,
@@ -114,7 +122,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       monthlyDiscountPercent,
       yearlyDiscountPercent
     };
-  }, [planType, isPhysicalAddon, physicalBookCount, details.country, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, currency]);
+  }, [planType, isPhysicalAddon, physicalBookCount, details.country, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, isGiftWrapping, isGiftCard, currency]);
 
   React.useEffect(() => {
     if (storyData.isPhysicalPrint) {
@@ -160,6 +168,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     const finalDetails = {
       ...details,
       isPhysicalDelivery: isPhysicalAddon,
+      isGiftWrapping,
+      isGiftCard,
+      giftMessage: isGiftCard ? giftMessage : '',
       address: isPhysicalAddon 
         ? formatFullAddress({ ...details, language }) 
         : (language === 'ar' ? 'طلب رقمي (لا يتطلب شحن فعلي)' : 'Digital Softcopy (No physical delivery required)')
@@ -167,9 +178,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
     let calculatedTotal = pricing.total;
     if (selectedPlan === 'monthly' && planType !== 'monthly') {
-      calculatedTotal = pricing.monthlyPrice + pricing.physical + pricing.shipping;
+      calculatedTotal = pricing.monthlyPrice + pricing.physical + pricing.shipping + pricing.giftTotal;
     } else if (selectedPlan === 'yearly' && planType !== 'yearly') {
-      calculatedTotal = pricing.yearlyTotal + pricing.physical + pricing.shipping;
+      calculatedTotal = pricing.yearlyTotal + pricing.physical + pricing.shipping + pricing.giftTotal;
     }
 
     onProceedToPayment(finalDetails, selectedPlan, calculatedTotal);
@@ -243,9 +254,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     billingSummary: t('فاتورة ' + convertPrice(pricing.monthlyPrice, currency) + ' شهرياً (كتاب كل شهر)', 'Billed ' + convertPrice(pricing.monthlyPrice, currency) + '/mo (1 book/mo)'), 
                     badge: t('الأكثر شعبية', 'POPULAR'),
                     perks: [
-                      t('✨ بطل ثانٍ ومناسبات مجاناً بكل قصة', '✨ FREE 2nd Hero & Events on all books'),
-                      t('📱 قصة رقمية تفاعلية جديدة شهرياً', '📱 1 New custom interactive storybook every month'),
-                      t('⚡ أولوية التوليد الذكي السريع', '⚡ Priority High-Speed AI Generation')
+                      t('📱 قصة مخصصة جديدة شهرياً', '1 New custom storybook every month'),
+                      t('✨ يشمل جميع مزايا القصة الفردية (تفاعلية + PDF)', 'Includes all Single Book features (Reader + PDF)'),
+                      t('👥 بطل ثانٍ ومناسبات خاصة مجاناً بكل قصة', 'FREE 2nd Hero & Events on all books'),
                     ]
                   },
                   { 
@@ -257,10 +268,10 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     billingSummary: t('تُدفع ' + convertPrice(pricing.yearlyTotal, currency) + ' سنوياً لـ 12 كتاباً', 'Billed ' + convertPrice(pricing.yearlyTotal, currency) + '/yr for 12 books'), 
                     badge: t('أفضل توفير', 'BEST VALUE'),
                     perks: [
-                      t('👑 أفضل توفير (فقط ' + convertPrice(pricing.yearlyPerBook, currency) + ' للكتاب)', '👑 Best Value (Only ' + convertPrice(pricing.yearlyPerBook, currency) + '/book)'),
-                      t('🎁 خصم 15% على جميع الكتب المطبوعة', '🎁 15% OFF all physical printed books'),
-                      t('✨ بطل ثانٍ ومناسبات مجاناً بـ 12 كتاباً', '✨ FREE 2nd Hero & Events for 12 books'),
-                      t('🚀 وصول حصري لجميع أساليب الرسم الجديدة', '🚀 VIP Access to all new styles')
+                      t('👑 12 قصة مخصصة (كتاب جديد كل شهر)', '12 Custom storybooks (1 new book every month)'),
+                      t('✨ يشمل جميع مزايا باقة النادي الشهري', 'Includes all Monthly Club features & Free Add-ons'),
+                      t('🎁 خصم 15% على جميع الكتب المطبوعة', '15% OFF all physical printed books'),
+                      t('🚀 وصول حصري لجميع أساليب الرسم الجديدة', 'VIP Access to all new styles')
                     ]
                   }
                 ].map((p) => {
@@ -338,8 +349,8 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 })}
               </div>
 
-              {/* Physical Printing Disclaimer Notice - ONLY rendered when subscription is chosen */}
-              {(planType === 'monthly' || planType === 'yearly') && (
+              {/* Physical Printing Disclaimer Notice - ONLY rendered when Yearly subscription is chosen */}
+              {planType === 'yearly' && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -347,16 +358,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 >
                   <span className="text-base flex-shrink-0">ℹ️</span>
                   <p>
-                    {planType === 'yearly' ? (
-                      t(
-                        'تنبيه: تشمل الباقة السنوية إصدار 12 كتاباً رقمياً تفاعلياً عالي الدقة. طباعة وتوصيل النسخ الورقية الفاخرة (Hardcover) هي خدمة اختيارية تُطلب بشكل منفصل (مع خصم 15% حصري لأعضاء الباقة السنوية).',
-                        'Note: The Yearly subscription covers 12 HD interactive digital storybooks. Premium hardcover printing and delivery are optional add-ons charged separately (with an exclusive 15% discount for yearly members).'
-                      )
-                    ) : (
-                      t(
-                        'تنبيه: تشمل الباقة الشهرية إصدار الكتب الرقمية التفاعلية عالية الدقة. طباعة وتوصيل النسخ الورقية الفاخرة (Hardcover) هي خدمة اختيارية إضافية تُطلب بسعرها الأساسي (خصم الـ 15% على الطباعة متاح حصرياً للباقة السنوية).',
-                        'Note: The Monthly subscription covers HD interactive digital storybooks. Premium hardcover printing and delivery are optional add-ons charged separately at standard rates (15% print discount is exclusive to the Yearly Plan).'
-                      )
+                    {t(
+                      'تنبيه: تشمل الباقة السنوية إصدار 12 كتاباً رقمياً تفاعلياً عالي الدقة. طباعة وتوصيل النسخ الورقية الفاخرة (Hardcover) هي خدمة اختيارية تُطلب بشكل منفصل (مع خصم 15% حصري لأعضاء الباقة السنوية).',
+                      'Note: The Yearly subscription covers 12 HD interactive digital storybooks. Premium hardcover printing and delivery are optional add-ons charged separately (with an exclusive 15% discount for yearly members).'
                     )}
                   </p>
                 </motion.div>
@@ -469,6 +473,101 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 )}
               </div>
             )}
+          </div>
+
+          {/* Gift Options: Gift Wrapping (2 KD) & Greeting Gift Card (0.5 KD) */}
+          <div className="p-6 sm:p-8 rounded-[3rem] border-2 border-dashed border-gray-200 bg-white/40 backdrop-blur-xl space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-brand-coral/10 text-brand-coral flex items-center justify-center font-bold flex-shrink-0">
+                <span className="material-symbols-outlined text-2xl">card_giftcard</span>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-brand-navy">{t('خيارات وباقة الإهداء 🎁', 'Gift Packaging & Card Options 🎁')}</h3>
+                <p className="text-xs text-gray-500 font-medium">{t('اجعلها هدية لا تُنسى مع لمسات إهداء وتغليف راقية', 'Make it an unforgettable present with luxury wrapping and personalized card.')}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Gift Wrapping (2 KD) */}
+              <div 
+                className={'p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ' + (
+                  isGiftWrapping ? 'border-brand-coral bg-brand-coral/5 shadow-sm ring-2 ring-brand-coral/20' : 'border-gray-200 bg-white/60 hover:border-gray-300'
+                )} 
+                onClick={() => setIsGiftWrapping(!isGiftWrapping)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl flex-shrink-0">🎁</span>
+                    <div>
+                      <span className="font-black text-brand-navy text-sm block">{t('تغليف هدايا فاخر', 'Premium Gift Wrapping')}</span>
+                      <span className="text-[11px] text-gray-500 font-medium block leading-tight">{t('شريط حريري وبوكس فاخر جاهز للإهداء', 'Luxury gift wrap with satin ribbon')}</span>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={isGiftWrapping} 
+                    onChange={(e) => setIsGiftWrapping(e.target.checked)} 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="mt-1 accent-brand-coral w-4 h-4 rounded cursor-pointer"
+                  />
+                </div>
+                <div className="text-left rtl:text-right">
+                  <span className="text-xs font-black text-brand-coral">+{convertPrice(2.000, currency)}</span>
+                </div>
+              </div>
+
+              {/* Greeting Gift Card (0.5 KD) */}
+              <div 
+                className={'p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ' + (
+                  isGiftCard ? 'border-brand-teal bg-brand-teal/5 shadow-sm ring-2 ring-brand-teal/20' : 'border-gray-200 bg-white/60 hover:border-gray-300'
+                )} 
+                onClick={() => setIsGiftCard(!isGiftCard)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl flex-shrink-0">💌</span>
+                    <div>
+                      <span className="font-black text-brand-navy text-sm block">{t('بطاقة إهداء مخصصة', 'Personalized Gift Card')}</span>
+                      <span className="text-[11px] text-gray-500 font-medium block leading-tight">{t('كرت إهداء مطبوع بكلماتك ورسالتك', 'Printed card with your custom message')}</span>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={isGiftCard} 
+                    onChange={(e) => setIsGiftCard(e.target.checked)} 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="mt-1 accent-brand-teal w-4 h-4 rounded cursor-pointer"
+                  />
+                </div>
+                <div className="text-left rtl:text-right">
+                  <span className="text-xs font-black text-brand-teal">+{convertPrice(0.500, currency)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Gift Message Textbox (Only if Gift Card is selected) */}
+            <AnimatePresence>
+              {isGiftCard && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 pt-1 overflow-hidden"
+                >
+                  <label className="text-xs font-black text-brand-navy flex items-center justify-between">
+                    <span>💌 {t('رسالة بطاقة الإهداء:', 'Your Gift Card Message:')}</span>
+                    <span className="text-[10px] text-gray-400 font-normal">{giftMessage.length}/150 {t('حرف', 'chars')}</span>
+                  </label>
+                  <textarea 
+                    value={giftMessage}
+                    onChange={(e) => setGiftMessage(e.target.value.slice(0, 150))}
+                    placeholder={t('اكتب رسالتك الجميلة هنا (مثال: إلى بطلنا الغالي، نتمنى لك عيد ميلاد سعيد ومستقبلاً باهراً! مع كل الحب...)', 'Write your personalized message here (e.g. Happy Birthday to our little champion! Wishing you a world of wonder and joy...)')}
+                    rows={2}
+                    className="w-full p-3.5 bg-white rounded-2xl border border-brand-teal/30 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 text-xs font-medium text-brand-navy outline-none resize-none shadow-inner"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Contact & Shipping Form */}
@@ -760,6 +859,20 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                   </div>
                 </>
               )}
+
+              {/* Gift Options in Summary */}
+              {isGiftWrapping && (
+                <div className="flex justify-between items-center text-xs pt-1 border-t border-gray-100">
+                  <span className="font-bold text-brand-coral">🎁 {t('تغليف هدايا فاخر', 'Gift Wrapping')}</span>
+                  <span className="font-black text-brand-coral">+{convertPrice(2.000, currency)}</span>
+                </div>
+              )}
+              {isGiftCard && (
+                <div className="flex justify-between items-center text-xs pt-1">
+                  <span className="font-bold text-brand-teal">💌 {t('بطاقة إهداء مخصصة', 'Gift Card')}</span>
+                  <span className="font-black text-brand-teal">+{convertPrice(0.500, currency)}</span>
+                </div>
+              )}
             </div>
 
             {/* Total */}
@@ -789,7 +902,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
         </div>
       </div>
 
-      {/* Club Discount Intercept Modal (Opens when user submits Single Book order) */}
+      {/* Club Discount Intercept Modal (Opens when user submits Single Book order - Pushes to Yearly Club) */}
       <AnimatePresence>
         {showUpsellModal && (
           <div className="fixed inset-0 bg-brand-navy/60 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={() => setShowUpsellModal(false)}>
@@ -802,29 +915,25 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
               style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}
             >
               <div className="w-16 h-16 bg-gradient-to-tr from-brand-orange to-brand-coral text-white rounded-3xl flex items-center justify-center text-3xl mx-auto shadow-lg shadow-brand-orange/30 animate-bounce">
-                🎁
+                👑
               </div>
 
               {(() => {
                 const currentOrderTotal = pricing.total;
-                const clubOrderTotal = pricing.monthlyPrice + pricing.physical + pricing.shipping;
-                const upsellSavingsPercent = currentOrderTotal > clubOrderTotal 
-                  ? Math.round(((currentOrderTotal - clubOrderTotal) / currentOrderTotal) * 100) 
-                  : pricing.monthlyDiscountPercent;
 
                 return (
                   <>
                     <div className="space-y-2">
                       <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                        {t('وفّر أكثر من ' + upsellSavingsPercent + '%', 'Save over ' + upsellSavingsPercent + '%')}
+                        {t('وفر 50% لكل كتاب 👑', 'Save 50% Per Book 👑')}
                       </span>
                       <h3 className="text-2xl font-black text-brand-navy">
-                        {t('انتظر! افتح خصم النادي ووفّر فوراً', 'Wait! Unlock Club Discount & Save Instantly')}
+                        {t('عرض خاص: افتح الباقة السنوية ووفّر 50%!', 'Special Offer: Unlock Yearly Club & Save 50%!')}
                       </h3>
                       <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
                         {t(
-                          'بدلاً من دفع ' + convertPrice(currentOrderTotal, currency) + ' لطلبك الحالي، اشترك في باقة النادي الشهرية وادفع ' + convertPrice(clubOrderTotal, currency) + ' فقط مع بطل ثانٍ ومناسبات مجاناً!',
-                          'Instead of paying ' + convertPrice(currentOrderTotal, currency) + ' for your current order, join the Monthly Club and pay only ' + convertPrice(clubOrderTotal, currency) + ' with FREE 2nd hero & special events!'
+                          'بدلاً من دفع ' + convertPrice(currentOrderTotal, currency) + ' لقصة واحدة فقط، احصل على 12 قصة مخصصة طوال العام بسعر ' + convertPrice(pricing.yearlyPerBook, currency) + ' فقط للكتاب (إجمالي ' + convertPrice(pricing.yearlyTotal, currency) + ' سنوياً) مع بطل ثانٍ ومناسبات مجاناً وخصم 15% على المطبوعة الفاخرة!',
+                          'Instead of paying ' + convertPrice(currentOrderTotal, currency) + ' for just 1 story, get 12 custom storybooks for only ' + convertPrice(pricing.yearlyPerBook, currency) + '/book (' + convertPrice(pricing.yearlyTotal, currency) + '/yr) with FREE 2nd hero & events + 15% OFF print!'
                         )}
                       </p>
                     </div>
@@ -833,16 +942,19 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     <div className="grid grid-cols-2 gap-3 text-left rtl:text-right">
                       <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-1">
                         <span className="text-[10px] font-bold text-gray-400 block">{t('طلبك الحالي', 'Your Order')}</span>
-                        <span className="text-xs font-black text-brand-navy block">{t('قصة لمرة واحدة', 'Single Story Order')}</span>
+                        <span className="text-xs font-black text-brand-navy block">{t('قصة واحدة فقط', 'Single Story (1 Book)')}</span>
                         <span className="text-lg font-black text-gray-600 block">{convertPrice(currentOrderTotal, currency)}</span>
-                        <span className="text-[9px] text-gray-400 block">{t('دفعة لمرة واحدة', 'One-time payment')}</span>
+                        <span className="text-[9px] text-gray-400 block">{t('شراء لمرة واحدة', 'One-time payment')}</span>
                       </div>
 
                       <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-brand-coral space-y-1 shadow-sm">
-                        <span className="text-[10px] font-black text-brand-coral block">{t('عرض النادي ✨', 'Club Offer ✨')}</span>
-                        <span className="text-xs font-black text-brand-navy block">{t('كتاب كل شهر + مزايا مجاناً', '1 Book / Mo + Free Perks')}</span>
-                        <span className="text-lg font-black text-brand-coral block">{convertPrice(clubOrderTotal, currency)}</span>
-                        <span className="text-[9px] font-bold text-emerald-700 block">{t('وفر مع إضافات مجانية', 'Save with Free Addons')}</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-brand-coral block">{t('الباقة السنوية 👑', 'Yearly Club 👑')}</span>
+                          <span className="bg-brand-coral text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{t('وفر 50%', 'SAVE 50%')}</span>
+                        </div>
+                        <span className="text-xs font-black text-brand-navy block">{t('12 قصة (كتاب كل شهر)', '12 Books (1/Month)')}</span>
+                        <span className="text-lg font-black text-brand-coral block">{convertPrice(pricing.yearlyPerBook, currency)} <span className="text-xs text-gray-400 font-bold">{t('/للكتاب', '/book')}</span></span>
+                        <span className="text-[9px] font-bold text-emerald-700 block">{t('تدفع ' + convertPrice(pricing.yearlyTotal, currency) + ' سنوياً + مزايا مجانية', 'Billed ' + convertPrice(pricing.yearlyTotal, currency) + '/yr + Free Perks')}</span>
                       </div>
                     </div>
 
@@ -851,12 +963,12 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                       <Button 
                         onClick={() => {
                           setShowUpsellModal(false);
-                          setPlanType('monthly');
-                          proceedDirectly('monthly');
+                          setPlanType('yearly');
+                          proceedDirectly('yearly');
                         }}
                         className="w-full py-4 text-sm font-black rounded-2xl shadow-xl bg-brand-coral hover:bg-[#e07b40] text-white cursor-pointer"
                       >
-                        {t('✨ اشترك في النادي ووفّر الآن (موصى به)', '✨ Switch to Club & Save (Recommended)')}
+                        {t('👑 الترقية للباقة السنوية وتوفير 50% (موصى به)', '👑 Upgrade to Yearly Club & Save 50% (Recommended)')}
                       </Button>
 
                       <button
