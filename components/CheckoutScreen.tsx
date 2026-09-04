@@ -347,9 +347,16 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 >
                   <span className="text-base flex-shrink-0">ℹ️</span>
                   <p>
-                    {t(
-                      'تنبيه: تشمل باقات الاشتراك إصدار الكتب الرقمية التفاعلية عالية الدقة وقراءتها عبر المنصة. طباعة وتوصيل النسخ الورقية الفاخرة (Hardcover) هي خدمة اختيارية تُطلب بشكل منفصل (مع خصم 15% حصري لأعضاء الباقة السنوية).',
-                      'Note: Subscriptions cover HD interactive digital storybooks with unlimited access. Premium hardcover printing and delivery are optional add-ons charged separately (with an exclusive 15% discount for yearly club members).'
+                    {planType === 'yearly' ? (
+                      t(
+                        'تنبيه: تشمل الباقة السنوية إصدار 12 كتاباً رقمياً تفاعلياً عالي الدقة. طباعة وتوصيل النسخ الورقية الفاخرة (Hardcover) هي خدمة اختيارية تُطلب بشكل منفصل (مع خصم 15% حصري لأعضاء الباقة السنوية).',
+                        'Note: The Yearly subscription covers 12 HD interactive digital storybooks. Premium hardcover printing and delivery are optional add-ons charged separately (with an exclusive 15% discount for yearly members).'
+                      )
+                    ) : (
+                      t(
+                        'تنبيه: تشمل الباقة الشهرية إصدار الكتب الرقمية التفاعلية عالية الدقة. طباعة وتوصيل النسخ الورقية الفاخرة (Hardcover) هي خدمة اختيارية إضافية تُطلب بسعرها الأساسي (خصم الـ 15% على الطباعة متاح حصرياً للباقة السنوية).',
+                        'Note: The Monthly subscription covers HD interactive digital storybooks. Premium hardcover printing and delivery are optional add-ons charged separately at standard rates (15% print discount is exclusive to the Yearly Plan).'
+                      )
                     )}
                   </p>
                 </motion.div>
