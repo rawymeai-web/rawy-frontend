@@ -805,62 +805,74 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 🎁
               </div>
 
-              <div className="space-y-2">
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                  {t('وفّر أكثر من ' + pricing.monthlyDiscountPercent + '%', 'Save over ' + pricing.monthlyDiscountPercent + '%')}
-                </span>
-                <h3 className="text-2xl font-black text-brand-navy">
-                  {t('انتظر! افتح خصم النادي ووفّر فوراً', 'Wait! Unlock Club Discount & Save Instantly')}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
-                  {t(
-                    'بدلاً من دفع ' + convertPrice(pricing.singleDigitalTotal, currency) + ' لقصة واحدة فقط، اشترك في باقة النادي الشهرية مقابل ' + convertPrice(pricing.monthlyPrice, currency) + ' شهرياً مع بطل ثانٍ ومناسبات مجاناً!',
-                    'Instead of paying ' + convertPrice(pricing.singleDigitalTotal, currency) + ' for just 1 book, join the Monthly Club for only ' + convertPrice(pricing.monthlyPrice, currency) + '/month with FREE 2nd hero & special events!'
-                  )}
-                </p>
-              </div>
+              {(() => {
+                const currentOrderTotal = pricing.total;
+                const clubOrderTotal = pricing.monthlyPrice + pricing.physical + pricing.shipping;
+                const upsellSavingsPercent = currentOrderTotal > clubOrderTotal 
+                  ? Math.round(((currentOrderTotal - clubOrderTotal) / currentOrderTotal) * 100) 
+                  : pricing.monthlyDiscountPercent;
 
-              {/* Comparison Box */}
-              <div className="grid grid-cols-2 gap-3 text-left rtl:text-right">
-                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-1">
-                  <span className="text-[10px] font-bold text-gray-400 block">{t('طلبك الحالي', 'Your Choice')}</span>
-                  <span className="text-xs font-black text-brand-navy block">{t('قصة واحدة فقط', 'Single Book Only')}</span>
-                  <span className="text-lg font-black text-gray-600 block">{convertPrice(pricing.singleDigitalTotal, currency)}</span>
-                  <span className="text-[9px] text-gray-400 block">{t('شراء لمرة واحدة', 'One-time')}</span>
-                </div>
+                return (
+                  <>
+                    <div className="space-y-2">
+                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                        {t('وفّر أكثر من ' + upsellSavingsPercent + '%', 'Save over ' + upsellSavingsPercent + '%')}
+                      </span>
+                      <h3 className="text-2xl font-black text-brand-navy">
+                        {t('انتظر! افتح خصم النادي ووفّر فوراً', 'Wait! Unlock Club Discount & Save Instantly')}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
+                        {t(
+                          'بدلاً من دفع ' + convertPrice(currentOrderTotal, currency) + ' لطلبك الحالي، اشترك في باقة النادي الشهرية وادفع ' + convertPrice(clubOrderTotal, currency) + ' فقط مع بطل ثانٍ ومناسبات مجاناً!',
+                          'Instead of paying ' + convertPrice(currentOrderTotal, currency) + ' for your current order, join the Monthly Club and pay only ' + convertPrice(clubOrderTotal, currency) + ' with FREE 2nd hero & special events!'
+                        )}
+                      </p>
+                    </div>
 
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-brand-coral space-y-1 shadow-sm">
-                  <span className="text-[10px] font-black text-brand-coral block">{t('عرض النادي ✨', 'Club Offer ✨')}</span>
-                  <span className="text-xs font-black text-brand-navy block">{t('كتاب كل شهر', '1 Book / Month')}</span>
-                  <span className="text-lg font-black text-brand-coral block">{convertPrice(pricing.monthlyPrice, currency)}</span>
-                  <span className="text-[9px] font-bold text-emerald-700 block">{t('وفر مع إضافات مجانية', 'Save with Free Addons')}</span>
-                </div>
-              </div>
+                    {/* Comparison Box */}
+                    <div className="grid grid-cols-2 gap-3 text-left rtl:text-right">
+                      <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-1">
+                        <span className="text-[10px] font-bold text-gray-400 block">{t('طلبك الحالي', 'Your Order')}</span>
+                        <span className="text-xs font-black text-brand-navy block">{t('قصة لمرة واحدة', 'Single Story Order')}</span>
+                        <span className="text-lg font-black text-gray-600 block">{convertPrice(currentOrderTotal, currency)}</span>
+                        <span className="text-[9px] text-gray-400 block">{t('دفعة لمرة واحدة', 'One-time payment')}</span>
+                      </div>
 
-              {/* Actions */}
-              <div className="space-y-3 pt-2">
-                <Button 
-                  onClick={() => {
-                    setShowUpsellModal(false);
-                    setPlanType('monthly');
-                    proceedDirectly('monthly');
-                  }}
-                  className="w-full py-4 text-sm font-black rounded-2xl shadow-xl bg-brand-coral hover:bg-[#e07b40] text-white cursor-pointer"
-                >
-                  {t('✨ اشترك في النادي ووفّر الآن (موصى به)', '✨ Switch to Club & Save (Recommended)')}
-                </Button>
+                      <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-brand-coral space-y-1 shadow-sm">
+                        <span className="text-[10px] font-black text-brand-coral block">{t('عرض النادي ✨', 'Club Offer ✨')}</span>
+                        <span className="text-xs font-black text-brand-navy block">{t('كتاب كل شهر + مزايا مجاناً', '1 Book / Mo + Free Perks')}</span>
+                        <span className="text-lg font-black text-brand-coral block">{convertPrice(clubOrderTotal, currency)}</span>
+                        <span className="text-[9px] font-bold text-emerald-700 block">{t('وفر مع إضافات مجانية', 'Save with Free Addons')}</span>
+                      </div>
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUpsellModal(false);
-                    proceedDirectly('one_time');
-                  }}
-                  className="w-full py-2 text-xs font-bold text-gray-400 hover:text-brand-navy transition-colors cursor-pointer"
-                >
-                  {t('لا شكراً، المتابعة بكتاب واحد (' + convertPrice(pricing.singleDigitalTotal, currency) + ')', 'No thanks, continue with 1 book (' + convertPrice(pricing.singleDigitalTotal, currency) + ')')}
-                </button>
-              </div>
+                    {/* Actions */}
+                    <div className="space-y-3 pt-2">
+                      <Button 
+                        onClick={() => {
+                          setShowUpsellModal(false);
+                          setPlanType('monthly');
+                          proceedDirectly('monthly');
+                        }}
+                        className="w-full py-4 text-sm font-black rounded-2xl shadow-xl bg-brand-coral hover:bg-[#e07b40] text-white cursor-pointer"
+                      >
+                        {t('✨ اشترك في النادي ووفّر الآن (موصى به)', '✨ Switch to Club & Save (Recommended)')}
+                      </Button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUpsellModal(false);
+                          proceedDirectly('one_time');
+                        }}
+                        className="w-full py-2 text-xs font-bold text-gray-400 hover:text-brand-navy transition-colors cursor-pointer"
+                      >
+                        {t('لا شكراً، المتابعة بالطلب الحالي (' + convertPrice(currentOrderTotal, currency) + ')', 'No thanks, continue with current order (' + convertPrice(currentOrderTotal, currency) + ')')}
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </motion.div>
           </div>
         )}
