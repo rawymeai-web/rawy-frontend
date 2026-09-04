@@ -128,11 +128,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
               </div>
             </label>
 
-            {/* Secondary Option: Stripe Sandbox (Testing Mode) */}
+            {/* Secondary Option: Direct Card (Coming Soon / Developer Testing) */}
             <label className={`flex items-start p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
               paymentMethod === 'stripe' 
-                ? 'border-brand-coral bg-[#F78F50]/5 shadow-md ring-2 ring-brand-coral/20' 
-                : 'border-gray-200/70 hover:border-gray-300 bg-gray-50/50'
+                ? 'border-gray-400 bg-gray-100/70 shadow-sm opacity-90' 
+                : 'border-dashed border-gray-300/80 bg-gray-50/40 hover:bg-gray-50/80 opacity-60 hover:opacity-90'
             }`}>
               <input 
                 type="radio" 
@@ -140,20 +140,23 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
                 value="stripe"
                 checked={paymentMethod === 'stripe'}
                 onChange={() => setPaymentMethod('stripe')}
-                className="mt-1 accent-brand-coral"
+                className="mt-1 accent-gray-600"
                 disabled={isProcessing}
               />
               <div className={`${language === 'ar' ? 'mr-3' : 'ml-3'} flex-1`}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold text-gray-700 text-sm">
-                    💳 {t('بطاقة ائتمانية (بوابة تجريبية)', 'Credit Card (Sandbox Gateway)')}
+                    💳 {t('دفع مباشر بالبطاقة', 'Direct Card Payment')}
                   </span>
-                  <span className="bg-amber-100 text-amber-800 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    {t('تجريبي / Sandbox', 'DEV SANDBOX')}
+                  <span className="bg-gray-200 text-gray-600 text-[8px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    {t('قريباً ✨', 'COMING SOON ✨')}
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  {t('بوابة اختبار تجريبية للمطورين. للدفع الفعلي يرجى اختيار رابط الدفع أعلاه.', 'Sandbox testing gateway for developers. For live payments, choose Payment Link above.')}
+                <p className="text-[11px] text-gray-500 mt-1 leading-relaxed font-medium">
+                  {t(
+                    'سيتم تفعيل الدفع الفوري بالبطاقة قريباً. حالياً يرجى اختيار رابط الدفع السريع أعلاه للدفع عبر كي نت أو أبل باي.',
+                    'Direct in-app card checkout is coming soon. Please select the Direct Payment Link above for instant KNET & Apple Pay.'
+                  )}
                 </p>
               </div>
             </label>
