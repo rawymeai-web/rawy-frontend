@@ -56,6 +56,62 @@ export const UAE_EMIRATES = [
   { ar: 'أم القيوين', en: 'Umm Al Quwain' }
 ];
 
+export const EGYPT_GOVERNORATES = [
+  { ar: 'القاهرة', en: 'Cairo' },
+  { ar: 'الجيزة', en: 'Giza' },
+  { ar: 'الإسكندرية', en: 'Alexandria' },
+  { ar: 'القليوبية', en: 'Qalyubia' },
+  { ar: 'الشرقية', en: 'Sharqia' },
+  { ar: 'الدقهلية', en: 'Dakahlia' },
+  { ar: 'البحيرة', en: 'Beheira' },
+  { ar: 'الغربية', en: 'Gharbia' },
+  { ar: 'المنوفية', en: 'Monufia' },
+  { ar: 'كفر الشيخ', en: 'Kafr El Sheikh' },
+  { ar: 'دمياط', en: 'Damietta' },
+  { ar: 'بورسعيد', en: 'Port Said' },
+  { ar: 'الإسماعيلية', en: 'Ismailia' },
+  { ar: 'السويس', en: 'Suez' },
+  { ar: 'الفيوم', en: 'Faiyum' },
+  { ar: 'بني سويف', en: 'Beni Suef' },
+  { ar: 'المنيا', en: 'Minya' },
+  { ar: 'أسيوط', en: 'Asyut' },
+  { ar: 'سوهاج', en: 'Sohag' },
+  { ar: 'قنا', en: 'Qena' },
+  { ar: 'الأقصر', en: 'Luxor' },
+  { ar: 'أسوان', en: 'Aswan' },
+  { ar: 'البحر الأحمر', en: 'Red Sea' },
+  { ar: 'جنوب سيناء', en: 'South Sinai' },
+  { ar: 'شمال سيناء', en: 'North Sinai' },
+  { ar: 'مطروح', en: 'Matrouh' },
+  { ar: 'الوادي الجديد', en: 'New Valley' }
+];
+
+/**
+ * Calculates dynamic shipping rate by country code with Free Shipping for 2+ books.
+ * Egypt: 150 EGP (approx ~0.98 KWD)
+ * Kuwait: 2.000 KWD
+ * GCC: 5.000 KWD
+ * ROW: 7.000 KWD
+ */
+export function getCountryShippingRate(countryCode: string, bookCount: number = 1): number {
+  if (bookCount >= 2) return 0; // Free shipping for 2 or more physical books!
+
+  switch (countryCode) {
+    case 'KW':
+      return 2.000;
+    case 'SA':
+    case 'AE':
+    case 'QA':
+    case 'BH':
+    case 'OM':
+      return 5.000;
+    case 'EG':
+      return 0.980; // 150 EGP converted to KWD base
+    default:
+      return 7.000;
+  }
+}
+
 export const US_STATES = [
   { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
   { code: 'AR', name: 'Arkansas' }, { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
@@ -120,6 +176,14 @@ export function formatFullAddress(details: {
     if (details.street) parts.push(details.street);
     if (details.building) parts.push(details.building);
     parts.push(isAr ? 'الإمارات العربية المتحدة' : 'UAE');
+  } else if (details.country === 'EG') {
+    if (details.governorate) parts.push(details.governorate);
+    if (details.city) parts.push(details.city);
+    if (details.area) parts.push(`${isAr ? 'منطقة/حي' : 'District'}: ${details.area}`);
+    if (details.street) parts.push(`${isAr ? 'شارع' : 'Street'} ${details.street}`);
+    if (details.building) parts.push(`${isAr ? 'عمارة/مبنى' : 'Bldg'} ${details.building}`);
+    if (details.floorApt) parts.push(details.floorApt);
+    parts.push(isAr ? 'مصر' : 'Egypt');
   } else if (details.country === 'US') {
     if (details.street) parts.push(details.street);
     if (details.floorApt) parts.push(details.floorApt);

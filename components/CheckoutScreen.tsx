@@ -8,8 +8,10 @@ import {
   KUWAIT_GOVERNORATES, 
   SAUDI_REGIONS, 
   UAE_EMIRATES, 
+  EGYPT_GOVERNORATES,
   US_STATES, 
-  formatFullAddress 
+  formatFullAddress,
+  getCountryShippingRate
 } from '../services/countryAddressConfig';
 
 interface CheckoutScreenProps {
@@ -20,27 +22,11 @@ interface CheckoutScreenProps {
   currency: Currency;
 }
 
-const CheckIcon = () => (
-  <svg className="w-5 h-5 flex-shrink-0 text-brand-teal" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-  </svg>
-);
-
-const SHIPPING_RATES = {
-  kuwait: 2.000,
-  gcc: 5.000,
-  row: 7.000
-};
-
-const REGION_NAMES = {
-  kuwait: { ar: 'الكويت', en: 'Kuwait' },
-  gcc: { ar: 'دول الخليج', en: 'GCC Countries' },
-  row: { ar: 'بقية العالم', en: 'Rest of World' }
-};
-
 const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onBack, language, storyData, currency }) => {
   const isPhysicalInitial = !!storyData.isPhysicalPrint;
   const [isPhysicalAddon, setIsPhysicalAddon] = useState(isPhysicalInitial);
+  const [physicalBookCount, setPhysicalBookCount] = useState(1);
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
 
   const [details, setDetails] = useState<ShippingDetails>({ 
     name: storyData.parentName || '', 
@@ -83,25 +69,40 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     const heroAddon = storyData.useSecondCharacter ? 1.500 : 0;
     const themeAddon = storyData.isCustomTheme ? 0.500 : 0;
     
-    const aLaCarteDigitalTotal = digitalBase + heroAddon + themeAddon;
+    // Single Storybook full price including selected add-ons
+    const singleDigitalTotal = digitalBase + heroAddon + themeAddon;
     
     let subTotal = 0;
-    if (planType === 'monthly') subTotal = 4.500;
-    else if (planType === 'yearly') subTotal = 48.000;
-    else subTotal = aLaCarteDigitalTotal;
+    if (planType === 'monthly') subTotal = 4.500; // 2 books/month
+    else if (planType === 'yearly') subTotal = 24.000; // 12 books/year (1 book per month upfront @ 2 KD/book)
+    else subTotal = singleDigitalTotal;
 
     const finalDigital = storyData.isPrintUpsell ? 0 : subTotal;
-    const physicalPrice = isPhysicalAddon ? 18.500 : 0;
-    const shipping = isPhysicalAddon ? SHIPPING_RATES[details.region as keyof typeof SHIPPING_RATES || 'kuwait'] : 0;
+    const physicalUnitPrice = 18.500;
+    const physicalPrice = isPhysicalAddon ? physicalUnitPrice * physicalBookCount : 0;
     
+    // Dynamic Shipping Rate per country, free for 2+ books
+    const shipping = isPhysicalAddon ? getCountryShippingRate(details.country || 'KW', physicalBookCount) : 0;
+    
+    // Dynamic Discount calculations relative to single book price
+    const monthlyPerBook = 2.250;
+    const yearlyPerBook = 2.000;
+    const monthlyDiscountPercent = Math.max(10, Math.round(((singleDigitalTotal - monthlyPerBook) / singleDigitalTotal) * 100));
+    const yearlyDiscountPercent = Math.max(20, Math.round(((singleDigitalTotal - yearlyPerBook) / singleDigitalTotal) * 100));
+
     return {
-      aLaCarteDigitalTotal,
+      singleDigitalTotal,
       currentDigital: finalDigital,
       physical: physicalPrice,
+      physicalUnitPrice,
       shipping,
-      total: finalDigital + physicalPrice + shipping
+      total: finalDigital + physicalPrice + shipping,
+      monthlyPerBook,
+      yearlyPerBook,
+      monthlyDiscountPercent,
+      yearlyDiscountPercent
     };
-  }, [planType, isPhysicalAddon, details.region, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, currency]);
+  }, [planType, isPhysicalAddon, physicalBookCount, details.country, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, currency]);
 
   React.useEffect(() => {
     if (storyData.isPhysicalPrint) {
@@ -118,6 +119,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     if (countryCode === 'KW') defaultGov = language === 'ar' ? 'العاصمة' : 'Capital (Al Asimah)';
     if (countryCode === 'SA') defaultGov = language === 'ar' ? 'منطقة الرياض' : 'Riyadh';
     if (countryCode === 'AE') defaultGov = language === 'ar' ? 'دبي' : 'Dubai';
+    if (countryCode === 'EG') defaultGov = language === 'ar' ? 'القاهرة' : 'Cairo';
     if (countryCode === 'US') defaultGov = 'CA';
 
     const updated = {
@@ -129,7 +131,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       province: defaultGov,
       emirate: defaultGov,
       state: defaultGov,
-      city: countryCode === 'KW' ? (language === 'ar' ? 'الكويت' : 'Kuwait City') : details.city
+      city: countryCode === 'KW' ? (language === 'ar' ? 'الكويت' : 'Kuwait City') : (countryCode === 'EG' ? (language === 'ar' ? 'القاهرة' : 'Cairo') : details.city)
     };
 
     updated.address = formatFullAddress({ ...updated, language });
@@ -142,9 +144,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     setDetails(updated);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const proceedDirectly = (selectedPlan: 'one_time' | 'monthly' | 'yearly' = planType) => {
     const finalDetails = {
       ...details,
       isPhysicalDelivery: isPhysicalAddon,
@@ -153,8 +153,27 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
         : (language === 'ar' ? 'طلب رقمي (لا يتطلب شحن فعلي)' : 'Digital Softcopy (No physical delivery required)')
     };
 
-    onProceedToPayment(finalDetails, planType, pricing.total);
+    let calculatedTotal = pricing.total;
+    if (selectedPlan === 'monthly' && planType !== 'monthly') {
+      calculatedTotal = 4.500 + pricing.physical + pricing.shipping;
+    }
+
+    onProceedToPayment(finalDetails, selectedPlan, calculatedTotal);
   };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Intercept single storybook orders to present the club discount modal
+    if (planType === 'one_time' && !storyData.isPrintUpsell) {
+      setShowUpsellModal(true);
+      return;
+    }
+
+    proceedDirectly(planType);
+  };
+
+  const currentCountry = COUNTRIES.find(c => c.code === details.country) || COUNTRIES[0];
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20 px-4">
@@ -163,39 +182,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
         <Button onClick={onBack} variant="outline" className="rounded-2xl px-6">
           &larr; {t('العودة', 'Back')}
         </Button>
-        <div className="text-right">
+        <div className="text-right rtl:text-left">
           <h2 className="text-3xl font-black text-brand-navy">{t('إتمام الطلب', 'Checkout')}</h2>
           <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">{t('خطوة واحدة لبدء السحر', 'One step from magic')}</p>
         </div>
       </div>
-
-      {/* Decoy Intercept Banner */}
-      {planType === 'one_time' && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-brand-orange to-brand-coral p-6 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group cursor-pointer"
-          onClick={() => setPlanType('monthly')}
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
-            <span className="material-symbols-outlined text-8xl">auto_awesome</span>
-          </div>
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="space-y-1">
-              <h3 className="text-2xl font-black">{t('انتظر! وفّر أكثر من 40%', 'Wait! Save over 40%')}</h3>
-              <p className="text-white/90 font-medium">
-                {t(
-                  `احصل على هذا الكتاب + كتاب إضافي كل شهر مقابل ${convertPrice(4.500, currency)} فقط!`,
-                  `Get this exact book + a SECOND book every month for only ${convertPrice(4.500, currency)}!`
-                )}
-              </p>
-            </div>
-            <button className="bg-white text-brand-coral px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-lg">
-              {t('اشترك ووفر الآن', 'Subscribe & Save Now')}
-            </button>
-          </div>
-        </motion.div>
-      )}
 
       <div className="grid lg:grid-cols-3 gap-10">
         {/* Left: Plan Selection & Add-ons */}
@@ -203,35 +194,42 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
           
           {/* Plan Selector - Hidden if Print Upsell */}
           {!storyData.isPrintUpsell && (
-            <div className="bg-white/50 backdrop-blur-xl p-8 rounded-[3rem] border border-white shadow-xl space-y-6">
-              <h3 className="text-xl font-black text-brand-navy flex items-center gap-3">
-                <span className="material-symbols-outlined text-brand-coral">style</span>
-                {t('اختر باقتك الرقمية', 'Choose Your Digital Plan')}
-              </h3>
+            <div className="bg-white/50 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white shadow-xl space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black text-brand-navy flex items-center gap-3">
+                  <span className="material-symbols-outlined text-brand-coral">style</span>
+                  {t('اختر باقتك الرقمية', 'Choose Your Digital Plan')}
+                </h3>
+                <span className="text-xs font-bold text-brand-teal bg-brand-teal/10 px-3 py-1 rounded-full">
+                  {t('جميع الإضافات مجانية مع النادي ✨', 'All Add-ons Free in Club ✨')}
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   { 
                     id: 'one_time', 
                     name: t('قصة واحدة لمرة واحدة', 'Single Storybook'), 
-                    mainPrice: convertPrice(pricing.aLaCarteDigitalTotal, currency),
-                    priceUnit: '',
-                    sub: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase'),
+                    pricePerBook: convertPrice(pricing.singleDigitalTotal, currency),
+                    strikethroughPrice: null,
+                    discountBadge: null,
+                    billingSummary: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase (No subscription)'),
                     perks: [
                       t('📖 قصة رقمية تفاعلية بجودة HD', '📖 HD Interactive Storybook'),
-                      storyData.useSecondCharacter ? t('👥 يشمل بطل ثانٍ (+1.5 د.ك)', '👥 Includes 2nd Hero (+1.5 KD)') : null,
-                      storyData.isCustomTheme ? t('🎉 يشمل مناسبة خاصة (+0.5 د.ك)', '🎉 Includes Special Event (+0.5 KD)') : null,
-                    ].filter(Boolean) as string[]
+                      storyData.useSecondCharacter ? t('👥 يشمل بطل ثانٍ (+1.5 د.ك)', '👥 Includes 2nd Hero (+1.5 KD)') : t('👥 بطل ثانٍ (+1.5 د.ك اختياري)', '👥 2nd Hero (+1.5 KD optional)'),
+                      storyData.isCustomTheme ? t('🎉 يشمل مناسبة خاصة (+0.5 د.ك)', '🎉 Includes Special Event (+0.5 KD)') : t('🎉 مناسبة خاصة (+0.5 د.ك اختياري)', '🎉 Special Event (+0.5 KD optional)'),
+                    ]
                   },
                   { 
                     id: 'monthly', 
                     name: t('الباقة الشهرية', 'Monthly Club'), 
-                    mainPrice: convertPrice(4.500, currency),
-                    priceUnit: '/' + t('شهر', 'mo'),
-                    sub: t('قصتان شهرياً (وفر أكثر من 55%)', '2 Custom Books / Month'), 
+                    pricePerBook: convertPrice(pricing.monthlyPerBook, currency),
+                    strikethroughPrice: convertPrice(pricing.singleDigitalTotal, currency),
+                    discountBadge: t('وفر ' + pricing.monthlyDiscountPercent + '%', 'Save ' + pricing.monthlyDiscountPercent + '%'),
+                    billingSummary: t('فاتورة ' + convertPrice(4.500, currency) + ' شهرياً (قصتان كل شهر)', 'Billed ' + convertPrice(4.500, currency) + '/mo (2 books/mo)'), 
                     badge: t('الأكثر شعبية', 'POPULAR'),
                     perks: [
-                      t('✨ بطل ثانٍ مجاناً بكل القصص', '✨ FREE Second Hero on all books'),
+                      t('✨ بطل ثانٍ مجاناً بكل القصص', '✨ FREE 2nd Hero on all books'),
                       t('🎁 تخصيص المناسبات مجاناً', '🎁 FREE Special Events & Themes'),
                       t('⚡ أولوية التوليد وقراءة تفاعلية 3D', '⚡ Priority AI & Interactive 3D')
                     ]
@@ -239,13 +237,14 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                   { 
                     id: 'yearly', 
                     name: t('الباقة السنوية', 'Yearly Club'), 
-                    mainPrice: convertPrice(2.000, currency),
-                    priceUnit: '/' + t('كتاب', 'book'),
-                    sub: t(`فقط ${convertPrice(48.000, currency)} سنوياً (24 قصة بالسنة)`, `Billed annually ${convertPrice(48.000, currency)} (24 books/yr)`), 
+                    pricePerBook: convertPrice(pricing.yearlyPerBook, currency),
+                    strikethroughPrice: convertPrice(pricing.singleDigitalTotal, currency),
+                    discountBadge: t('وفر ' + pricing.yearlyDiscountPercent + '%', 'Save ' + pricing.yearlyDiscountPercent + '%'),
+                    billingSummary: t('تُدفع ' + convertPrice(24.000, currency) + ' سنوياً (كتاب شهرياً)', 'Billed ' + convertPrice(24.000, currency) + '/yr (1 book/mo)'), 
                     badge: t('أفضل توفير', 'BEST VALUE'),
                     perks: [
                       t('👑 أعلى نسبة توفير (فقط 2 د.ك للكتاب)', '👑 Maximum Savings (Only 2 KD/book)'),
-                      t('✨ بطل ثانٍ ومناسبات مجاناً بجميع الـ 24 قصة', '✨ FREE 2nd Hero & Events for 24 books'),
+                      t('✨ بطل ثانٍ ومناسبات مجاناً بـ 12 كتاباً', '✨ FREE 2nd Hero & Events for 12 books'),
                       t('🚀 وصول حصري لجميع أساليب الرسم الجديدة', '🚀 VIP Access to all new styles')
                     ]
                   }
@@ -256,11 +255,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                       key={p.id}
                       type="button"
                       onClick={() => setPlanType(p.id as any)}
-                      className={`relative p-6 rounded-3xl text-left rtl:text-right transition-all border-2 flex flex-col gap-2 cursor-pointer ${
+                      className={'relative p-5 sm:p-6 rounded-3xl text-left rtl:text-right transition-all border-2 flex flex-col justify-between gap-3 cursor-pointer ' + (
                         isSelected 
                         ? 'border-brand-coral bg-white shadow-2xl ring-4 ring-brand-coral/20 scale-[1.03] z-10' 
                         : 'border-gray-200/80 bg-white/60 hover:bg-white hover:border-gray-300'
-                      }`}
+                      )}
                     >
                       {/* Selected Checkmark Badge */}
                       {isSelected && (
@@ -269,27 +268,52 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                         </div>
                       )}
 
-                      {p.badge && (
-                        <span className={`absolute -top-3 left-4 rtl:left-auto rtl:right-4 text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm ${
-                          isSelected ? 'bg-brand-coral text-white' : 'bg-brand-navy text-white'
-                        }`}>
-                          {p.badge}
-                        </span>
-                      )}
-
-                      <span className={`text-xs font-black uppercase tracking-wider ${isSelected ? 'text-brand-coral' : 'text-gray-500'}`}>
-                        {p.name}
-                      </span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-black text-brand-navy">{p.mainPrice}</span>
-                        {p.priceUnit && <span className="text-xs font-bold text-gray-500">{p.priceUnit}</span>}
+                      {/* Top Floating Badge */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {p.badge && (
+                          <span className={'text-[8px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest shadow-sm ' + (
+                            isSelected ? 'bg-brand-coral text-white' : 'bg-brand-navy text-white'
+                          )}>
+                            {p.badge}
+                          </span>
+                        )}
+                        {p.discountBadge && (
+                          <span className="text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest bg-emerald-100 text-emerald-800">
+                            {p.discountBadge}
+                          </span>
+                        )}
                       </div>
-                      <span className={`text-[10px] font-bold leading-tight ${isSelected ? 'text-brand-navy/90' : 'text-gray-400'}`}>{p.sub}</span>
+
+                      <div>
+                        <span className={'text-xs font-black uppercase tracking-wider block mb-1 ' + (isSelected ? 'text-brand-coral' : 'text-gray-500')}>
+                          {p.name}
+                        </span>
+
+                        {/* Price Display with Strikethrough */}
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          {p.strikethroughPrice && (
+                            <span className="text-sm font-bold text-gray-400 line-through">
+                              {p.strikethroughPrice}
+                            </span>
+                          )}
+                          <span className="text-2xl sm:text-3xl font-black text-brand-navy">
+                            {p.pricePerBook}
+                          </span>
+                          <span className="text-xs font-bold text-gray-500">
+                            /{t('كتاب', 'book')}
+                          </span>
+                        </div>
+
+                        {/* Billing fine print */}
+                        <p className={'text-[10px] font-bold leading-tight mt-1 ' + (isSelected ? 'text-brand-navy/90' : 'text-gray-400')}>
+                          {p.billingSummary}
+                        </p>
+                      </div>
 
                       {/* Plan Perks */}
-                      <div className="mt-2 pt-2 border-t border-gray-100 space-y-1.5 text-left rtl:text-right">
+                      <div className="pt-3 border-t border-gray-100 space-y-1.5 text-left rtl:text-right w-full">
                         {p.perks.map((perk, pIdx) => (
-                          <div key={pIdx} className="text-[10px] font-bold text-brand-navy/80 flex items-center gap-1">
+                          <div key={pIdx} className="text-[10px] font-bold text-brand-navy/80 flex items-center gap-1 leading-tight">
                             <span>{perk}</span>
                           </div>
                         ))}
@@ -311,75 +335,94 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
             </div>
           )}
 
-          {/* Physical Upsell */}
-          <div className={`p-8 rounded-[3rem] border-2 transition-all space-y-6 ${
-            isPhysicalAddon ? 'border-brand-teal bg-brand-teal/5' : 'border-dashed border-gray-200 bg-white/30'
-          }`}>
-            <div className="flex items-center justify-between">
+          {/* Physical Hardcover Upsell */}
+          <div className={'p-6 sm:p-8 rounded-[3rem] border-2 transition-all space-y-5 ' + (
+            isPhysicalAddon ? 'border-brand-teal bg-brand-teal/5 shadow-md' : 'border-dashed border-gray-200 bg-white/30'
+          )}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${isPhysicalAddon ? 'bg-brand-teal text-white' : 'bg-gray-100 text-gray-400'}`}>
+                <div className={'w-14 h-14 rounded-2xl flex items-center justify-center transition-colors flex-shrink-0 ' + (isPhysicalAddon ? 'bg-brand-teal text-white' : 'bg-gray-100 text-gray-400')}>
                   <span className="material-symbols-outlined text-3xl">auto_stories</span>
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-brand-navy">{t('أضف نسخة مطبوعة فاخرة', 'Add Premium HD Hardcover')}</h3>
-                  <p className="text-sm text-gray-500 font-medium">{t('طباعة احترافية بـ 12 لوناً HD', 'Professional 12-Color HD Print')}</p>
+                  <p className="text-xs text-gray-500 font-medium">{t('طباعة احترافية بـ 12 لوناً وتجليد مقوى دائم', 'Professional 12-Color HD Print & Archival Binding')}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-xl font-black text-brand-teal">+{convertPrice(21.000, currency)}</div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('+ الشحن', '+ Shipping')}</div>
+              <div className="text-left rtl:text-right sm:text-right rtl:sm:text-left">
+                <div className="text-xl font-black text-brand-teal">+{convertPrice(pricing.physicalUnitPrice, currency)}</div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('لكل نسخة مطبوعة', 'per printed book')}</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 bg-white/50 p-4 rounded-2xl border border-white/60">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={isPhysicalAddon}
-                  onChange={(e) => setIsPhysicalAddon(e.target.checked)}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-teal"></div>
-              </label>
-              <span className="text-sm font-black text-brand-navy uppercase tracking-widest">
-                {isPhysicalAddon ? t('تمت الإضافة 🎉', 'Added to Order 🎉') : t('أضف للطلب', 'Add to Order')}
-              </span>
+            <div className="flex items-center justify-between gap-4 bg-white/60 p-4 rounded-2xl border border-white/80">
+              <div className="flex items-center gap-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={isPhysicalAddon}
+                    onChange={(e) => setIsPhysicalAddon(e.target.checked)}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-teal"></div>
+                </label>
+                <span className="text-sm font-black text-brand-navy">
+                  {isPhysicalAddon ? t('تمت الإضافة للطلب 🎉', 'Added to Order 🎉') : t('أضف النسخة المطبوعة', 'Add Hardcover Book')}
+                </span>
+              </div>
+
+              {/* Quantity Selector if added */}
+              {isPhysicalAddon && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-500">{t('العدد:', 'Qty:')}</span>
+                  <div className="flex items-center bg-white rounded-xl border border-gray-200 p-1">
+                    <button 
+                      type="button" 
+                      onClick={() => setPhysicalBookCount(Math.max(1, physicalBookCount - 1))}
+                      className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 font-bold flex items-center justify-center text-sm cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="px-3 font-black text-sm text-brand-navy">{physicalBookCount}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setPhysicalBookCount(physicalBookCount + 1)}
+                      className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 font-bold flex items-center justify-center text-sm cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <AnimatePresence>
-              {isPhysicalAddon && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-6 border-t border-brand-teal/10 space-y-4">
-                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest">{t('اختر منطقة الشحن', 'Select Shipping Region')}</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {(['kuwait', 'gcc', 'row'] as const).map((r) => (
-                        <button
-                          key={r}
-                          onClick={() => setDetails({ ...details, region: r })}
-                          className={`p-4 rounded-2xl border-2 text-center transition-all ${
-                            details.region === r 
-                            ? 'border-brand-teal bg-white text-brand-teal shadow-lg' 
-                            : 'border-gray-100 bg-white/50 text-gray-400'
-                          }`}
-                        >
-                          <div className="font-black text-sm uppercase tracking-tighter">{t(REGION_NAMES[r].ar, REGION_NAMES[r].en)}</div>
-                          <div className="text-[10px] font-bold">+{convertPrice(SHIPPING_RATES[r], currency)}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Dynamic Shipping Preview (per country) */}
+            {isPhysicalAddon && (
+              <div className="p-4 bg-white/80 rounded-2xl border border-brand-teal/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{currentCountry.flag}</span>
+                  <span className="font-bold text-brand-navy">
+                    {t('الشحن إلى', 'Shipping to')} {currentCountry.name[language]}:
+                  </span>
+                  <span className="font-black text-brand-teal">
+                    {pricing.shipping === 0 ? t('شحن مجاني 🎉', 'FREE Shipping 🎉') : '+' + convertPrice(pricing.shipping, currency)}
+                  </span>
+                </div>
+                {physicalBookCount >= 2 ? (
+                  <span className="bg-emerald-100 text-emerald-800 font-black px-3 py-1 rounded-full text-[10px]">
+                    {t('🎉 تم تطبيق الشحن المجاني (لكتابين أو أكثر)', '🎉 Free Shipping Applied (2+ Books)')}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-gray-400 font-bold">
+                    {t('💡 اطلب نسختين مطبوعتين أو أكثر للحصول على شحن مجاني!', '💡 Order 2+ physical copies for FREE shipping!')}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Contact & Shipping Form */}
-          <div className="bg-white/50 backdrop-blur-xl p-8 rounded-[3rem] border border-white shadow-xl space-y-8">
+          <div className="bg-white/50 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white shadow-xl space-y-6">
             <h3 className="text-xl font-black text-brand-navy flex items-center gap-3">
               <span className="material-symbols-outlined text-brand-coral">
                 {isPhysicalAddon ? 'local_shipping' : 'contact_mail'}
@@ -419,7 +462,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     type="tel"
                     value={details.phone}
                     onChange={(e) => updateField('phone', e.target.value)}
-                    placeholder="+965 xxxxxxxx"
+                    placeholder={details.country === 'EG' ? '+20 1xxxxxxxxx' : (details.country === 'KW' ? '+965 xxxxxxxx' : '+...')}
                     className="w-full px-5 py-3.5 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy text-sm"
                   />
                 </div>
@@ -427,7 +470,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
               {/* Physical Delivery Address (Rendered ONLY when physical hardcover is selected) */}
               <AnimatePresence>
-                {isPhysicalAddon ? (
+                {isPhysicalAddon && (
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -439,460 +482,336 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                         <span className="material-symbols-outlined text-brand-teal text-lg">home_pin</span>
                         {t('عنوان التوصيل للمطبوعة الفاخرة', 'Hardcover Delivery Address')}
                       </h4>
-                      <span className="text-[10px] bg-brand-teal/10 text-brand-teal font-black px-3 py-1 rounded-full uppercase">
-                        {t(REGION_NAMES[details.region as keyof typeof REGION_NAMES || 'kuwait'].ar, REGION_NAMES[details.region as keyof typeof REGION_NAMES || 'kuwait'].en)}
-                      </span>
                     </div>
 
-                    {/* Country Selector */}
+                    {/* Country Selector Dropdown */}
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الدولة', 'Country')} *</label>
-                      <select
-                        value={details.country || 'KW'}
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الدولة', 'Country / Region')} *</label>
+                      <select 
+                        value={details.country}
                         onChange={(e) => handleCountryChange(e.target.value)}
-                        className="w-full px-5 py-3.5 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none transition-colors font-bold text-brand-navy text-sm cursor-pointer"
+                        className="w-full px-5 py-3.5 rounded-2xl bg-white border border-gray-100 focus:border-brand-coral outline-none transition-colors font-bold text-brand-navy text-sm cursor-pointer"
                       >
-                        {COUNTRIES.map((c) => (
+                        {COUNTRIES.map(c => (
                           <option key={c.code} value={c.code}>
-                            {c.flag} {c.name[language]}
+                            {c.flag} {c.name[language]} ({c.phoneCode})
                           </option>
                         ))}
                       </select>
                     </div>
 
-                    {/* KUWAIT Dynamic Address */}
+                    {/* Dynamic Address Fields Based on Selected Country */}
                     {details.country === 'KW' && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المحافظة', 'Governorate')} *</label>
-                          <select
-                            required
-                            value={details.governorate || KUWAIT_GOVERNORATES[0].ar}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المحافظة', 'Governorate')}</label>
+                          <select 
+                            value={details.governorate}
                             onChange={(e) => updateField('governorate', e.target.value)}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy"
                           >
-                            {KUWAIT_GOVERNORATES.map((g) => (
-                              <option key={g.ar} value={language === 'ar' ? g.ar : g.en}>
-                                {language === 'ar' ? g.ar : g.en}
-                              </option>
+                            {KUWAIT_GOVERNORATES.map(g => (
+                              <option key={g.en} value={g[language]}>{g[language]}</option>
                             ))}
                           </select>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة', 'Area')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.area || ''}
-                            onChange={(e) => updateField('area', e.target.value)}
-                            placeholder={t('مثال: مشرف، السرة، الروضة', 'e.g. Mishref, Surra')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة', 'Area')} *</label>
+                          <input required type="text" value={details.area || ''} onChange={(e) => updateField('area', e.target.value)} placeholder={t('مثال: كيفان', 'e.g. Kaifan')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('القطعة', 'Block')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.block || ''}
-                            onChange={(e) => updateField('block', e.target.value)}
-                            placeholder={t('مثال: 4', 'e.g. 4')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('القطعة', 'Block')} *</label>
+                          <input required type="text" value={details.block || ''} onChange={(e) => updateField('block', e.target.value)} placeholder={t('مثال: 3', 'e.g. 3')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الشارع', 'Street')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.street || ''}
-                            onChange={(e) => updateField('street', e.target.value)}
-                            placeholder={t('اسم أو رقم الشارع', 'Street name/number')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('الشارع', 'Street')} *</label>
+                          <input required type="text" value={details.street || ''} onChange={(e) => updateField('street', e.target.value)} placeholder={t('مثال: شارع 12', 'e.g. Street 12')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المبنى / المنزل', 'Building / House')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.building || ''}
-                            onChange={(e) => updateField('building', e.target.value)}
-                            placeholder={t('رقم المنزل / العمارة', 'House/Bldg number')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المبنى / المنزل', 'Building / House')} *</label>
+                          <input required type="text" value={details.building || ''} onChange={(e) => updateField('building', e.target.value)} placeholder={t('مثال: منزل 15', 'e.g. House 15')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الدور / الشقة (اختياري)', 'Floor / Apt (Optional)')}</label>
-                          <input 
-                            type="text"
-                            value={details.floorApt || ''}
-                            onChange={(e) => updateField('floorApt', e.target.value)}
-                            placeholder={t('مثال: دور 2، شقة 5', 'e.g. Floor 2, Apt 5')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('الدور / الشقة (اختياري)', 'Floor / Apt')}</label>
+                          <input type="text" value={details.floorApt || ''} onChange={(e) => updateField('floorApt', e.target.value)} placeholder={t('مثال: الدور 2', 'e.g. Floor 2')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
                       </div>
                     )}
 
-                    {/* SAUDI ARABIA Dynamic Address */}
+                    {details.country === 'EG' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المحافظة', 'Governorate')}</label>
+                          <select 
+                            value={details.governorate}
+                            onChange={(e) => updateField('governorate', e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy"
+                          >
+                            {EGYPT_GOVERNORATES.map(g => (
+                              <option key={g.en} value={g[language]}>{g[language]}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المدينة / الحي', 'City / District')} *</label>
+                          <input required type="text" value={details.city || ''} onChange={(e) => updateField('city', e.target.value)} placeholder={t('مثال: المعادي / الشيخ زايد', 'e.g. Maadi / Zayed')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('اسم الشارع', 'Street Name')} *</label>
+                          <input required type="text" value={details.street || ''} onChange={(e) => updateField('street', e.target.value)} placeholder={t('مثال: شارع 9', 'e.g. Street 9')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('رقم العمارة / المبنى', 'Building Number')} *</label>
+                          <input required type="text" value={details.building || ''} onChange={(e) => updateField('building', e.target.value)} placeholder={t('مثال: عمارة 45', 'e.g. Bldg 45')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('الدور / رقم الشقة', 'Floor / Apartment')}</label>
+                          <input type="text" value={details.floorApt || ''} onChange={(e) => updateField('floorApt', e.target.value)} placeholder={t('مثال: شقة 12', 'e.g. Apt 12')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
+                        </div>
+                      </div>
+                    )}
+
                     {details.country === 'SA' && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة', 'Province/Region')} *</label>
-                          <select
-                            required
-                            value={details.province || SAUDI_REGIONS[0].ar}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة', 'Region')}</label>
+                          <select 
+                            value={details.province}
                             onChange={(e) => updateField('province', e.target.value)}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy"
                           >
-                            {SAUDI_REGIONS.map((r) => (
-                              <option key={r.ar} value={language === 'ar' ? r.ar : r.en}>
-                                {language === 'ar' ? r.ar : r.en}
-                              </option>
+                            {SAUDI_REGIONS.map(r => (
+                              <option key={r.en} value={r[language]}>{r[language]}</option>
                             ))}
                           </select>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المدينة', 'City')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.city || ''}
-                            onChange={(e) => updateField('city', e.target.value)}
-                            placeholder={t('الرياض، جدة، الدمام...', 'Riyadh, Jeddah, Dammam...')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المدينة', 'City')} *</label>
+                          <input required type="text" value={details.city || ''} onChange={(e) => updateField('city', e.target.value)} placeholder={t('مثال: الرياض / جدة', 'e.g. Riyadh')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الحي', 'District')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.area || ''}
-                            onChange={(e) => updateField('area', e.target.value)}
-                            placeholder={t('اسم الحي', 'District name')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('الحي', 'District')} *</label>
+                          <input required type="text" value={details.area || ''} onChange={(e) => updateField('area', e.target.value)} placeholder={t('مثال: حي النرجس', 'e.g. Al Narjis')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الشارع', 'Street')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.street || ''}
-                            onChange={(e) => updateField('street', e.target.value)}
-                            placeholder={t('اسم الشارع', 'Street name')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('الشارع', 'Street')} *</label>
+                          <input required type="text" value={details.street || ''} onChange={(e) => updateField('street', e.target.value)} placeholder={t('اسم الشارع', 'Street')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('رقم المبنى / العنوان الوطني', 'Building / National Address')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.building || ''}
-                            onChange={(e) => updateField('building', e.target.value)}
-                            placeholder={t('رقم المبنى أو الرمز القصير', 'Building # or Short Address')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الرمز البريدي (اختياري)', 'Postal Code (Optional)')}</label>
-                          <input 
-                            type="text"
-                            value={details.postalCode || ''}
-                            onChange={(e) => updateField('postalCode', e.target.value)}
-                            placeholder="12345"
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('رقم المبنى', 'Building No.')}</label>
+                          <input type="text" value={details.building || ''} onChange={(e) => updateField('building', e.target.value)} placeholder="1234" className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
                       </div>
                     )}
 
-                    {/* UAE Dynamic Address */}
                     {details.country === 'AE' && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الإمارة', 'Emirate')} *</label>
-                          <select
-                            required
-                            value={details.emirate || UAE_EMIRATES[0].ar}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('الإمارة', 'Emirate')}</label>
+                          <select 
+                            value={details.emirate}
                             onChange={(e) => updateField('emirate', e.target.value)}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy"
                           >
-                            {UAE_EMIRATES.map((em) => (
-                              <option key={em.ar} value={language === 'ar' ? em.ar : em.en}>
-                                {language === 'ar' ? em.ar : em.en}
-                              </option>
+                            {UAE_EMIRATES.map(em => (
+                              <option key={em.en} value={em[language]}>{em[language]}</option>
                             ))}
                           </select>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة / المجتمع', 'Area / Community')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.area || ''}
-                            onChange={(e) => updateField('area', e.target.value)}
-                            placeholder={t('مثال: مارينا، البرشاء', 'e.g. Marina, Al Barsha')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المنطقة', 'Area')} *</label>
+                          <input required type="text" value={details.area || ''} onChange={(e) => updateField('area', e.target.value)} placeholder={t('مثال: مارينا', 'e.g. Marina')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الشارع', 'Street')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.street || ''}
-                            onChange={(e) => updateField('street', e.target.value)}
-                            placeholder={t('اسم أو رقم الشارع', 'Street name/number')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
-                        </div>
-                        <div className="sm:col-span-2 md:col-span-3 space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الفيلا / المبنى والشقة', 'Villa / Building & Apt')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.building || ''}
-                            onChange={(e) => updateField('building', e.target.value)}
-                            placeholder={t('رقم الفيلا أو اسم البرج ورقم الشقة', 'Villa # or Tower Name & Apt #')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('الشارع والمبنى', 'Street & Building')} *</label>
+                          <input required type="text" value={details.street || ''} onChange={(e) => updateField('street', e.target.value)} placeholder={t('اسم الشارع ورقم البرج', 'Street & Tower')} className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
                       </div>
                     )}
 
-                    {/* USA Dynamic Address */}
-                    {details.country === 'US' && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="sm:col-span-2 space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Street Address (Line 1) *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.street || ''}
-                            onChange={(e) => updateField('street', e.target.value)}
-                            placeholder="123 Main St, Apt 4B"
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                    {['US', 'GB', 'CA', 'AU', 'OTHER', 'QA', 'BH', 'OM'].includes(details.country) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('المدينة', 'City')} *</label>
+                          <input required type="text" value={details.city || ''} onChange={(e) => updateField('city', e.target.value)} placeholder="City" className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Apt / Suite / Unit (Optional)</label>
-                          <input 
-                            type="text"
-                            value={details.floorApt || ''}
-                            onChange={(e) => updateField('floorApt', e.target.value)}
-                            placeholder="Unit 102"
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">City *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.city || ''}
-                            onChange={(e) => updateField('city', e.target.value)}
-                            placeholder="San Francisco"
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">State *</label>
-                          <select
-                            required
-                            value={details.state || 'CA'}
-                            onChange={(e) => updateField('state', e.target.value)}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          >
-                            {US_STATES.map((s) => (
-                              <option key={s.code} value={s.code}>
-                                {s.name} ({s.code})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">ZIP Code *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.postalCode || ''}
-                            onChange={(e) => updateField('postalCode', e.target.value)}
-                            placeholder="94103"
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">{t('العنوان التفصيلي', 'Street Address')} *</label>
+                          <input required type="text" value={details.street || ''} onChange={(e) => updateField('street', e.target.value)} placeholder="Street address, building, apt" className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 text-sm font-bold text-brand-navy" />
                         </div>
                       </div>
                     )}
-
-                    {/* OTHER COUNTRIES Generic Address */}
-                    {!['KW', 'SA', 'AE', 'US'].includes(details.country || 'KW') && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المدينة', 'City')} *</label>
-                          <input 
-                            required
-                            type="text"
-                            value={details.city || ''}
-                            onChange={(e) => updateField('city', e.target.value)}
-                            placeholder={t('اسم المدينة', 'City')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('المقاطعة / الولاية', 'State / Province')}</label>
-                          <input 
-                            type="text"
-                            value={details.province || ''}
-                            onChange={(e) => updateField('province', e.target.value)}
-                            placeholder={t('الولاية أو المحافظة', 'State / Province')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('الرمز البريدي', 'Postal / ZIP Code')}</label>
-                          <input 
-                            type="text"
-                            value={details.postalCode || ''}
-                            onChange={(e) => updateField('postalCode', e.target.value)}
-                            placeholder="Postal Code"
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                          />
-                        </div>
-                        <div className="sm:col-span-2 md:col-span-3 space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('العنوان التفصيلي', 'Street Address & Building')} *</label>
-                          <textarea 
-                            required
-                            rows={2}
-                            value={details.street || ''}
-                            onChange={(e) => updateField('street', e.target.value)}
-                            placeholder={t('الشارع، رقم المبنى، الشقة...', 'Street, Building #, Apartment, Unit...')}
-                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm resize-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Delivery Notes */}
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('ملاحظات خاصة بالتوصيل (اختياري)', 'Delivery Notes (Optional)')}</label>
-                      <input 
-                        type="text"
-                        value={details.deliveryNotes || ''}
-                        onChange={(e) => updateField('deliveryNotes', e.target.value)}
-                        placeholder={t('مثال: الاتصال قبل الوصول، ترك الطرد عند الباب', 'e.g. Call before delivery')}
-                        className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 focus:border-brand-teal outline-none font-bold text-brand-navy text-sm"
-                      />
-                    </div>
                   </motion.div>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-brand-coral/5 border border-brand-coral/15 flex items-center gap-3 text-xs text-brand-navy font-bold">
-                    <span className="material-symbols-outlined text-brand-coral text-xl">cloud_download</span>
-                    <p>
-                      {t(
-                        'تم اختيار النسخة الرقمية (PDF) فقط — سيتم إرسال رابط التصفح والتحميل مباشرة إلى بريدك الإلكتروني وهاتفك دون الحاجة لعنوان شحن.',
-                        'Digital Softcopy selected — Your preview and high-res PDF will be delivered directly to your email and phone without requiring a shipping address.'
-                      )}
-                    </p>
-                  </div>
                 )}
               </AnimatePresence>
             </form>
           </div>
         </div>
 
-        {/* Right: Summary */}
-        <div className="lg:col-span-1">
-          <div className="bg-brand-navy p-10 rounded-[3.5rem] text-white shadow-2xl sticky top-8 space-y-8 relative overflow-hidden">
-             {/* Decorative Background */}
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
-             
-             <h3 className="text-2xl font-black uppercase tracking-tighter relative z-10">{t('ملخص الطلب', 'Order Summary')}</h3>
-             
-             <div className="space-y-4 relative z-10">
-               <div className="flex justify-between items-center text-sm">
-                 <span className="text-white/60 font-bold uppercase tracking-widest text-[10px]">{t('المنتج الرقمي', 'Digital Product')}</span>
-                 <span className="font-black">{convertPrice(pricing.currentDigital, currency)}</span>
-               </div>
+        {/* Right: Order Summary Card */}
+        <div className="space-y-6">
+          <div className="bg-white/60 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white shadow-2xl space-y-6 sticky top-24">
+            <h3 className="text-xl font-black text-brand-navy border-b border-gray-100 pb-4 flex items-center justify-between">
+              <span>{t('ملخص الطلب', 'Order Summary')}</span>
+              <span className="text-xs font-black text-brand-orange uppercase tracking-wider">{details.countryName}</span>
+            </h3>
 
-               {planType === 'one_time' && (
-                 <div className="pl-4 space-y-2 border-l border-white/10 ml-2 py-1">
-                   {storyData.useSecondCharacter && (
-                     <div className="flex justify-between items-center text-[9px] text-white/40">
-                       <span className="font-bold uppercase tracking-widest">{t('شخصية إضافية', 'Extra Character')}</span>
-                       <span>+{convertPrice(2.000, currency)}</span>
-                     </div>
-                   )}
-                   {storyData.isCustomTheme && (
-                     <div className="flex justify-between items-center text-[9px] text-white/40">
-                       <span className="font-bold uppercase tracking-widest">{t('سمة مخصصة', 'Custom Theme')}</span>
-                       <span>+{convertPrice(1.000, currency)}</span>
-                     </div>
-                   )}
-                 </div>
-               )}
-               
-               {isPhysicalAddon && (
-                 <>
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-white/60 font-bold uppercase tracking-widest text-[10px]">{t('نسخة مطبوعة HD', 'HD Physical Print')}</span>
-                     <span className="font-black">{convertPrice(pricing.physical, currency)}</span>
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-white/60 font-bold uppercase tracking-widest text-[10px]">{t('الشحن الدولي', 'Shipping')}</span>
-                     <span className="font-black">{convertPrice(pricing.shipping, currency)}</span>
-                   </div>
-                 </>
-               )}
+            {/* Story Details */}
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-gray-500">{t('بطل القصة', 'Story Hero')}</span>
+                <span className="font-black text-brand-navy">{storyData.childName || 'Little Hero'}</span>
+              </div>
 
-               <div className="pt-6 border-t border-white/10 mt-6">
-                 <div className="flex justify-between items-end">
-                   <div>
-                     <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">{t('المجموع النهائي', 'Grand Total')}</div>
-                     <div className="text-4xl font-black text-brand-coral">{convertPrice(pricing.total, currency)}</div>
-                   </div>
-                   <div className="text-[9px] font-black text-white/30 uppercase text-right leading-tight">
-                     {t('جميع الضرائب', 'All taxes')}<br/>{t('مشمولة', 'included')}
-                   </div>
-                 </div>
-               </div>
-             </div>
-
-             <div className="space-y-4 relative z-10 pt-4">
-                <Button 
-                  type="submit" 
-                  form="checkout-form"
-                  className="w-full bg-brand-coral text-white py-6 rounded-3xl font-black uppercase tracking-[0.2em] text-lg hover:bg-white hover:text-brand-coral transition-all shadow-xl shadow-brand-coral/20"
-                >
-                  {t('ادفع الآن', 'Pay Now')}
-                </Button>
-                
-                <div className="flex items-center justify-center gap-4 text-white/30">
-                  <span className="material-symbols-outlined text-lg">verified_user</span>
-                  <span className="text-[9px] font-black uppercase tracking-widest">{t('دفع آمن 100%', '100% Secure Payment')}</span>
+              {storyData.useSecondCharacter && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-brand-teal">👥 {t('بطل ثانٍ مضاف', 'Second Hero Added')}</span>
+                  <span className="font-bold text-brand-teal">
+                    {planType === 'one_time' ? '+' + convertPrice(1.500, currency) : t('مجاناً ✨', 'FREE ✨')}
+                  </span>
                 </div>
-             </div>
+              )}
 
-             {/* Plan Benefits */}
-             <div className="pt-8 space-y-3 relative z-10">
-               {[
-                 t('تسليم رقمي فوري', 'Instant Digital Delivery'),
-                 t('تنسيق PDF عالي الجودة', 'High-Res PDF Format'),
-                 t('لوحة تحكم تفاعلية', 'Interactive Dashboard'),
-                 planType !== 'one_time' ? t('أولوية في التنفيذ', 'Priority Processing') : null
-               ].filter(Boolean).map((benefit, i) => (
-                 <div key={i} className="flex items-center gap-3 text-[10px] font-bold text-white/50 uppercase tracking-widest">
-                   <span className="w-1.5 h-1.5 rounded-full bg-brand-coral" />
-                   {benefit}
-                 </div>
-               ))}
-             </div>
+              {storyData.isCustomTheme && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-brand-coral">🎉 {t('تخصيص مناسبة خاصة', 'Special Event Customization')}</span>
+                  <span className="font-bold text-brand-coral">
+                    {planType === 'one_time' ? '+' + convertPrice(0.500, currency) : t('مجاناً 🎁', 'FREE 🎁')}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-gray-500">{t('الباقة المختارة', 'Plan')}</span>
+                <span className="font-black text-brand-navy">
+                  {planType === 'one_time' ? t('قصة واحدة', 'Single Book') : (planType === 'monthly' ? t('الباقة الشهرية', 'Monthly Club') : t('الباقة السنوية', 'Yearly Club'))}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-gray-500">{t('النسخة الرقمية', 'Digital Softcopy')}</span>
+                <span className="font-black text-brand-navy">{convertPrice(pricing.currentDigital, currency)}</span>
+              </div>
+
+              {isPhysicalAddon && (
+                <>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="font-bold text-gray-500">{t('المطبوعة الفاخرة', 'HD Hardcover Print')} ({physicalBookCount}x)</span>
+                    <span className="font-black text-brand-teal">+{convertPrice(pricing.physical, currency)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-500">{t('الشحن والتوصيل', 'Shipping')}</span>
+                    <span className="font-black text-brand-teal">
+                      {pricing.shipping === 0 ? t('مجاناً 🎉', 'FREE 🎉') : '+' + convertPrice(pricing.shipping, currency)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Total */}
+            <div className="pt-4 border-t-2 border-dashed border-gray-200 flex justify-between items-baseline">
+              <div>
+                <span className="text-xs font-black text-gray-400 uppercase tracking-wider block">{t('الإجمالي النهائي', 'Total Price')}</span>
+                <span className="text-[10px] text-gray-400 font-bold">
+                  {planType === 'monthly' ? t('يتجدد شهرياً - إلغاء بأي وقت', 'Renews monthly - Cancel anytime') : (planType === 'yearly' ? t('دفعة سنوية لـ 12 كتاباً', 'Annual payment for 12 books') : t('دفعة لمرة واحدة', 'One-time payment'))}
+                </span>
+              </div>
+              <span className="text-3xl font-black text-brand-coral">{convertPrice(pricing.total, currency)}</span>
+            </div>
+
+            <Button 
+              type="submit" 
+              form="checkout-form"
+              className="w-full py-4 text-base font-black rounded-2xl shadow-xl shadow-brand-coral/20 bg-brand-coral hover:bg-[#e07b40] text-white flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>{t('متابعة إلى الدفع ➔', 'Proceed to Payment ➔')}</span>
+            </Button>
+
+            <div className="flex items-center justify-center gap-2 text-[11px] font-bold text-gray-400 text-center">
+              <span className="material-symbols-outlined text-sm text-green-600">lock</span>
+              <span>{t('دفع آمن 100% عبر كي نت وبطاقات الدفع', '100% Secure Checkout via KNET & Cards')}</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Club Discount Intercept Modal (Opens when user submits Single Book order) */}
+      <AnimatePresence>
+        {showUpsellModal && (
+          <div className="fixed inset-0 bg-brand-navy/60 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={() => setShowUpsellModal(false)}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2.5rem] shadow-2xl p-6 sm:p-8 w-full max-w-lg border border-gray-100 text-center space-y-6 relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}
+            >
+              <div className="w-16 h-16 bg-gradient-to-tr from-brand-orange to-brand-coral text-white rounded-3xl flex items-center justify-center text-3xl mx-auto shadow-lg shadow-brand-orange/30 animate-bounce">
+                🎁
+              </div>
+
+              <div className="space-y-2">
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                  {t('وفّر أكثر من ' + pricing.monthlyDiscountPercent + '%', 'Save over ' + pricing.monthlyDiscountPercent + '%')}
+                </span>
+                <h3 className="text-2xl font-black text-brand-navy">
+                  {t('انتظر! افتح خصم النادي واحصل على كتابين', 'Wait! Unlock Club Discount & Get 2 Books')}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
+                  {t(
+                    'بدلاً من دفع ' + convertPrice(pricing.singleDigitalTotal, currency) + ' لكتاب واحد، اشترك في باقة النادي الشهرية مقابل ' + convertPrice(4.500, currency) + ' فقط واحصل على كتابين كل شهر مع بطل ثانٍ ومناسبات مجاناً!',
+                    'Instead of paying ' + convertPrice(pricing.singleDigitalTotal, currency) + ' for just 1 book, join the Monthly Club for only ' + convertPrice(4.500, currency) + '/mo and get 2 books/month with FREE 2nd hero & events!'
+                  )}
+                </p>
+              </div>
+
+              {/* Comparison Box */}
+              <div className="grid grid-cols-2 gap-3 text-left rtl:text-right">
+                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-1">
+                  <span className="text-[10px] font-bold text-gray-400 block">{t('طلبك الحالي', 'Your Choice')}</span>
+                  <span className="text-xs font-black text-brand-navy block">{t('قصة واحدة فقط', 'Single Book Only')}</span>
+                  <span className="text-lg font-black text-gray-600 block">{convertPrice(pricing.singleDigitalTotal, currency)}</span>
+                  <span className="text-[9px] text-gray-400 block">{t('كتاب واحد', '1 book')}</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-brand-coral space-y-1 shadow-sm">
+                  <span className="text-[10px] font-black text-brand-coral block">{t('عرض النادي ✨', 'Club Offer ✨')}</span>
+                  <span className="text-xs font-black text-brand-navy block">{t('قصتان شهرياً', '2 Books / Month')}</span>
+                  <span className="text-lg font-black text-brand-coral block">{convertPrice(4.500, currency)}</span>
+                  <span className="text-[9px] font-bold text-emerald-700 block">{t('فقط ' + convertPrice(pricing.monthlyPerBook, currency) + ' / كتاب', 'Only ' + convertPrice(pricing.monthlyPerBook, currency) + '/book')}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-3 pt-2">
+                <Button 
+                  onClick={() => {
+                    setShowUpsellModal(false);
+                    setPlanType('monthly');
+                    proceedDirectly('monthly');
+                  }}
+                  className="w-full py-4 text-sm font-black rounded-2xl shadow-xl bg-brand-coral hover:bg-[#e07b40] text-white cursor-pointer"
+                >
+                  {t('✨ اشترك في النادي ووفّر الآن (موصى به)', '✨ Switch to Club & Save (Recommended)')}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUpsellModal(false);
+                    proceedDirectly('one_time');
+                  }}
+                  className="w-full py-2 text-xs font-bold text-gray-400 hover:text-brand-navy transition-colors cursor-pointer"
+                >
+                  {t('لا شكراً، المتابعة بكتاب واحد (' + convertPrice(pricing.singleDigitalTotal, currency) + ')', 'No thanks, continue with 1 book (' + convertPrice(pricing.singleDigitalTotal, currency) + ')')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
