@@ -4,6 +4,7 @@ import { authService } from '../services/authService';
 import type { Language, DbOrderStatus, Subscription, AdminOrder } from '../types';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
+import { useCart } from '../context/CartContext';
 
 interface DashboardProps {
     language: Language;
@@ -24,6 +25,7 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
     onBack,
     onStartAdventure
 }) => {
+    const { draftCount, openCart } = useCart();
     const [activeSub, setActiveSub] = useState<Subscription | null>(() => {
         try {
             const cached = localStorage.getItem('rawy_cached_sub');
@@ -168,9 +170,23 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                         <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-1">{t('إدارة اشتراكاتك والكتب الخاصة بك', 'Manage your subscriptions & custom stories')}</p>
                     </div>
                 </div>
-                <Button onClick={onLogout} variant="outline" className="!px-6 !py-2 text-xs font-black uppercase tracking-widest border-2">
-                    {t('تسجيل الخروج', 'Sign Out')}
-                </Button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => openCart('drafts')}
+                        className="px-4 py-2 rounded-xl bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                        title={t('المشاريع غير المكتملة', 'Uncompleted Projects')}
+                    >
+                        <span>📝 {t('المشاريع غير المكتملة', 'Draft Projects')}</span>
+                        {draftCount > 0 && (
+                            <span className="bg-brand-teal text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                                {draftCount}
+                            </span>
+                        )}
+                    </button>
+                    <Button onClick={onLogout} variant="outline" className="!px-6 !py-2 text-xs font-black uppercase tracking-widest border-2">
+                        {t('تسجيل الخروج', 'Sign Out')}
+                    </Button>
+                </div>
             </div>
 
             {/* Subscription Section */}

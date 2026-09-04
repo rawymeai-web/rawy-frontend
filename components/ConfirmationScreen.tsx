@@ -108,6 +108,15 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, on
             <span className="font-black text-brand-coral">{convertPrice(totalPrice, currency)}</span>
           </div>
 
+          {shippingDetails?.promoCode && (
+            <div className="flex justify-between items-center text-xs text-emerald-700 font-bold pt-1 border-t border-[#F78F50]/10">
+              <span>🏷️ {t('كود الخصم المطبق', 'Promo Code Applied')} ({shippingDetails.promoCode})</span>
+              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-mono">
+                {shippingDetails.discountAmount ? `- ${convertPrice(shippingDetails.discountAmount, currency)}` : t('مُطبق ✨', 'Applied ✨')}
+              </span>
+            </div>
+          )}
+
           {shippingDetails?.isPhysicalDelivery && (
             <div className="flex justify-between items-center text-xs text-brand-navy font-bold pt-1 border-t border-[#F78F50]/10">
               <span>🚚 {t('طريقة وسرعة التوصيل', 'Delivery Method')}</span>

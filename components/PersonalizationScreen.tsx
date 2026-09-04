@@ -40,7 +40,8 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
     const numericAge = parseInt(childAge, 10);
     if (!isNaN(numericAge) && numericAge >= 6 && !localData.childGender) { alert(language === 'ar' ? 'الرجاء تحديد ما إذا كان البطل ولداً أم بنتاً للاستمرار.' : "Please select if the hero is a boy or a girl to continue."); return; }
     
-    if (mainCharacter.images.length === 0) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الرئيسية.' : 'Please upload an image for the main character.'); return; }
+    const hasMainImage = (mainCharacter.images && mainCharacter.images.length > 0) || (mainCharacter.imageBases64 && mainCharacter.imageBases64.length > 0);
+    if (!hasMainImage) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الرئيسية.' : 'Please upload an image for the main character.'); return; }
     if (mainCharacter.qualityAnalysis?.score === 'not_usable') {
       alert(language === 'ar' 
         ? 'الصورة المرفوعة غير صالحة للاستخدام. يرجى مراجعة فحص الجودة ورفع صورة أخرى واضحة للوجه.' 
@@ -63,7 +64,8 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
           return;
         }
       }
-      if (secondCharacter.images.length === 0) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الثانوية.' : "Please upload an image for the second character."); return; }
+      const hasSecondImage = (secondCharacter.images && secondCharacter.images.length > 0) || (secondCharacter.imageBases64 && secondCharacter.imageBases64.length > 0);
+      if (!hasSecondImage) { alert(language === 'ar' ? 'الرجاء رفع صورة للشخصية الثانوية.' : "Please upload an image for the second character."); return; }
       if (secondCharacter.qualityAnalysis?.score === 'not_usable') {
         alert(language === 'ar' 
           ? 'صورة الشخصية الثانوية غير صالحة للاستخدام. يرجى مراجعة فحص الجودة ورفع صورة أخرى واضحة للوجه.' 

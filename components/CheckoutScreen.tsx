@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from './Button';
-import type { ShippingDetails, Language, StoryData } from '../types';
+import type { ShippingDetails, Language, StoryData, DiscountDetails } from '../types';
 import { convertPrice, type Currency } from '../services/currencyService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,6 +13,8 @@ import {
   formatFullAddress,
   getCountryShippingRate
 } from '../services/countryAddressConfig';
+import { validateAndCalculatePromo, type PromoValidationResult } from '../services/promoService';
+import { useCart } from '../context/CartContext';
 
 interface CheckoutScreenProps {
   onProceedToPayment: (details: ShippingDetails, planType: 'one_time' | 'monthly' | 'yearly', total: number) => void;
@@ -31,6 +33,13 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   const [isGiftWrapping, setIsGiftWrapping] = useState(false);
   const [isGiftCard, setIsGiftCard] = useState(false);
   const [giftMessage, setGiftMessage] = useState('');
+
+  // Promo Code State
+  const { addToCart } = useCart();
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<PromoValidationResult | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
 
   const [details, setDetails] = useState<ShippingDetails>({ 
     name: storyData.parentName || '', 
@@ -74,9 +83,10 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     const singleDigitalBase = 5.000;
     const heroAddon = storyData.useSecondCharacter ? 1.500 : 0;
     const themeAddon = storyData.isCustomTheme ? 0.500 : 0;
+    // Dynamic single digital price factoring customer's exact add-ons
     const singleDigitalTotal = singleDigitalBase + heroAddon + themeAddon;
     
-    // Monthly: 1 book per month @ 4.000 KD
+    // Monthly: 1 book per month @ 4.000 KD (includes all digital add-ons free!)
     const monthlyPrice = 4.000;
     // Yearly: 12 books per year @ 30.000 KD upfront (clean 2.500 KD / book)
     const yearlyTotal = 30.000;
@@ -106,9 +116,13 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     const giftCardPrice = isPhysicalAddon && isGiftCard ? 0.500 : 0;
     const giftTotal = giftWrappingPrice + giftCardPrice;
 
-    // Discounts relative to base single book
-    const monthlyDiscountPercent = Math.max(10, Math.round(((singleDigitalBase - monthlyPrice) / singleDigitalBase) * 100)); // 20%
-    const yearlyDiscountPercent = Math.max(20, Math.round(((singleDigitalBase - yearlyPerBook) / singleDigitalBase) * 100)); // 50%
+    const subtotalBeforeDiscount = finalDigital + physicalPrice + shipping + giftTotal;
+    const discountAmount = appliedPromo?.isValid ? appliedPromo.discountAmount : 0;
+    const total = Math.max(0, subtotalBeforeDiscount - discountAmount);
+
+    // Dynamic savings percentages compared to customer's actual single book total
+    const monthlyDiscountPercent = Math.max(10, Math.round(((singleDigitalTotal - monthlyPrice) / singleDigitalTotal) * 100));
+    const yearlyDiscountPercent = Math.max(20, Math.round(((singleDigitalTotal - yearlyPerBook) / singleDigitalTotal) * 100));
 
     return {
       singleDigitalBase,
@@ -125,7 +139,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       giftWrapping: giftWrappingPrice,
       giftCard: giftCardPrice,
       giftTotal,
-      total: finalDigital + physicalPrice + shipping + giftTotal,
+      subtotalBeforeDiscount,
+      discountAmount,
+      total,
       monthlyPrice,
       yearlyTotal,
       monthlyPerBook: monthlyPrice,
@@ -133,7 +149,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       monthlyDiscountPercent,
       yearlyDiscountPercent
     };
-  }, [planType, isPhysicalAddon, physicalBookCount, shippingMethod, details.country, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, isGiftWrapping, isGiftCard, currency]);
+  }, [planType, isPhysicalAddon, physicalBookCount, shippingMethod, details.country, storyData.useSecondCharacter, storyData.isCustomTheme, storyData.isPrintUpsell, isGiftWrapping, isGiftCard, appliedPromo, currency]);
 
   React.useEffect(() => {
     if (storyData.isPhysicalPrint) {
@@ -184,6 +200,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       isGiftWrapping: isPhysicalAddon ? isGiftWrapping : false,
       isGiftCard: isPhysicalAddon ? isGiftCard : false,
       giftMessage: (isPhysicalAddon && isGiftCard) ? giftMessage : '',
+      promoCode: appliedPromo?.code,
+      discountAmount: pricing.discountAmount,
+      discountDetails: appliedPromo?.discountDetails,
       address: isPhysicalAddon 
         ? formatFullAddress({ ...details, language }) 
         : (language === 'ar' ? 'طلب رقمي (لا يتطلب شحن فعلي)' : 'Digital Softcopy (No physical delivery required)')
@@ -191,12 +210,60 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
     let calculatedTotal = pricing.total;
     if (selectedPlan === 'monthly' && planType !== 'monthly') {
-      calculatedTotal = pricing.monthlyPrice + pricing.physical + pricing.shipping + pricing.giftTotal;
+      calculatedTotal = Math.max(0, pricing.monthlyPrice + pricing.physical + pricing.shipping + pricing.giftTotal - pricing.discountAmount);
     } else if (selectedPlan === 'yearly' && planType !== 'yearly') {
-      calculatedTotal = pricing.yearlyTotal + pricing.physical + pricing.shipping + pricing.giftTotal;
+      calculatedTotal = Math.max(0, pricing.yearlyTotal + pricing.physical + pricing.shipping + pricing.giftTotal - pricing.discountAmount);
     }
 
     onProceedToPayment(finalDetails, selectedPlan, calculatedTotal);
+  };
+
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setIsApplyingPromo(true);
+    setPromoError(null);
+    try {
+      const result = await validateAndCalculatePromo(promoInput, {
+        planType,
+        productTotal: pricing.currentDigital + pricing.physical,
+        shippingTotal: pricing.shipping,
+        addonsTotal: (storyData.useSecondCharacter ? 1.500 : 0) + (storyData.isCustomTheme ? 0.500 : 0) + pricing.giftTotal,
+        orderTotal: pricing.subtotalBeforeDiscount
+      });
+      if (result.isValid) {
+        setAppliedPromo(result);
+        setPromoError(null);
+      } else {
+        setAppliedPromo(null);
+        setPromoError(result.message[language]);
+      }
+    } catch (e: any) {
+      setPromoError(language === 'ar' ? 'فشل التحقق من الكود' : 'Failed to validate code');
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoInput('');
+    setPromoError(null);
+  };
+
+  const handleAddToCart = () => {
+    addToCart({
+      storyData,
+      planType,
+      isPhysicalPrint: isPhysicalAddon,
+      physicalCount: physicalBookCount,
+      isGiftWrapping: isPhysicalAddon ? isGiftWrapping : false,
+      isGiftCard: isPhysicalAddon ? isGiftCard : false,
+      giftMessage: (isPhysicalAddon && isGiftCard) ? giftMessage : '',
+      unitPrice: pricing.total,
+      totalPrice: pricing.total,
+      status: 'ready_for_checkout',
+      thumbnailUrl: storyData.coverImageUrl || storyData.mainCharacter?.imageDNA?.[0] || storyData.mainCharacter?.imageBases64?.[0] || ''
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -248,7 +315,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                   { 
                     id: 'one_time', 
                     name: t('قصة واحدة', 'Single Storybook'), 
-                    pricePerBook: convertPrice(pricing.singleDigitalBase, currency),
+                    pricePerBook: convertPrice(pricing.singleDigitalTotal, currency),
                     strikethroughPrice: null,
                     discountBadge: null,
                     billingSummary: t('دفعة لمرة واحدة (بدون تجديد)', 'One-time payment (No sub)'),
@@ -263,7 +330,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     id: 'monthly', 
                     name: t('الباقة الشهرية', 'Monthly Club'), 
                     pricePerBook: convertPrice(pricing.monthlyPerBook, currency),
-                    strikethroughPrice: convertPrice(pricing.singleDigitalBase, currency),
+                    strikethroughPrice: convertPrice(pricing.singleDigitalTotal, currency),
                     discountBadge: t('وفر ' + pricing.monthlyDiscountPercent + '%', 'Save ' + pricing.monthlyDiscountPercent + '%'),
                     billingSummary: t('فاتورة ' + convertPrice(pricing.monthlyPrice, currency) + ' شهرياً (كتاب كل شهر)', 'Billed ' + convertPrice(pricing.monthlyPrice, currency) + '/mo (1 book/mo)'), 
                     badge: t('الأكثر شعبية', 'POPULAR'),
@@ -278,7 +345,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     id: 'yearly', 
                     name: t('الباقة السنوية', 'Yearly Club'), 
                     pricePerBook: convertPrice(pricing.yearlyPerBook, currency),
-                    strikethroughPrice: convertPrice(pricing.singleDigitalBase, currency),
+                    strikethroughPrice: convertPrice(pricing.singleDigitalTotal, currency),
                     discountBadge: t('وفر ' + pricing.yearlyDiscountPercent + '%', 'Save ' + pricing.yearlyDiscountPercent + '%'),
                     billingSummary: t('تُدفع ' + convertPrice(pricing.yearlyTotal, currency) + ' سنوياً لـ 12 كتاباً', 'Billed ' + convertPrice(pricing.yearlyTotal, currency) + '/yr for 12 books'), 
                     badge: t('أفضل توفير', 'BEST VALUE'),
@@ -517,7 +584,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                         <span className="text-2xl flex-shrink-0">📦</span>
                         <div>
                           <span className="font-black text-brand-navy text-xs block">{t('توصيل قياسي', 'Standard Delivery')}</span>
-                          <span className="text-[10px] text-gray-500 font-medium block">{t('خلال ٣ - ٥ أيام عمل', '3 - 5 business days')}</span>
+                          <span className="text-[10px] text-gray-500 font-medium block">{t('خلال ٤ - ١٢ يوم عمل', '4 - 12 business days')}</span>
                         </div>
                       </div>
                       <input 
@@ -556,7 +623,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                               +{convertPrice(2.000, currency)}
                             </span>
                           </div>
-                          <span className="text-[10px] text-gray-500 font-medium block">{t('خلال ١ - ٢ يوم عمل • أولوية التجهيز', '1 - 2 business days • Priority')}</span>
+                          <span className="text-[10px] text-gray-500 font-medium block">{t('خلال ٢ - ٧ أيام عمل حول العالم • أولوية التجهيز', '2 - 7 business days worldwide • Priority')}</span>
                         </div>
                       </div>
                       <input 
@@ -986,6 +1053,66 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
               )}
             </div>
 
+            {/* Promo Code Input & Applied Details */}
+            <div className="pt-3 border-t border-gray-100 space-y-2">
+              {appliedPromo ? (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🏷️</span>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-emerald-800 uppercase">{appliedPromo.code}</span>
+                        <span className="text-[9px] font-black bg-emerald-200/70 text-emerald-900 px-1.5 py-0.2 rounded-md">
+                          {t('مُطبق', 'Applied')}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-emerald-700 font-medium block leading-tight">{appliedPromo.message[language]}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    className="text-xs font-bold text-gray-400 hover:text-rose-500 transition-colors p-1 cursor-pointer"
+                    title="Remove Promo Code"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyPromo(); } }}
+                      placeholder={t('كود الخصم (مثال: RAWY10)', 'Promo code (e.g. RAWY10)')}
+                      className="flex-1 px-3.5 py-2.5 bg-gray-50 border border-gray-200 focus:border-brand-coral rounded-xl text-xs font-bold uppercase tracking-wider outline-none transition-colors"
+                    />
+                    <button
+                      type="button"
+                      disabled={!promoInput.trim() || isApplyingPromo}
+                      onClick={handleApplyPromo}
+                      className="px-4 py-2.5 bg-brand-navy hover:bg-brand-navy/90 text-white rounded-xl text-xs font-black disabled:opacity-40 transition-all cursor-pointer flex-shrink-0"
+                    >
+                      {isApplyingPromo ? '...' : t('تطبيق', 'Apply')}
+                    </button>
+                  </div>
+                  {promoError && (
+                    <p className="text-[10px] font-bold text-rose-500 pl-1">{promoError}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Discount row in summary */}
+              {appliedPromo && pricing.discountAmount > 0 && (
+                <div className="flex justify-between items-center text-xs font-black text-emerald-600 pt-1">
+                  <span>🏷️ {t('الخصم المطبق', 'Discount')} ({appliedPromo.code})</span>
+                  <span>- {convertPrice(pricing.discountAmount, currency)}</span>
+                </div>
+              )}
+            </div>
+
             {/* Total */}
             <div className="pt-4 border-t-2 border-dashed border-gray-200 flex justify-between items-baseline">
               <div>
@@ -994,16 +1121,34 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                   {planType === 'monthly' ? t('يتجدد شهرياً - إلغاء بأي وقت', 'Renews monthly - Cancel anytime') : (planType === 'yearly' ? t('دفعة سنوية لـ 12 كتاباً', 'Annual payment for 12 books') : t('دفعة لمرة واحدة', 'One-time payment'))}
                 </span>
               </div>
-              <span className="text-3xl font-black text-brand-coral">{convertPrice(pricing.total, currency)}</span>
+              <div className="text-right rtl:text-left">
+                {pricing.discountAmount > 0 && (
+                  <span className="text-xs font-bold text-gray-400 line-through block leading-none mb-1">
+                    {convertPrice(pricing.subtotalBeforeDiscount, currency)}
+                  </span>
+                )}
+                <span className="text-3xl font-black text-brand-coral">{convertPrice(pricing.total, currency)}</span>
+              </div>
             </div>
 
-            <Button 
-              type="submit" 
-              form="checkout-form"
-              className="w-full py-4 text-base font-black rounded-2xl shadow-xl shadow-brand-coral/20 bg-brand-coral hover:bg-[#e07b40] text-white flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>{t('متابعة إلى الدفع ➔', 'Proceed to Payment ➔')}</span>
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                type="submit" 
+                form="checkout-form"
+                className="w-full py-4 text-base font-black rounded-2xl shadow-xl shadow-brand-coral/20 bg-brand-coral hover:bg-[#e07b40] text-white flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{t('متابعة إلى الدفع ➔', 'Proceed to Payment ➔')}</span>
+              </Button>
+
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="w-full py-3 rounded-2xl bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">shopping_bag</span>
+                <span>{t('🛍️ إضافة إلى السلة وصنع قصة أخرى', '🛍️ Add to Cart & Create Another Book')}</span>
+              </button>
+            </div>
 
             <div className="flex items-center justify-center gap-2 text-[11px] font-bold text-gray-400 text-center">
               <span className="material-symbols-outlined text-sm text-green-600">lock</span>

@@ -28,6 +28,8 @@ import { type StoryData } from '../types';
 import { RegionalDiscoveryModal } from './RegionalDiscoveryModal';
 import { FAQModal } from './FAQModal';
 import { AboutUsModal } from './AboutUsModal';
+import { CartDrawer } from './CartDrawer';
+import { useCart } from '../context/CartContext';
 
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from './PageTransition';
@@ -650,6 +652,7 @@ const MainLayout: React.FC = () => {
                 }} 
                 onCurrencyChange={(c) => setCurrency(currencies.find(x => x.code === c) || currencies[0])} 
             />
+            <CartDrawer />
         </div>
     );
 };

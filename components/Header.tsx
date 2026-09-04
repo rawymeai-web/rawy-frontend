@@ -4,6 +4,7 @@ import { Button } from './Button';
 import { CurrencySelector } from './CurrencySelector';
 import type { Language } from '../types';
 import type { Currency } from '../services/currencyService';
+import { useCart } from '../context/CartContext';
 
 interface HeaderProps {
   onAdminLoginClick?: () => void;
@@ -39,6 +40,7 @@ const Header: React.FC<HeaderProps> = ({
   onOpenRegionModal
 }) => {
   const [logoClicks, setLogoClicks] = useState(0);
+  const { cartCount, openCart } = useCart();
 
   const handleLogoClick = () => {
     const newCount = logoClicks + 1;
@@ -63,12 +65,12 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Controls */}
-        <div className={`flex items-center gap-2.5 sm:gap-4 ${language === 'ar' ? 'order-first' : 'order-last'}`}>
+        <div className={`flex items-center gap-2 sm:gap-3 ${language === 'ar' ? 'order-first' : 'order-last'}`}>
 
           {/* Regional & Language Modal Trigger Button */}
           <button
             onClick={onOpenRegionModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gray-100/90 hover:bg-amber-100/80 border border-gray-200/60 hover:border-amber-300 transition-all text-xs font-black text-brand-navy shadow-sm group"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100/90 hover:bg-amber-100/80 border border-gray-200/60 hover:border-amber-300 transition-all text-xs font-black text-brand-navy shadow-sm group"
             title="Change Country, Language & Currency"
           >
             <span className="text-sm">🌐</span>
@@ -78,11 +80,30 @@ const Header: React.FC<HeaderProps> = ({
             <span className="material-symbols-outlined text-xs text-brand-navy/40 group-hover:text-brand-orange transition-colors">expand_more</span>
           </button>
 
+          {/* Shopping Cart Icon Trigger */}
+          <button
+            onClick={() => openCart('cart')}
+            className="relative px-3 py-1.5 rounded-full bg-white/90 hover:bg-white border border-gray-200/80 hover:border-brand-coral text-brand-navy shadow-sm transition-all flex items-center gap-1.5 cursor-pointer group"
+            title={language === 'ar' ? 'سلة التسوق' : 'Shopping Cart'}
+          >
+            <span className="material-symbols-outlined text-lg text-brand-coral group-hover:scale-110 transition-transform">
+              shopping_bag
+            </span>
+            <span className="text-xs font-black hidden md:inline text-brand-navy">
+              {language === 'ar' ? 'السلة' : 'Cart'}
+            </span>
+            {cartCount > 0 && (
+              <span className="bg-brand-coral text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-[18px] text-center shadow-md animate-pulse">
+                {cartCount}
+              </span>
+            )}
+          </button>
+
           {/* Customer Login / My Orders */}
           <Button
             onClick={onMyOrdersClick}
             variant="secondary"
-            className="!px-4 sm:!px-5 !py-2 text-xs sm:text-sm font-bold shadow-sm hover:shadow-md border-brand-teal/20 text-brand-teal hover:bg-brand-teal hover:text-white transition-all"
+            className="!px-3.5 sm:!px-4 !py-1.5 text-xs sm:text-sm font-bold shadow-sm hover:shadow-md border-brand-teal/20 text-brand-teal hover:bg-brand-teal hover:text-white transition-all"
           >
             {language === 'ar' ? 'حسابي' : 'My Account'}
           </Button>
