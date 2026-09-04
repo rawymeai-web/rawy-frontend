@@ -230,7 +230,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     billingSummary: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase (No subscription)'),
                     perks: [
                       t('📖 كتاب رقمي تفاعلي عالي الدقة (Softcopy)', 'HD Interactive Digital Softcopy'),
-                      t('📱 قراءة وتصفح 3D غير محدود بأي جهاز', 'Unlimited 3D reading on any device'),
+                      t('📱 قراءة وتصفح تفاعلي سلس على أي جهاز', 'Unlimited interactive reading on any device'),
                       t('⬇ تنزيل فوري لملف الـ PDF للطباعة', 'Instant PDF download anytime'),
                     ]
                   },
@@ -244,7 +244,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     badge: t('الأكثر شعبية', 'POPULAR'),
                     perks: [
                       t('✨ بطل ثانٍ ومناسبات مجاناً بكل قصة', '✨ FREE 2nd Hero & Events on all books'),
-                      t('📱 كتاب رقمي تفاعلي جديد شهرياً', '📱 1 New Custom 3D book every month'),
+                      t('📱 قصة رقمية تفاعلية جديدة شهرياً', '📱 1 New custom interactive storybook every month'),
                       t('⚡ أولوية التوليد الذكي السريع', '⚡ Priority High-Speed AI Generation')
                     ]
                   },
