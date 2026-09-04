@@ -96,9 +96,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     // Dynamic Shipping Rate per country, free for 2+ books
     const shipping = isPhysicalAddon ? getCountryShippingRate(details.country || 'KW', physicalBookCount) : 0;
     
-    // Gift Add-ons
-    const giftWrappingPrice = isGiftWrapping ? 2.000 : 0;
-    const giftCardPrice = isGiftCard ? 0.500 : 0;
+    // Gift Add-ons (Only applicable if Physical Hardcover Print is selected)
+    const giftWrappingPrice = isPhysicalAddon && isGiftWrapping ? 2.000 : 0;
+    const giftCardPrice = isPhysicalAddon && isGiftCard ? 0.500 : 0;
     const giftTotal = giftWrappingPrice + giftCardPrice;
 
     // Discounts relative to base single book
@@ -171,9 +171,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     const finalDetails = {
       ...details,
       isPhysicalDelivery: isPhysicalAddon,
-      isGiftWrapping,
-      isGiftCard,
-      giftMessage: isGiftCard ? giftMessage : '',
+      isGiftWrapping: isPhysicalAddon ? isGiftWrapping : false,
+      isGiftCard: isPhysicalAddon ? isGiftCard : false,
+      giftMessage: (isPhysicalAddon && isGiftCard) ? giftMessage : '',
       address: isPhysicalAddon 
         ? formatFullAddress({ ...details, language }) 
         : (language === 'ar' ? 'طلب رقمي (لا يتطلب شحن فعلي)' : 'Digital Softcopy (No physical delivery required)')
@@ -498,100 +498,102 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
             )}
           </div>
 
-          {/* Gift Options: Gift Wrapping (2 KD) & Greeting Gift Card (0.5 KD) */}
-          <div className="p-6 sm:p-8 rounded-[3rem] border-2 border-dashed border-gray-200 bg-white/40 backdrop-blur-xl space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-brand-coral/10 text-brand-coral flex items-center justify-center font-bold flex-shrink-0">
-                <span className="material-symbols-outlined text-2xl">card_giftcard</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-brand-navy">{t('خيارات وباقة الإهداء 🎁', 'Gift Packaging & Card Options 🎁')}</h3>
-                <p className="text-xs text-gray-500 font-medium">{t('اجعلها هدية لا تُنسى مع لمسات إهداء وتغليف راقية', 'Make it an unforgettable present with luxury wrapping and personalized card.')}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Gift Wrapping (2 KD) */}
-              <div 
-                className={'p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ' + (
-                  isGiftWrapping ? 'border-brand-coral bg-brand-coral/5 shadow-sm ring-2 ring-brand-coral/20' : 'border-gray-200 bg-white/60 hover:border-gray-300'
-                )} 
-                onClick={() => setIsGiftWrapping(!isGiftWrapping)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl flex-shrink-0">🎁</span>
-                    <div>
-                      <span className="font-black text-brand-navy text-sm block">{t('تغليف هدايا فاخر', 'Premium Gift Wrapping')}</span>
-                      <span className="text-[11px] text-gray-500 font-medium block leading-tight">{t('شريط حريري وبوكس فاخر جاهز للإهداء', 'Luxury gift wrap with satin ribbon')}</span>
-                    </div>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={isGiftWrapping} 
-                    onChange={(e) => setIsGiftWrapping(e.target.checked)} 
-                    onClick={(e) => e.stopPropagation()} 
-                    className="mt-1 accent-brand-coral w-4 h-4 rounded cursor-pointer"
-                  />
+          {/* Gift Options: Gift Wrapping (2 KD) & Greeting Gift Card (0.5 KD) - Physical delivery only */}
+          {isPhysicalAddon && (
+            <div className="p-6 sm:p-8 rounded-[3rem] border-2 border-dashed border-gray-200 bg-white/40 backdrop-blur-xl space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-brand-coral/10 text-brand-coral flex items-center justify-center font-bold flex-shrink-0">
+                  <span className="material-symbols-outlined text-2xl">card_giftcard</span>
                 </div>
-                <div className="text-left rtl:text-right">
-                  <span className="text-xs font-black text-brand-coral">+{convertPrice(2.000, currency)}</span>
+                <div>
+                  <h3 className="text-xl font-black text-brand-navy">{t('خيارات وباقة الإهداء 🎁', 'Gift Packaging & Card Options 🎁')}</h3>
+                  <p className="text-xs text-gray-500 font-medium">{t('اجعلها هدية لا تُنسى مع لمسات إهداء وتغليف راقية', 'Make it an unforgettable present with luxury wrapping and personalized card.')}</p>
                 </div>
               </div>
 
-              {/* Greeting Gift Card (0.5 KD) */}
-              <div 
-                className={'p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ' + (
-                  isGiftCard ? 'border-brand-teal bg-brand-teal/5 shadow-sm ring-2 ring-brand-teal/20' : 'border-gray-200 bg-white/60 hover:border-gray-300'
-                )} 
-                onClick={() => setIsGiftCard(!isGiftCard)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl flex-shrink-0">💌</span>
-                    <div>
-                      <span className="font-black text-brand-navy text-sm block">{t('بطاقة إهداء مخصصة', 'Personalized Gift Card')}</span>
-                      <span className="text-[11px] text-gray-500 font-medium block leading-tight">{t('كرت إهداء مطبوع بكلماتك ورسالتك', 'Printed card with your custom message')}</span>
-                    </div>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={isGiftCard} 
-                    onChange={(e) => setIsGiftCard(e.target.checked)} 
-                    onClick={(e) => e.stopPropagation()} 
-                    className="mt-1 accent-brand-teal w-4 h-4 rounded cursor-pointer"
-                  />
-                </div>
-                <div className="text-left rtl:text-right">
-                  <span className="text-xs font-black text-brand-teal">+{convertPrice(0.500, currency)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Gift Message Textbox (Only if Gift Card is selected) */}
-            <AnimatePresence>
-              {isGiftCard && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2 pt-1 overflow-hidden"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Gift Wrapping (2 KD) */}
+                <div 
+                  className={'p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ' + (
+                    isGiftWrapping ? 'border-brand-coral bg-brand-coral/5 shadow-sm ring-2 ring-brand-coral/20' : 'border-gray-200 bg-white/60 hover:border-gray-300'
+                  )} 
+                  onClick={() => setIsGiftWrapping(!isGiftWrapping)}
                 >
-                  <label className="text-xs font-black text-brand-navy flex items-center justify-between">
-                    <span>💌 {t('رسالة بطاقة الإهداء:', 'Your Gift Card Message:')}</span>
-                    <span className="text-[10px] text-gray-400 font-normal">{giftMessage.length}/150 {t('حرف', 'chars')}</span>
-                  </label>
-                  <textarea 
-                    value={giftMessage}
-                    onChange={(e) => setGiftMessage(e.target.value.slice(0, 150))}
-                    placeholder={t('اكتب رسالتك الجميلة هنا (مثال: إلى بطلنا الغالي، نتمنى لك عيد ميلاد سعيد ومستقبلاً باهراً! مع كل الحب...)', 'Write your personalized message here (e.g. Happy Birthday to our little champion! Wishing you a world of wonder and joy...)')}
-                    rows={2}
-                    className="w-full p-3.5 bg-white rounded-2xl border border-brand-teal/30 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 text-xs font-medium text-brand-navy outline-none resize-none shadow-inner"
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl flex-shrink-0">🎁</span>
+                      <div>
+                        <span className="font-black text-brand-navy text-sm block">{t('تغليف هدايا فاخر', 'Premium Gift Wrapping')}</span>
+                        <span className="text-[11px] text-gray-500 font-medium block leading-tight">{t('شريط حريري وبوكس فاخر جاهز للإهداء', 'Luxury gift wrap with satin ribbon')}</span>
+                      </div>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={isGiftWrapping} 
+                      onChange={(e) => setIsGiftWrapping(e.target.checked)} 
+                      onClick={(e) => e.stopPropagation()} 
+                      className="mt-1 accent-brand-coral w-4 h-4 rounded cursor-pointer"
+                    />
+                  </div>
+                  <div className="text-left rtl:text-right">
+                    <span className="text-xs font-black text-brand-coral">+{convertPrice(2.000, currency)}</span>
+                  </div>
+                </div>
+
+                {/* Greeting Gift Card (0.5 KD) */}
+                <div 
+                  className={'p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ' + (
+                    isGiftCard ? 'border-brand-teal bg-brand-teal/5 shadow-sm ring-2 ring-brand-teal/20' : 'border-gray-200 bg-white/60 hover:border-gray-300'
+                  )} 
+                  onClick={() => setIsGiftCard(!isGiftCard)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl flex-shrink-0">💌</span>
+                      <div>
+                        <span className="font-black text-brand-navy text-sm block">{t('بطاقة إهداء مخصصة', 'Personalized Gift Card')}</span>
+                        <span className="text-[11px] text-gray-500 font-medium block leading-tight">{t('كرت إهداء مطبوع بكلماتك ورسالتك', 'Printed card with your custom message')}</span>
+                      </div>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={isGiftCard} 
+                      onChange={(e) => setIsGiftCard(e.target.checked)} 
+                      onClick={(e) => e.stopPropagation()} 
+                      className="mt-1 accent-brand-teal w-4 h-4 rounded cursor-pointer"
+                    />
+                  </div>
+                  <div className="text-left rtl:text-right">
+                    <span className="text-xs font-black text-brand-teal">+{convertPrice(0.500, currency)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Gift Message Textbox (Only if Gift Card is selected) */}
+              <AnimatePresence>
+                {isGiftCard && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2 pt-1 overflow-hidden"
+                  >
+                    <label className="text-xs font-black text-brand-navy flex items-center justify-between">
+                      <span>💌 {t('رسالة بطاقة الإهداء:', 'Your Gift Card Message:')}</span>
+                      <span className="text-[10px] text-gray-400 font-normal">{giftMessage.length}/150 {t('حرف', 'chars')}</span>
+                    </label>
+                    <textarea 
+                      value={giftMessage}
+                      onChange={(e) => setGiftMessage(e.target.value.slice(0, 150))}
+                      placeholder={t('اكتب رسالتك الجميلة هنا (مثال: إلى بطلنا الغالي، نتمنى لك عيد ميلاد سعيد ومستقبلاً باهراً! مع كل الحب...)', 'Write your personalized message here (e.g. Happy Birthday to our little champion! Wishing you a world of wonder and joy...)')}
+                      rows={2}
+                      className="w-full p-3.5 bg-white rounded-2xl border border-brand-teal/30 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 text-xs font-medium text-brand-navy outline-none resize-none shadow-inner"
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Contact & Shipping Form */}
           <div className="bg-white/50 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white shadow-xl space-y-6">
@@ -884,13 +886,13 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
               )}
 
               {/* Gift Options in Summary */}
-              {isGiftWrapping && (
+              {isPhysicalAddon && isGiftWrapping && (
                 <div className="flex justify-between items-center text-xs pt-1 border-t border-gray-100">
                   <span className="font-bold text-brand-coral">🎁 {t('تغليف هدايا فاخر', 'Gift Wrapping')}</span>
                   <span className="font-black text-brand-coral">+{convertPrice(2.000, currency)}</span>
                 </div>
               )}
-              {isGiftCard && (
+              {isPhysicalAddon && isGiftCard && (
                 <div className="flex justify-between items-center text-xs pt-1">
                   <span className="font-bold text-brand-teal">💌 {t('بطاقة إهداء مخصصة', 'Gift Card')}</span>
                   <span className="font-black text-brand-teal">+{convertPrice(0.500, currency)}</span>
