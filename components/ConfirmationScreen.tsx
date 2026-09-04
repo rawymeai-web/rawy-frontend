@@ -38,6 +38,28 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, on
     yearly: t('الباقة السنوية', 'Yearly Subscription')
   }[storyData.planType || 'one_time'];
 
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      // @ts-ignore
+      const fileService = await import('../services/fileService');
+      const blob = await fileService.generatePreviewPdf(storyData, language, undefined, orderNumber);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const safeTitle = (storyData?.title || 'Storybook').replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
+      link.download = `Rawy_${safeTitle}_${orderNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      alert(t('حدث خطأ أثناء تنزيل الـ PDF: ', 'Error downloading PDF: ') + e);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] w-full p-4" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
       {/* Glassmorphism Card */}
@@ -158,24 +180,19 @@ const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ orderNumber, on
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
           {!isManualPayment && (
-            <Button onClick={async () => {
-              try {
-                // @ts-ignore
-                const fileService = await import('../services/fileService');
-                const blob = await fileService.generatePrintPackage(storyData, shippingDetails || {} as any, language, orderNumber);
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `Order_${orderNumber}_Package.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              } catch (e) { alert('Download failed: ' + e); }
-            }} className="text-base px-8 py-3.5 bg-brand-orange hover:bg-brand-coral rounded-2xl shadow-lg w-full sm:w-auto">
-              {t('⬇ تنزيل الملفات', '⬇ Download Files')}
+            <Button 
+              onClick={handleDownloadPdf} 
+              disabled={isDownloadingPdf}
+              className="text-base px-8 py-3.5 bg-brand-orange hover:bg-brand-coral rounded-2xl shadow-lg w-full sm:w-auto flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg">
+                {isDownloadingPdf ? 'hourglass_top' : 'picture_as_pdf'}
+              </span>
+              <span>{isDownloadingPdf ? t('جاري تجهيز الـ PDF...', 'Preparing PDF...') : t('📄 تنزيل القصة (PDF)', '📄 Download Storybook (PDF)')}</span>
             </Button>
           )}
           
-          <Button onClick={onRestart} className="text-base px-8 py-3.5 rounded-2xl shadow-lg hover:shadow-xl w-full sm:w-auto bg-brand-navy hover:bg-brand-navy/90 text-white">
+          <Button onClick={onRestart} className="text-base px-8 py-3.5 rounded-2xl shadow-lg hover:shadow-xl w-full sm:w-auto bg-brand-navy hover:bg-brand-navy/90 text-white cursor-pointer">
             {t('صنع قصة جديدة', 'Create a New Story')}
           </Button>
         </div>

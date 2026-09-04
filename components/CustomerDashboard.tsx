@@ -50,6 +50,27 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
     });
     const [user, setUser] = useState<any>(null);
     const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
+    const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
+
+    const handleDownloadOrderPdf = async (order: any) => {
+        setDownloadingOrderId(order.orderNumber);
+        try {
+            // @ts-ignore
+            const fileService = await import('../services/fileService');
+            const blob = await fileService.generatePreviewPdf(order.storyData, language, undefined, order.orderNumber);
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const safeTitle = (order.storyData?.title || 'Storybook').replace(/[^a-zA-Z0-9\u0600-\u06FF_-]/g, '_');
+            link.download = `Rawy_${safeTitle}_${order.orderNumber}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (e) {
+            alert(t('حدث خطأ أثناء تنزيل الـ PDF: ', 'Error downloading PDF: ') + e);
+        } finally {
+            setDownloadingOrderId(null);
+        }
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -272,11 +293,26 @@ export const CustomerDashboard: React.FC<DashboardProps> = ({
                                             {hasPreview && (
                                                 <Button 
                                                     onClick={() => onViewBook(order)}
-                                                    className="flex-1 md:flex-none !px-6 sm:!px-8 !py-3 rounded-xl bg-brand-orange text-white hover:bg-brand-orange/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-orange/20 flex items-center justify-center gap-2"
+                                                    className="flex-1 md:flex-none !px-5 sm:!px-7 !py-3 rounded-xl bg-brand-orange text-white hover:bg-brand-orange/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-orange/20 flex items-center justify-center gap-2"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">auto_stories</span>
-                                                    {t('تصفح وقراءة الكتاب 📖', 'Read & Flip Storybook 📖')}
+                                                    {t('قراءة 📖', 'Read 📖')}
                                                 </Button>
+                                            )}
+                                            {hasPreview && (
+                                                <button
+                                                    onClick={() => handleDownloadOrderPdf(order)}
+                                                    disabled={downloadingOrderId === order.orderNumber}
+                                                    title={t('تنزيل ملف الـ PDF', 'Download Storybook PDF')}
+                                                    className="px-4 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-brand-navy transition-all flex items-center justify-center gap-1.5 text-xs font-bold shadow-sm cursor-pointer disabled:opacity-50"
+                                                >
+                                                    <span className="material-symbols-outlined text-base text-brand-coral">
+                                                        {downloadingOrderId === order.orderNumber ? 'hourglass_top' : 'picture_as_pdf'}
+                                                    </span>
+                                                    <span>
+                                                        {downloadingOrderId === order.orderNumber ? t('جاري التجهيز...', 'Preparing...') : t('تنزيل PDF', 'Download PDF')}
+                                                    </span>
+                                                </button>
                                             )}
                                             {hasPreview && (
                                                 <button
