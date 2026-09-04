@@ -229,9 +229,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     discountBadge: null,
                     billingSummary: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase (No subscription)'),
                     perks: [
-                      t('📖 كتاب رقمي تفاعلي عالي الدقة (Softcopy)', 'HD Interactive Digital Softcopy'),
-                      t('📱 قراءة وتصفح تفاعلي سلس على أي جهاز', 'Unlimited interactive reading on any device'),
-                      t('⬇ تنزيل فوري لملف الـ PDF للطباعة', 'Instant PDF download anytime'),
+                      t('📖 قصة رقمية تفاعلية بجودة عالية', 'HD interactive digital storybook'),
+                      t('📱 قراءة سهلة عبر أي جهاز', 'Read on any phone, tablet, or PC'),
+                      t('📥 تسليم نسخة PDF بعد المراجعة والتجهيز', 'PDF copy delivered after review & creation'),
                     ]
                   },
                   { 
