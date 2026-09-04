@@ -444,7 +444,7 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
                       ? 'bg-brand-teal text-white border-brand-teal shadow-sm' 
                       : 'bg-brand-orange/10 text-brand-orange border-brand-orange/20'
                   }`}>
-                    {t('ميزة إضافية', 'PREMIUM')} • +{convertPrice(1.0, currency)}
+                    {t('ميزة إضافية', 'PREMIUM')} • +{convertPrice(0.5, currency)}
                   </span>
                 </div>
                 <p className="text-[10px] text-brand-navy/40 mt-1">

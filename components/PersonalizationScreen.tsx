@@ -149,7 +149,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                           ? 'bg-white text-brand-teal border-white' 
                           : 'bg-brand-orange/10 text-brand-orange border-brand-orange/20'
                       }`}>
-                        {t('ميزة إضافية', 'PREMIUM')} • +{convertPrice(2.0, currency)}
+                        {t('ميزة إضافية', 'PREMIUM')} • +{convertPrice(1.5, currency)}
                       </span>
                     </div>
                     <p className={`text-[10px] ${localData.useSecondCharacter ? 'text-white/80' : 'text-brand-navy/40'}`}>
