@@ -242,9 +242,10 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     strikethroughPrice: null,
                     discountBadge: null,
                     billingSummary: t('دفعة لمرة واحدة (بدون تجديد)', 'One-time payment (No sub)'),
+                    includesLabel: null,
                     perks: [
-                      { text: t('قصة مخصصة واحدة', '1 Custom storybook') },
-                      { text: t('قارئ تفاعلي ونسخة PDF', 'Web reader & PDF copy') },
+                      { text: t('قصة رقمية مخصصة كاملة', 'Full custom digital storybook') },
+                      { text: t('قارئ تفاعلي ونسخة PDF', 'Interactive reader & PDF copy') },
                       { text: t('قراءة عبر أي جهاز', 'Read on any device') },
                     ]
                   },
@@ -256,11 +257,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     discountBadge: t('وفر ' + pricing.monthlyDiscountPercent + '%', 'Save ' + pricing.monthlyDiscountPercent + '%'),
                     billingSummary: t('فاتورة ' + convertPrice(pricing.monthlyPrice, currency) + ' شهرياً (كتاب كل شهر)', 'Billed ' + convertPrice(pricing.monthlyPrice, currency) + '/mo (1 book/mo)'), 
                     badge: t('الأكثر شعبية', 'POPULAR'),
+                    includesLabel: t('كل مزايا القصة الفردية، بالإضافة إلى:', 'Everything in Single Book, plus:'),
                     perks: [
-                      { text: t('قصة جديدة كل شهر', '1 New book every month') },
-                      { text: t('بطل ثانٍ مجاناً', 'FREE 2nd hero included'), badge: t('مجاناً', 'FREE') },
+                      { text: t('قصة مخصصة جديدة شهرياً', '1 New custom book every month') },
+                      { text: t('بطل ثانٍ مجاناً بكل قصة', 'FREE 2nd hero on all books'), badge: t('مجاناً', 'FREE') },
                       { text: t('تخصيص مناسبات مجاناً', 'FREE special events'), badge: t('مجاناً', 'FREE') },
-                      { text: t('قارئ تفاعلي ونسخة PDF', 'Web reader & PDF copy') },
                     ]
                   },
                   { 
@@ -271,10 +272,10 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     discountBadge: t('وفر ' + pricing.yearlyDiscountPercent + '%', 'Save ' + pricing.yearlyDiscountPercent + '%'),
                     billingSummary: t('تُدفع ' + convertPrice(pricing.yearlyTotal, currency) + ' سنوياً لـ 12 كتاباً', 'Billed ' + convertPrice(pricing.yearlyTotal, currency) + '/yr for 12 books'), 
                     badge: t('أفضل توفير', 'BEST VALUE'),
+                    includesLabel: t('كل مزايا النادي الشهري، بالإضافة إلى:', 'Everything in Monthly Club, plus:'),
                     perks: [
-                      { text: t('12 قصة مخصصة طوال العام', '12 Custom books / year') },
-                      { text: t('بطل ثانٍ ومناسبات مجاناً', 'FREE 2nd hero & events'), badge: t('مجاناً', 'FREE') },
-                      { text: t('خصم 15% على الطباعة', '15% OFF printed books'), badge: t('15% خصم', '15% OFF') },
+                      { text: t('12 قصة مخصصة (كتاب كل شهر)', '12 Custom books (1/month)') },
+                      { text: t('خصم 15% على الكتب المطبوعة', '15% OFF printed hardcovers'), badge: t('15% خصم', '15% OFF') },
                       { text: t('وصول VIP لجميع الأنماط', 'VIP access to all styles') },
                     ]
                   }
@@ -342,6 +343,14 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
 
                       {/* Plan Perks Checklist */}
                       <div className="pt-3 border-t border-gray-100 space-y-2 text-left rtl:text-right w-full">
+                        {p.includesLabel && (
+                          <div className={`text-[11px] font-black tracking-tight flex items-center gap-1.5 pb-1 ${
+                            isSelected ? 'text-brand-coral' : 'text-brand-teal'
+                          }`}>
+                            <span className="material-symbols-outlined text-xs">auto_awesome</span>
+                            <span>{p.includesLabel}</span>
+                          </div>
+                        )}
                         {p.perks.map((perk, pIdx) => (
                           <div key={pIdx} className="text-xs font-bold text-brand-navy/85 flex items-center gap-2">
                             <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
