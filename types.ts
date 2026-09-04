@@ -265,7 +265,9 @@ export interface StoryData {
   isPrintUpsell?: boolean; // NEW: For post-read physical re-orders
   shippingRegion?: 'kuwait' | 'gcc' | 'row';
   printStatus?: 'none' | 'ordered' | 'printed' | 'delivered';
-  isCustomTheme?: boolean; // NEW: Track if this book uses a special event/custom theme (+1 KD)
+  isCustomTheme?: boolean;
+  cachedPreviews?: any[];
+  cachedHeroSignature?: string; // NEW: Track if this book uses a special event/custom theme (+1 KD)
 }
 
 export interface WorkflowLog {

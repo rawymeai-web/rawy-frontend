@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { StoryData, Language } from '../types';
 import { Button } from './Button';
 import { Spinner } from './Spinner';
@@ -22,6 +22,21 @@ interface StylePreview {
     imageBase64?: string;
     secondImageBase64?: string;
     errorMessage?: string;
+}
+
+// Computes a deterministic signature representing the uploaded photo(s), style, and hero parameters
+export function computeHeroSignature(storyData: StoryData): string {
+    const heroA = storyData.mainCharacter?.imageBases64?.[0] || storyData.styleReferenceImageBase64 || '';
+    const heroB = storyData.secondCharacter?.imageBases64?.[0] || storyData.secondCharacterImageBase64 || '';
+    const heroAHash = heroA ? `${heroA.slice(0, 100)}_${heroA.slice(-40)}_${heroA.length}` : 'no-hero-a';
+    const heroBHash = heroB ? `${heroB.slice(0, 100)}_${heroB.slice(-40)}_${heroB.length}` : 'no-hero-b';
+    const stylePrompt = storyData.selectedStylePrompt || storyData.selectedStyleNames?.[0] || 'default';
+    const age = storyData.childAge || '5';
+    const gender = storyData.childGender || 'neutral';
+    const dual = storyData.useSecondCharacter ? 'dual' : 'single';
+    const theme = storyData.themeId || storyData.theme || 'default';
+
+    return `rawy_dna_v2:${dual}:${heroAHash}:${heroBHash}:${stylePrompt}:${age}:${gender}:${theme}`;
 }
 
 const StyleCard: React.FC<{
@@ -100,38 +115,129 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
     const [isLocking, setIsLocking] = useState(false);
     const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-    const [previews, setPreviews] = useState<StylePreview[]>(
-        [1, 2, 3, 4].map(i => ({
+    const currentSig = useMemo(() => computeHeroSignature(storyData), [
+        storyData.mainCharacter,
+        storyData.secondCharacter,
+        storyData.useSecondCharacter,
+        storyData.selectedStylePrompt,
+        storyData.selectedStyleNames,
+        storyData.themeId,
+        storyData.theme,
+        storyData.childAge,
+        storyData.childGender
+    ]);
+
+    // Check if we have valid cached previews for this exact signature
+    const getCachedDNA = (): { previews: StylePreview[]; primaryIdx: number | null; secondaryIdx: number | null } | null => {
+        try {
+            // 1. Check in storyData first
+            if (storyData.cachedHeroSignature === currentSig && Array.isArray(storyData.cachedPreviews) && storyData.cachedPreviews.length > 0) {
+                const hasDone = storyData.cachedPreviews.some((p: any) => p.status === 'done' && p.imageBase64);
+                if (hasDone) {
+                    return {
+                        previews: storyData.cachedPreviews,
+                        primaryIdx: storyData.dnaAudit?.heroA?.selectedPreviewIndex ?? 0,
+                        secondaryIdx: storyData.dnaAudit?.heroB?.selectedPreviewIndex ?? 0
+                    };
+                }
+            }
+
+            // 2. Check in sessionStorage
+            const sessionRaw = sessionStorage.getItem(`rawy_dna_cache_${currentSig}`);
+            if (sessionRaw) {
+                const parsed = JSON.parse(sessionRaw);
+                if (Array.isArray(parsed.previews) && parsed.previews.some((p: any) => p.status === 'done' && p.imageBase64)) {
+                    return {
+                        previews: parsed.previews,
+                        primaryIdx: parsed.primaryIdx ?? storyData.dnaAudit?.heroA?.selectedPreviewIndex ?? 0,
+                        secondaryIdx: parsed.secondaryIdx ?? storyData.dnaAudit?.heroB?.selectedPreviewIndex ?? 0
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('[HeroCache] Read error:', e);
+        }
+        return null;
+    };
+
+    const initialCached = getCachedDNA();
+
+    const [previews, setPreviews] = useState<StylePreview[]>(() => {
+        if (initialCached) return initialCached.previews;
+        return [1, 2, 3, 4].map(i => ({
             id: i.toString(),
             name: storyData.selectedStyleNames?.[0] || 'Default',
             prompt: storyData.selectedStylePrompt,
             status: 'pending'
-        }))
-    );
-    const [selectedPrimaryIndex, setSelectedPrimaryIndex] = useState<number | null>(null);
-    const [selectedSecondaryIndex, setSelectedSecondaryIndex] = useState<number | null>(null);
+        }));
+    });
 
-    const lastRequestKey = React.useRef<string>("");
-    const [debugStatus, setDebugStatus] = useState<string>("Initializing...");
+    const [selectedPrimaryIndex, setSelectedPrimaryIndex] = useState<number | null>(() => {
+        if (initialCached) return initialCached.primaryIdx;
+        return null;
+    });
+
+    const [selectedSecondaryIndex, setSelectedSecondaryIndex] = useState<number | null>(() => {
+        if (initialCached) return initialCached.secondaryIdx;
+        return null;
+    });
+
+    const [debugStatus, setDebugStatus] = useState<string>(() => {
+        if (initialCached) return language === 'ar' ? 'تم استرجاع الصورة المحفوظة ✨ (0 توكن)' : 'Restored from Cache ✨ (0 Tokens)';
+        return 'Initializing...';
+    });
+
+    const activeSignatureRef = useRef<string>(initialCached ? currentSig : '');
 
     useEffect(() => {
         let isMounted = true;
         const generateVariations = async () => {
-            if (!storyData.mainCharacter.imageBases64 || storyData.mainCharacter.imageBases64.length === 0) {
+            const hasMainImage = (storyData.mainCharacter?.imageBases64 && storyData.mainCharacter.imageBases64.length > 0) ||
+                                 (storyData.mainCharacter?.images && storyData.mainCharacter.images.length > 0) ||
+                                 !!storyData.styleReferenceImageBase64;
+
+            if (!hasMainImage) {
                 if (isMounted) setDebugStatus("Waiting for Reference Image...");
                 return;
             }
-            const currentKey = `${storyData.mainCharacter.name}-${storyData.selectedStylePrompt}-${storyData.childAge}`;
-            if (lastRequestKey.current === currentKey) {
-                const isWorking = previews.some(p => p.status === 'done' || p.status === 'loading');
-                if (isWorking) {
-                    if (isMounted) setDebugStatus("Ready (Cached)");
+
+            // 1. FAST-PATH: If this exact signature was already processed in this component session or cache
+            if (activeSignatureRef.current === currentSig) {
+                const hasReadyPreviews = previews.some(p => p.status === 'done' && p.imageBase64);
+                if (hasReadyPreviews) {
+                    if (isMounted) {
+                        setDebugStatus(language === 'ar' ? 'الصورة محفوظة جاهزة ✨ (0 توكن)' : 'Cached & Ready ✨ (0 Tokens)');
+                    }
                     return;
                 }
             }
-            lastRequestKey.current = currentKey;
-            if (isMounted) setDebugStatus("Starting Generation Engine...");
+
+            // 2. CACHE-LOOKUP: Check if stored in memory/sessionStorage
+            const cached = getCachedDNA();
+            if (cached) {
+                activeSignatureRef.current = currentSig;
+                if (isMounted) {
+                    setPreviews(cached.previews);
+                    setSelectedPrimaryIndex(cached.primaryIdx);
+                    if (storyData.useSecondCharacter) {
+                        setSelectedSecondaryIndex(cached.secondaryIdx);
+                    }
+                    setDebugStatus(language === 'ar' ? 'تم استرجاع الصورة المحفوظة ✨ (0 توكن)' : 'Restored from Cache ✨ (0 Tokens)');
+                }
+                return;
+            }
+
+            // 3. GENERATION: Photo or style actually changed, or user requested retry
+            activeSignatureRef.current = currentSig;
+            if (isMounted) setDebugStatus(language === 'ar' ? 'جاري رسم ومعالجة بطاقات الشخصية...' : 'Starting Generation Engine...');
             setPreviews(prev => prev.map(p => ({ ...p, status: 'loading' })));
+
+            const currentPreviews = [1, 2, 3, 4].map(i => ({
+                id: i.toString(),
+                name: storyData.selectedStyleNames?.[0] || 'Default',
+                prompt: storyData.selectedStylePrompt,
+                status: 'loading' as GenerationStatus
+            }));
 
             const callPreview = async (index: number) => {
                 try {
@@ -151,10 +257,22 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                     }) as any;
 
                     if (isMounted) {
-                        setPreviews(prev => prev.map((p, idx) => idx === index
-                            ? { ...p, status: 'done', imageBase64, secondImageBase64 }
-                            : p
-                        ));
+                        setPreviews(prev => {
+                            const updated = prev.map((p, idx) => idx === index
+                                ? { ...p, status: 'done' as GenerationStatus, imageBase64, secondImageBase64 }
+                                : p
+                            );
+                            // Store in sessionStorage on successful arrival
+                            try {
+                                sessionStorage.setItem(`rawy_dna_cache_${currentSig}`, JSON.stringify({
+                                    previews: updated,
+                                    primaryIdx: selectedPrimaryIndex ?? 0,
+                                    secondaryIdx: selectedSecondaryIndex ?? 0,
+                                    updatedAt: Date.now()
+                                }));
+                            } catch (e) {}
+                            return updated;
+                        });
                         setSelectedPrimaryIndex(prev => prev === null ? index : prev);
                         if (storyData.useSecondCharacter) {
                             setSelectedSecondaryIndex(prev => prev === null ? index : prev);
@@ -164,18 +282,22 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
                     console.error(`Preview ${index} failed:`, e);
                     if (isMounted) {
                         setPreviews(prev => prev.map((p, idx) => idx === index
-                            ? { ...p, status: 'error', errorMessage: e.message || "Unknown error" }
+                            ? { ...p, status: 'error' as GenerationStatus, errorMessage: e.message || "Unknown error" }
                             : p
                         ));
                     }
                 }
             };
-            await Promise.all(previews.map((_, i) => callPreview(i)));
-            if (isMounted) setDebugStatus("Generation Complete");
+
+            await Promise.all(currentPreviews.map((_, i) => callPreview(i)));
+            if (isMounted) {
+                setDebugStatus(language === 'ar' ? 'اكتمل التوليد وتم حفظ الصورة بالذاكرة ✓' : 'Generation Complete & Cached ✓');
+            }
         };
+
         generateVariations();
         return () => { isMounted = false; };
-    }, [storyData.mainCharacter, storyData.selectedStylePrompt]);
+    }, [currentSig]);
 
     const handleNext = async () => {
         if (selectedPrimaryIndex === null) return;
@@ -204,6 +326,16 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
         setIsLocking(true);
         const lockedAt = new Date().toISOString();
 
+        // Save DNA cache to sessionStorage
+        try {
+            sessionStorage.setItem(`rawy_dna_cache_${currentSig}`, JSON.stringify({
+                previews,
+                primaryIdx: selectedPrimaryIndex,
+                secondaryIdx: selectedSecondaryIndex,
+                updatedAt: Date.now()
+            }));
+        } catch (e) {}
+
         // Track Style selection
         import('../utils/analytics').then(({ trackPixelEvent }) => {
             trackPixelEvent('SelectStyle', {
@@ -230,7 +362,7 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
             // ─── Hero B DNA: use secondImageBase64 ONLY — never fall back to Hero A ─
             const heroBDNAImage = isSecondSubjectObject
                 ? storyData.secondCharacter?.imageBases64[0]
-                : secondaryChoice?.secondImageBase64; // undefined if no dual hero
+                : secondaryChoice?.secondImageBase64;
 
             // ─── DNA Audit Trail ─────────────────────────────────────────────────────
             const dnaAudit: StoryData['dnaAudit'] = {
@@ -250,6 +382,8 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
             };
 
             onNext({
+                cachedPreviews: previews,
+                cachedHeroSignature: currentSig,
                 styleReferenceImageBase64: primaryChoice.imageBase64,
                 secondCharacterImageBase64: heroBDNAImage,
                 technicalStyleGuide: guide,
@@ -269,12 +403,13 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
 
         } catch (e) {
             console.error("Locking failed:", e);
-            // Even on API error, still save the audit and whatever DNA we have
             const heroBDNAImage = isSecondSubjectObject
                 ? storyData.secondCharacter?.imageBases64[0]
                 : secondaryChoice?.secondImageBase64;
 
             onNext({
+                cachedPreviews: previews,
+                cachedHeroSignature: currentSig,
                 styleReferenceImageBase64: primaryChoice.imageBase64,
                 secondCharacterImageBase64: heroBDNAImage,
                 dnaAudit: {
@@ -306,10 +441,56 @@ const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onNext, onB
         }
     };
 
-
     const handleRetry = () => {
-        lastRequestKey.current = ""; 
-        setPreviews(prev => prev.map(p => ({ ...p, status: 'pending', imageBase64: undefined, errorMessage: undefined })));
+        // Clear cached DNA for this signature so fresh generation takes place
+        try {
+            sessionStorage.removeItem(`rawy_dna_cache_${currentSig}`);
+        } catch (e) {}
+        activeSignatureRef.current = "";
+        setPreviews(prev => prev.map(p => ({ ...p, status: 'loading', imageBase64: undefined, secondImageBase64: undefined, errorMessage: undefined })));
+        
+        // Trigger fresh generation
+        const callPreview = async (index: number) => {
+            try {
+                const { imageBase64, secondImageBase64 } = await backendApi.generatePreview({
+                    character: {
+                        ...storyData.mainCharacter,
+                        gender: storyData.childGender
+                    },
+                    secondCharacter: (storyData.useSecondCharacter && storyData.secondCharacter?.type !== 'object' && storyData.secondCharacter) ? {
+                        ...storyData.secondCharacter,
+                        gender: storyData.secondCharacter.gender || (storyData.childGender === 'boy' ? 'girl' : 'boy')
+                    } : undefined,
+                    themeDescription: storyData.theme || "Likeness Portrait",
+                    themeId: storyData.themeId,
+                    stylePrompt: storyData.selectedStylePrompt,
+                    age: storyData.childAge || "5"
+                }) as any;
+
+                setPreviews(prev => {
+                    const updated = prev.map((p, idx) => idx === index
+                        ? { ...p, status: 'done' as GenerationStatus, imageBase64, secondImageBase64 }
+                        : p
+                    );
+                    try {
+                        sessionStorage.setItem(`rawy_dna_cache_${currentSig}`, JSON.stringify({
+                            previews: updated,
+                            primaryIdx: selectedPrimaryIndex ?? 0,
+                            secondaryIdx: selectedSecondaryIndex ?? 0,
+                            updatedAt: Date.now()
+                        }));
+                    } catch (e) {}
+                    return updated;
+                });
+            } catch (e: any) {
+                setPreviews(prev => prev.map((p, idx) => idx === index
+                    ? { ...p, status: 'error' as GenerationStatus, errorMessage: e.message || "Unknown error" }
+                    : p
+                ));
+            }
+        };
+
+        [0, 1, 2, 3].forEach(i => callPreview(i));
     };
 
     return (
