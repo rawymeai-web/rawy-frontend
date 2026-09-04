@@ -237,15 +237,15 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                 {[
                   { 
                     id: 'one_time', 
-                    name: t('قصة واحدة لمرة واحدة', 'Single Storybook'), 
+                    name: t('قصة واحدة', 'Single Storybook'), 
                     pricePerBook: convertPrice(pricing.singleDigitalBase, currency),
                     strikethroughPrice: null,
                     discountBadge: null,
-                    billingSummary: t('شراء لمرة واحدة (بدون اشتراك)', 'One-time purchase (No subscription)'),
+                    billingSummary: t('دفعة لمرة واحدة (بدون تجديد)', 'One-time payment (No sub)'),
                     perks: [
-                      t('📖 قصة رقمية تفاعلية بجودة عالية', 'HD interactive digital storybook'),
-                      t('📱 قراءة سهلة عبر أي جهاز', 'Read on any phone, tablet, or PC'),
-                      t('📥 تسليم نسخة PDF بعد المراجعة والتجهيز', 'PDF copy delivered after review & creation'),
+                      { text: t('قصة مخصصة واحدة', '1 Custom storybook') },
+                      { text: t('قارئ تفاعلي ونسخة PDF', 'Web reader & PDF copy') },
+                      { text: t('قراءة عبر أي جهاز', 'Read on any device') },
                     ]
                   },
                   { 
@@ -257,9 +257,10 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     billingSummary: t('فاتورة ' + convertPrice(pricing.monthlyPrice, currency) + ' شهرياً (كتاب كل شهر)', 'Billed ' + convertPrice(pricing.monthlyPrice, currency) + '/mo (1 book/mo)'), 
                     badge: t('الأكثر شعبية', 'POPULAR'),
                     perks: [
-                      t('📱 قصة مخصصة جديدة شهرياً', '1 New custom storybook every month'),
-                      t('✨ يشمل جميع مزايا القصة الفردية (تفاعلية + PDF)', 'Includes all Single Book features (Reader + PDF)'),
-                      t('👥 بطل ثانٍ ومناسبات خاصة مجاناً بكل قصة', 'FREE 2nd Hero & Events on all books'),
+                      { text: t('قصة جديدة كل شهر', '1 New book every month') },
+                      { text: t('بطل ثانٍ مجاناً', 'FREE 2nd hero included'), badge: t('مجاناً', 'FREE') },
+                      { text: t('تخصيص مناسبات مجاناً', 'FREE special events'), badge: t('مجاناً', 'FREE') },
+                      { text: t('قارئ تفاعلي ونسخة PDF', 'Web reader & PDF copy') },
                     ]
                   },
                   { 
@@ -271,10 +272,10 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                     billingSummary: t('تُدفع ' + convertPrice(pricing.yearlyTotal, currency) + ' سنوياً لـ 12 كتاباً', 'Billed ' + convertPrice(pricing.yearlyTotal, currency) + '/yr for 12 books'), 
                     badge: t('أفضل توفير', 'BEST VALUE'),
                     perks: [
-                      t('👑 12 قصة مخصصة (كتاب جديد كل شهر)', '12 Custom storybooks (1 new book every month)'),
-                      t('✨ يشمل جميع مزايا باقة النادي الشهري', 'Includes all Monthly Club features & Free Add-ons'),
-                      t('🎁 خصم 15% على جميع الكتب المطبوعة', '15% OFF all physical printed books'),
-                      t('🚀 وصول حصري لجميع أساليب الرسم الجديدة', 'VIP Access to all new styles')
+                      { text: t('12 قصة مخصصة طوال العام', '12 Custom books / year') },
+                      { text: t('بطل ثانٍ ومناسبات مجاناً', 'FREE 2nd hero & events'), badge: t('مجاناً', 'FREE') },
+                      { text: t('خصم 15% على الطباعة', '15% OFF printed books'), badge: t('15% خصم', '15% OFF') },
+                      { text: t('وصول VIP لجميع الأنماط', 'VIP access to all styles') },
                     ]
                   }
                 ].map((p) => {
@@ -339,11 +340,21 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
                         </p>
                       </div>
 
-                      {/* Plan Perks */}
-                      <div className="pt-3 border-t border-gray-100 space-y-1.5 text-left rtl:text-right w-full">
+                      {/* Plan Perks Checklist */}
+                      <div className="pt-3 border-t border-gray-100 space-y-2 text-left rtl:text-right w-full">
                         {p.perks.map((perk, pIdx) => (
-                          <div key={pIdx} className="text-[10px] font-bold text-brand-navy/80 flex items-center gap-1 leading-tight">
-                            <span>{perk}</span>
+                          <div key={pIdx} className="text-xs font-bold text-brand-navy/85 flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? 'bg-brand-coral/20 text-brand-coral' : 'bg-emerald-100 text-emerald-600'
+                            }`}>
+                              <span className="material-symbols-outlined text-[13px] font-black">check</span>
+                            </div>
+                            <span className="flex-1 leading-tight">{perk.text}</span>
+                            {perk.badge && (
+                              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase flex-shrink-0 tracking-wider">
+                                {perk.badge}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
