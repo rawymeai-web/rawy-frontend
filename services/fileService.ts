@@ -138,7 +138,7 @@ async function renderTextBlobToImage(
     language: Language,
     fontSize: number = 42,
     childName: string = '',
-    style: 'clean' | 'box' = 'clean'
+    style: 'clean' | 'box' = 'box'
 ): Promise<{ dataUrl: string; width: number; height: number }> {
 
     const container = document.createElement('div');
@@ -157,6 +157,9 @@ async function renderTextBlobToImage(
 
     // BASE CSS
     let css = `
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
         width: ${widthPx}px;
         min-height: 160px;
         font-family: ${isAr ? 'Tajawal, sans-serif' : 'Nunito, sans-serif'};
@@ -165,20 +168,20 @@ async function renderTextBlobToImage(
         display: flex;
         flex-direction: column;
         justify-content: center;
-        align-items: center;
+        align-items: ${isAr ? 'flex-end' : 'flex-start'};
         text-align: ${isAr ? 'right' : 'left'};
         box-sizing: border-box;
         padding: 36px 42px;
     `;
 
-    // STYLE SPECIFIC CSS
+    // STYLE SPECIFIC CSS - Solid white card for guaranteed readability against dark or vibrant scenes
     if (style === 'box') {
         css += `
-            background-color: rgba(255, 255, 255, 0.88);
+            background-color: #FFFFFF;
             border-radius: 36px;
             color: #001A40;
-            border: 2px solid rgba(255, 255, 255, 0.95);
-            box-shadow: 0 10px 30px rgba(0, 26, 64, 0.08); 
+            border: 3px solid rgba(255, 255, 255, 0.95);
+            box-shadow: 0 12px 36px rgba(0, 26, 64, 0.12); 
         `;
     } else {
         // CLEAN STYLE
@@ -194,7 +197,7 @@ async function renderTextBlobToImage(
 
     document.body.appendChild(container);
     // Use html-to-image for native text shaping (fixes Arabic)
-    const dataUrl = await safeToPng(container, { pixelRatio: 3 });
+    const dataUrl = await safeToPng(container, { pixelRatio: 3, backgroundColor: 'transparent' });
     const canvasObj = new Image();
     await new Promise(r => { canvasObj.onload = r; canvasObj.src = dataUrl; });
     document.body.removeChild(container);
@@ -459,13 +462,20 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
                 else if (leftEmptyMatch) textOnLeft = true;
                 else textOnLeft = true;
             }
-            // Apply per-spread X/Y overrides from the editor, fall back to auto calculations
+            // Apply per-spread X/Y overrides from the editor, fall back to auto calculations (Top 12% default)
             const defaultRectX = textOnLeft ? pdfW * 0.05 : pdfW * 0.55;
-            const defaultRectY = (pdfH / 2) - (rectH / 2);
+            const defaultRectY = pdfH * 0.12;
             const rectX = spread.textOffsetX !== undefined ? spread.textOffsetX : defaultRectX;
             const rectY = spread.textOffsetY !== undefined ? spread.textOffsetY : defaultRectY;
 
             if (blobImg && blobImg.dataUrl) {
+                try {
+                    // Draw crisp native white card directly on PDF vector stream for 100% contrast on any scene
+                    pdf.setFillColor(255, 255, 255);
+                    pdf.roundedRect(rectX, rectY, rectW, rectH, 6, 6, 'F');
+                } catch (e) {
+                    console.warn("Native roundedRect failed:", e);
+                }
                 pdf.addImage(blobImg.dataUrl, 'PNG', rectX, rectY, rectW, rectH);
             }
         }
@@ -675,6 +685,13 @@ export const generateStitchedPdf = async (
             const txtY = pdfH - txtH - marginY;
 
             const cleanData = blobImg.dataUrl.includes(',') ? blobImg.dataUrl.split(',')[1] : blobImg.dataUrl;
+            try {
+                // Draw crisp native white card directly on PDF vector stream for 100% contrast on any scene
+                pdf.setFillColor(255, 255, 255);
+                pdf.roundedRect(txtX, txtY, txtW, txtH, 6, 6, 'F');
+            } catch (e) {
+                console.warn("Native roundedRect failed:", e);
+            }
             try {
                 pdf.addImage(`data:image/png;base64,${cleanData}`, 'PNG', txtX, txtY, txtW, txtH);
             } catch (e) { console.warn("Text Add Failed", e); }
