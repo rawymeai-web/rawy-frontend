@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from './Button';
+import { Spinner } from './Spinner';
 import type { ShippingDetails, Language, StoryData, DiscountDetails } from '../types';
 import { convertPrice, type Currency } from '../services/currencyService';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,6 +41,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   const [appliedPromo, setAppliedPromo] = useState<PromoValidationResult | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [details, setDetails] = useState<ShippingDetails>({ 
     name: storyData.parentName || '', 
@@ -77,6 +79,12 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       });
     });
   }, [storyData]);
+
+  React.useEffect(() => {
+    if (showUpsellModal) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [showUpsellModal]);
 
   const pricing = useMemo(() => {
     // Base Single Digital Storybook is flat 5.000 KD
@@ -191,31 +199,37 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
     setDetails(updated);
   };
 
-  const proceedDirectly = (selectedPlan: 'one_time' | 'monthly' | 'yearly' = planType) => {
-    const finalDetails: ShippingDetails = {
-      ...details,
-      isPhysicalDelivery: isPhysicalAddon,
-      shippingMethod: isPhysicalAddon ? shippingMethod : 'standard',
-      shippingCost: isPhysicalAddon ? pricing.shipping : 0,
-      isGiftWrapping: isPhysicalAddon ? isGiftWrapping : false,
-      isGiftCard: isPhysicalAddon ? isGiftCard : false,
-      giftMessage: (isPhysicalAddon && isGiftCard) ? giftMessage : '',
-      promoCode: appliedPromo?.code,
-      discountAmount: pricing.discountAmount,
-      discountDetails: appliedPromo?.discountDetails,
-      address: isPhysicalAddon 
-        ? formatFullAddress({ ...details, language }) 
-        : (language === 'ar' ? 'طلب رقمي (لا يتطلب شحن فعلي)' : 'Digital Softcopy (No physical delivery required)')
-    };
+  const proceedDirectly = async (selectedPlan: 'one_time' | 'monthly' | 'yearly' = planType) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const finalDetails: ShippingDetails = {
+        ...details,
+        isPhysicalDelivery: isPhysicalAddon,
+        shippingMethod: isPhysicalAddon ? shippingMethod : 'standard',
+        shippingCost: isPhysicalAddon ? pricing.shipping : 0,
+        isGiftWrapping: isPhysicalAddon ? isGiftWrapping : false,
+        isGiftCard: isPhysicalAddon ? isGiftCard : false,
+        giftMessage: (isPhysicalAddon && isGiftCard) ? giftMessage : '',
+        promoCode: appliedPromo?.code,
+        discountAmount: pricing.discountAmount,
+        discountDetails: appliedPromo?.discountDetails,
+        address: isPhysicalAddon 
+          ? formatFullAddress({ ...details, language }) 
+          : (language === 'ar' ? 'طلب رقمي (لا يتطلب شحن فعلي)' : 'Digital Softcopy (No physical delivery required)')
+      };
 
-    let calculatedTotal = pricing.total;
-    if (selectedPlan === 'monthly' && planType !== 'monthly') {
-      calculatedTotal = Math.max(0, pricing.monthlyPrice + pricing.physical + pricing.shipping + pricing.giftTotal - pricing.discountAmount);
-    } else if (selectedPlan === 'yearly' && planType !== 'yearly') {
-      calculatedTotal = Math.max(0, pricing.yearlyTotal + pricing.physical + pricing.shipping + pricing.giftTotal - pricing.discountAmount);
+      let calculatedTotal = pricing.total;
+      if (selectedPlan === 'monthly' && planType !== 'monthly') {
+        calculatedTotal = Math.max(0, pricing.monthlyPrice + pricing.physical + pricing.shipping + pricing.giftTotal - pricing.discountAmount);
+      } else if (selectedPlan === 'yearly' && planType !== 'yearly') {
+        calculatedTotal = Math.max(0, pricing.yearlyTotal + pricing.physical + pricing.shipping + pricing.giftTotal - pricing.discountAmount);
+      }
+
+      await onProceedToPayment(finalDetails, selectedPlan, calculatedTotal);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onProceedToPayment(finalDetails, selectedPlan, calculatedTotal);
   };
 
   const handleApplyPromo = async () => {
@@ -1135,9 +1149,17 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
               <Button 
                 type="submit" 
                 form="checkout-form"
-                className="w-full py-4 text-base font-black rounded-2xl shadow-xl shadow-brand-coral/20 bg-brand-coral hover:bg-[#e07b40] text-white flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isSubmitting}
+                className="w-full py-4 text-base font-black rounded-2xl shadow-xl shadow-brand-coral/20 bg-brand-coral hover:bg-[#e07b40] text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <span>{t('متابعة إلى الدفع ➔', 'Proceed to Payment ➔')}</span>
+                {isSubmitting ? (
+                  <>
+                    <Spinner size="sm" color="text-white" />
+                    <span>{t('جاري تجهيز الطلب...', 'Processing Order...')}</span>
+                  </>
+                ) : (
+                  <span>{t('متابعة إلى الدفع ➔', 'Proceed to Payment ➔')}</span>
+                )}
               </Button>
 
               <button
@@ -1161,12 +1183,12 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
       {/* Club Discount Intercept Modal (Opens when user submits Single Book order - Pushes to Yearly Club) */}
       <AnimatePresence>
         {showUpsellModal && (
-          <div className="fixed inset-0 bg-brand-navy/60 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={() => setShowUpsellModal(false)}>
+          <div className="fixed inset-0 bg-brand-navy/60 backdrop-blur-sm z-50 flex justify-center items-center p-4 overflow-y-auto" onClick={() => setShowUpsellModal(false)}>
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl p-6 sm:p-8 w-full max-w-lg border border-gray-100 text-center space-y-6 relative overflow-hidden"
+              className="bg-white rounded-[2.5rem] shadow-2xl p-6 sm:p-8 w-full max-w-lg border border-gray-100 text-center space-y-6 relative overflow-y-auto max-h-[90vh] my-auto"
               onClick={(e) => e.stopPropagation()}
               style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}
             >

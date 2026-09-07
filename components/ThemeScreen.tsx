@@ -252,7 +252,8 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
   const handleThemeClick = (themeOption: StoryTheme) => {
     setSelectedThemeId(themeOption.id);
     setCustomTitle(getTranslation(themeOption.title, language));
-    const components = getGuidelineComponentsForTheme(themeOption.id);
+    const age = parseInt(storyData.childAge || "5", 10);
+    const components = getGuidelineComponentsForTheme(themeOption.id, age);
     if (components) {
       setCustomGoal(components.goal);
       setCustomChallenge(components.challenge);
@@ -542,8 +543,8 @@ const ThemeScreen: React.FC<ThemeScreenProps> = ({ onNext, onBack, storyData, la
           className={`flex-[2] py-5 rounded-full font-black text-xl shadow-2xl transition-all hover:-translate-y-1 active:translate-y-0 active:scale-95 group relative overflow-hidden ${isNextDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-50' : 'bg-brand-orange text-white shadow-brand-orange/20 hover:shadow-brand-orange/40'}`}
         >
            <span className="relative z-10 flex items-center justify-center gap-3">
-             {t('ابدأ صناعة القصة!', 'Create My Story!')}
-             <span className="material-symbols-outlined">rocket_launch</span>
+             {t('صمّم بطل المغامرة ✨', 'Design Your Hero ✨')}
+             <span className="material-symbols-outlined">auto_awesome</span>
            </span>
            {!isNextDisabled && <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-full pointer-events-none"></div>}
         </button>

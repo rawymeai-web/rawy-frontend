@@ -1,22 +1,29 @@
-﻿import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { CartItem, StoryData } from '../types';
 
 interface CartContextType {
   cartItems: CartItem[];
+  items: CartItem[];
   draftItems: CartItem[];
+  drafts: CartItem[];
   cartCount: number;
+  totalItemsCount: number;
   draftCount: number;
   isCartOpen: boolean;
+  isOpen: boolean;
   cartTab: 'cart' | 'drafts';
+  activeTab: 'cart' | 'drafts';
   openCart: (tab?: 'cart' | 'drafts') => void;
   closeCart: () => void;
   addToCart: (item: Omit<CartItem, 'id' | 'createdAt' | 'updatedAt'>) => void;
   removeFromCart: (id: string) => void;
+  removeItem: (id: string) => void;
   updateCartItem: (id: string, updates: Partial<CartItem>) => void;
   clearCart: () => void;
   saveStoryAsDraft: (storyData: StoryData, planType?: 'one_time' | 'monthly' | 'yearly') => string;
   removeDraft: (id: string) => void;
   getCartTotal: () => number;
+  totalCartPrice: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -140,20 +147,27 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <CartContext.Provider value={{
       cartItems,
+      items: cartItems,
       draftItems,
+      drafts: draftItems,
       cartCount: cartItems.length,
+      totalItemsCount: cartItems.length,
       draftCount: draftItems.length,
       isCartOpen,
+      isOpen: isCartOpen,
       cartTab,
+      activeTab: cartTab,
       openCart,
       closeCart,
       addToCart,
       removeFromCart,
+      removeItem: removeFromCart,
       updateCartItem,
       clearCart,
       saveStoryAsDraft,
       removeDraft,
-      getCartTotal
+      getCartTotal,
+      totalCartPrice: getCartTotal()
     }}>
       {children}
     </CartContext.Provider>

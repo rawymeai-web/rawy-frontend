@@ -123,6 +123,77 @@ async function fetchCachedBackend<T>(endpoint: string, ttlMs: number = 10 * 60 *
     return freshData;
 }
 
+async function sanitizeAndCompressStoryData(storyData: any): Promise<any> {
+    if (!storyData || typeof storyData !== 'object') return storyData;
+    const clean = { ...storyData };
+
+    // 1. Remove volatile runtime preview caches and large debug dumps
+    delete clean.cachedPreviews;
+    delete clean.previewImages;
+    delete clean.styleVariants;
+    delete clean.coverDebugImages;
+    delete clean.workflowLogs;
+
+    // Helper: compress base64 images if they exceed 150KB
+    const compressArrayOfImages = async (imgList: any[]) => {
+        if (!Array.isArray(imgList)) return imgList;
+        return Promise.all(
+            imgList.map(async (img) => {
+                if (typeof img === 'string' && img.length > 150000 && !img.startsWith('http')) {
+                    try {
+                        const { compressBase64Image } = await import('../utils/imageUtils');
+                        return await compressBase64Image(img, 1024, 0.75);
+                    } catch (e) {
+                        return img;
+                    }
+                }
+                return img;
+            })
+        );
+    };
+
+    // 2. Compress hero photos
+    if (clean.mainCharacter) {
+        clean.mainCharacter = { ...clean.mainCharacter };
+        if (clean.mainCharacter.imageBases64) {
+            clean.mainCharacter.imageBases64 = await compressArrayOfImages(clean.mainCharacter.imageBases64);
+        }
+        if (clean.mainCharacter.images) {
+            clean.mainCharacter.images = await compressArrayOfImages(clean.mainCharacter.images);
+        }
+    }
+
+    if (clean.secondCharacter) {
+        clean.secondCharacter = { ...clean.secondCharacter };
+        if (clean.secondCharacter.imageBases64) {
+            clean.secondCharacter.imageBases64 = await compressArrayOfImages(clean.secondCharacter.imageBases64);
+        }
+        if (clean.secondCharacter.images) {
+            clean.secondCharacter.images = await compressArrayOfImages(clean.secondCharacter.images);
+        }
+    }
+
+    // 3. Compress single cover image if embedded as huge base64
+    if (typeof clean.coverImageUrl === 'string' && clean.coverImageUrl.length > 250000 && !clean.coverImageUrl.startsWith('http')) {
+        try {
+            const { compressBase64Image } = await import('../utils/imageUtils');
+            clean.coverImageUrl = await compressBase64Image(clean.coverImageUrl, 1024, 0.75);
+        } catch (e) {}
+    }
+
+    // 4. Strip heavy debug b64 from spreads
+    if (Array.isArray(clean.spreads)) {
+        clean.spreads = clean.spreads.map((spread: any) => {
+            if (!spread) return spread;
+            const cleanSpread = { ...spread };
+            delete cleanSpread.rawGeneratedB64;
+            return cleanSpread;
+        });
+    }
+
+    return clean;
+}
+
 export const backendApi = {
     // Catalog (Cached for 30 minutes)
     getCatalog: () => fetchCachedBackend('/catalog', 30 * 60 * 1000),
@@ -232,22 +303,26 @@ export const backendApi = {
     }),
 
     // Drafts / Orders V2
-    createDraftOrder: (payload: { storyData: any, customerEmail?: string, userId?: string, customerName?: string, total?: number, shippingDetails?: any }) => fetchBackend<{ success: boolean; orderId: string; message: string }>('/orders/draft', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    }),
+    createDraftOrder: async (payload: { storyData: any, customerEmail?: string, userId?: string, customerName?: string, total?: number, shippingDetails?: any }) => {
+        const cleanStory = await sanitizeAndCompressStoryData(payload.storyData);
+        return fetchBackend<{ success: boolean; orderId: string; message: string }>('/orders/draft', {
+            method: 'POST',
+            body: JSON.stringify({ ...payload, storyData: cleanStory })
+        });
+    },
 
-    updateDraftOrder: (payload: { orderId: string, storyData?: any, stepProgress?: number, status?: string, shippingDetails?: any }) => fetchBackend<{ success: boolean; message: string }>('/orders/draft', {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-    }),
+    updateDraftOrder: async (payload: { orderId: string, storyData?: any, stepProgress?: number, status?: string, shippingDetails?: any }) => {
+        const cleanStory = payload.storyData ? await sanitizeAndCompressStoryData(payload.storyData) : undefined;
+        return fetchBackend<{ success: boolean; message: string }>('/orders/draft', {
+            method: 'PUT',
+            body: JSON.stringify({ ...payload, storyData: cleanStory })
+        });
+    },
 
     // Customer Tools
     getCustomerDashboard: (userId: string) => fetchBackend<{ orders: any[], subscription: any }>(`/orders/customer/${userId}`),
     
-    getOrderDetails: (orderId: string) => fetchBackend<any>(`/orders/${orderId}`),
-
-    getPublicStory: (storyId: string) => fetchCachedBackend<{ success: boolean; story: any }>(`/orders/public-story/${storyId}`, 15 * 60 * 1000),
+    getPublicStory: (storyId: string) => fetchBackend<{ success: boolean; story: any }>(`/orders/public-story/${storyId}?_t=${Date.now()}`),
 
     // Admin Tools
     triggerCron: () => fetchBackend<{ executedTasks: number; failedTasks: number }>('/cron', {

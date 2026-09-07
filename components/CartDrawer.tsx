@@ -2,11 +2,11 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import type { Language, CartItem } from '../types';
-import { convertPrice, type Currency } from '../services/currencyService';
+import { convertPrice, currencies, type Currency } from '../services/currencyService';
 
 interface CartDrawerProps {
   language?: Language;
-  currency?: Currency;
+  currency?: Currency | string;
   onCheckout?: (items: CartItem[]) => void;
   onResumeDraft?: (draft: CartItem) => void;
 }
@@ -17,6 +17,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onCheckout,
   onResumeDraft
 }) => {
+  const resolvedCurrency: Currency = typeof currency === 'string'
+    ? (currencies.find(c => c.code === currency) || currencies[0])
+    : (currency || currencies[0]);
   const {
     items,
     drafts,
@@ -202,7 +205,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                           <div className="pt-2 flex items-center justify-between">
                             <span className="font-black text-brand-navy text-xs">
-                              {convertPrice(item.totalPrice, currency)}
+                              {convertPrice(item.totalPrice, resolvedCurrency)}
                             </span>
                           </div>
                         </div>
@@ -288,7 +291,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span>{t('المجموع الفرعي للقصص:', 'Stories Subtotal:')}</span>
                     <span className="font-black text-brand-navy text-sm">
-                      {convertPrice(totalCartPrice, currency)}
+                      {convertPrice(totalCartPrice, resolvedCurrency)}
                     </span>
                   </div>
 

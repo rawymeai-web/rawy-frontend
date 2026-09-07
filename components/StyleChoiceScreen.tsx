@@ -70,7 +70,7 @@ const StyleChoiceScreen: React.FC<StyleChoiceScreenProps> = ({ onNext, onBack, s
         let isMounted = true;
         const loadCatalogStyles = async () => {
             try {
-                const catalog = await backendApi.getCatalog();
+                const catalog = (await backendApi.getCatalog()) as any;
                 if (isMounted && catalog?.styles && catalog.styles.length > 0) {
                     const mapped: StyleItem[] = catalog.styles
                         .filter((s: any) => s.is_active !== false)

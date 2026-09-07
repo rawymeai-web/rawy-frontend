@@ -49,6 +49,7 @@ export interface StoryBlueprint {
     heroDesire: string;
     mainChallenge: string;
     primaryVisualAnchor: string; // NEW
+    anchorTriggerRule?: string; // v3.3: Structured physical trigger rule (e.g. 'glows warm when calm, cools when worried')
     moral: string;
     failedAttemptSpread?: number; // NEW
     insightSpread?: number; // NEW
@@ -358,6 +359,7 @@ export interface Page {
 export interface Spread {
   spreadNumber: number;       // 0 = cover, 1–N = inner spreads
   illustrationUrl: string;    // Supabase Storage public URL (or temp base64 during generation)
+  text?: string;
   leftText: string;           // Story text displayed on the left half
   rightText: string;          // Story text displayed on the right half
   actualPrompt?: string;      // The exact image prompt used

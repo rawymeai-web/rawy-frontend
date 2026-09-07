@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as fileService from '../services/fileService';
 import { compressBase64Image } from '../utils/imageUtils';
 import { convertPrice, type Currency, currencies } from '../services/currencyService';
@@ -58,6 +58,7 @@ const MainLayout: React.FC = () => {
     const [isFAQOpen, setIsFAQOpen] = useState(false);
     const [isPublicSharedStory, setIsPublicSharedStory] = useState(false);
     const [previewReturnScreen, setPreviewReturnScreen] = useState<string>('customerDashboard');
+    const isSubmittingOrderRef = useRef(false);
 
     // Automatically scroll to the top of the page on every screen change
     useEffect(() => {
@@ -289,27 +290,25 @@ const MainLayout: React.FC = () => {
     }, [shippingDetails, storyData, language, setPaymentModalOpen, setScreen, startWorkflow]);
 
     const lightenStoryData = async (data: StoryData) => {
-        // DIAGNOSTIC CORE: Log the size of all top-level keys to investigate the 7.06MB bloat
-        try {
-            const report = Object.entries(data).map(([key, value]) => {
-                const size = encodeURI(JSON.stringify(value)).split(/%..|./).length - 1;
-                return { 
-                    key, 
-                    sizeMB: (size / (1024 * 1024)).toFixed(2) + ' MB',
-                    rawSize: size
-                };
-            }).sort((a, b) => b.rawSize - a.rawSize)
-              .filter(x => x.rawSize > 1024); // Only show > 1KB
-            
-            console.warn("🚨 [PAYLOAD DIAGNOSTIC] Analyzing StoryData Components:");
-            console.table(report);
-        } catch (e) {
-            console.error("Failed to run payload diagnostic:", e);
-        }
+        // 1. Create a shallow clone to avoid mutating local UI state
+        const cleanData: any = { ...data };
 
-        let compressedRefImg = data.styleReferenceImageBase64;
-        let compressedSecondImg = data.secondCharacterImageBase64;
-    
+        // 2. Strip large UI cache arrays and generative artifacts that are never needed in the DB
+        delete cleanData.cachedPreviews;
+        delete cleanData.previewImages;
+        delete cleanData.styleVariants;
+        delete cleanData.blueprint;
+        delete cleanData.rawScript;
+        delete cleanData.script;
+        delete cleanData.visualPlan;
+        delete cleanData.prompts;
+        delete cleanData.finalPrompts;
+        delete cleanData.spreadPlan;
+        delete cleanData.workflowLogs;
+        delete cleanData.coverDebugImages;
+
+        // 3. Compress Style Reference (Hero A DNA)
+        let compressedRefImg = cleanData.styleReferenceImageBase64;
         if (compressedRefImg && compressedRefImg.length > 500) {
             try {
                 compressedRefImg = await compressBase64Image(compressedRefImg, 512, 0.7);
@@ -321,6 +320,8 @@ const MainLayout: React.FC = () => {
             }
         }
         
+        // 4. Compress Second Character Image (Hero B DNA)
+        let compressedSecondImg = cleanData.secondCharacterImageBase64;
         if (compressedSecondImg && compressedSecondImg.length > 500) {
             try {
                 compressedSecondImg = await compressBase64Image(compressedSecondImg, 512, 0.7);
@@ -332,49 +333,96 @@ const MainLayout: React.FC = () => {
             }
         }
 
+        // 5. Compress Main Character Uploaded Photos (Hero A)
         let compressedMainImages: string[] = [];
-        if (data.mainCharacter && data.mainCharacter.imageBases64) {
-            for (const img of data.mainCharacter.imageBases64) {
-                if (img && img.length > 500) {
-                    try {
-                        let comp = await compressBase64Image(img, 512, 0.7);
-                        if (comp.startsWith('data:image')) comp = comp.split(',')[1];
-                        compressedMainImages.push(comp);
-                    } catch (e) {
-                        compressedMainImages.push(img);
-                    }
-                } else if (img) {
+        const rawMain = cleanData.mainCharacter?.imageBases64 || [];
+        for (const img of rawMain.slice(0, 3)) { // Limit to max 3 photos
+            if (img && img.length > 500) {
+                try {
+                    let comp = await compressBase64Image(img, 512, 0.7);
+                    if (comp.startsWith('data:image')) comp = comp.split(',')[1];
+                    compressedMainImages.push(comp);
+                } catch (e) {
                     compressedMainImages.push(img);
                 }
+            } else if (img) {
+                compressedMainImages.push(img);
             }
         }
 
+        // 6. Compress Second Character Uploaded Photos (Hero B)
         let compressedSecondImages: string[] = [];
-        if (data.secondCharacter && data.secondCharacter.imageBases64) {
-             for (const img of data.secondCharacter.imageBases64) {
-                if (img && img.length > 500) {
-                    try {
-                        let comp = await compressBase64Image(img, 512, 0.7);
-                        if (comp.startsWith('data:image')) comp = comp.split(',')[1];
-                        compressedSecondImages.push(comp);
-                    } catch (e) {
-                        compressedSecondImages.push(img);
-                    }
-                } else if (img) {
+        const rawSecond = cleanData.secondCharacter?.imageBases64 || [];
+        for (const img of rawSecond.slice(0, 3)) {
+            if (img && img.length > 500) {
+                try {
+                    let comp = await compressBase64Image(img, 512, 0.7);
+                    if (comp.startsWith('data:image')) comp = comp.split(',')[1];
+                    compressedSecondImages.push(comp);
+                } catch (e) {
                     compressedSecondImages.push(img);
                 }
-             }
+            } else if (img) {
+                compressedSecondImages.push(img);
+            }
         }
 
-        return {
-            ...data,
+        // 7. Compress custom style photo if any
+        let compressedCustomStyle = cleanData.customStylePhoto;
+        if (compressedCustomStyle && compressedCustomStyle.length > 500) {
+            try {
+                compressedCustomStyle = await compressBase64Image(compressedCustomStyle, 512, 0.7);
+                if (compressedCustomStyle.startsWith('data:image')) {
+                    compressedCustomStyle = compressedCustomStyle.split(',')[1];
+                }
+            } catch (e) {}
+        }
+
+        // 8. Construct final ultra-lean StoryData (< 200 KB total)
+        const result: any = {
+            ...cleanData,
             styleReferenceImageBase64: compressedRefImg,
             secondCharacterImageBase64: compressedSecondImg,
-            mainCharacter: { ...data.mainCharacter, imageBases64: compressedMainImages, images: [] },
-            secondCharacter: data.secondCharacter ? { ...data.secondCharacter, imageBases64: compressedSecondImages, images: [] } : undefined,
-            coverImageUrl: data.coverImageUrl ? data.coverImageUrl.substring(0, 100) + '...[TRUNCATED]' : undefined,
-            spreads: (data.spreads || []).map((s: any) => ({ ...s, illustrationUrl: s.illustrationUrl ? s.illustrationUrl.substring(0, 100) + '...[TRUNCATED]' : undefined }))
+            customStylePhoto: compressedCustomStyle,
+            mainCharacter: cleanData.mainCharacter ? {
+                ...cleanData.mainCharacter,
+                imageBases64: compressedMainImages,
+                imageDNA: compressedRefImg ? [compressedRefImg] : [],
+                images: [],
+                imageRawUrl: undefined
+            } : undefined,
+            secondCharacter: cleanData.secondCharacter ? {
+                ...cleanData.secondCharacter,
+                imageBases64: compressedSecondImages,
+                imageDNA: compressedSecondImg ? [compressedSecondImg] : [],
+                images: [],
+                imageRawUrl: undefined
+            } : undefined,
+            coverImageUrl: cleanData.coverImageUrl ? (cleanData.coverImageUrl.startsWith('http') ? cleanData.coverImageUrl : cleanData.coverImageUrl.substring(0, 100) + '...[TRUNCATED]') : undefined,
+            spreads: (cleanData.spreads || []).map((s: any) => ({
+                ...s,
+                illustrationUrl: s.illustrationUrl ? (s.illustrationUrl.startsWith('http') ? s.illustrationUrl : s.illustrationUrl.substring(0, 100) + '...[TRUNCATED]') : undefined
+            }))
         };
+
+        // DIAGNOSTIC PAYLOAD AUDIT
+        try {
+            const report = Object.entries(result).map(([key, value]) => {
+                const size = encodeURI(JSON.stringify(value)).split(/%..|./).length - 1;
+                return { 
+                    key, 
+                    sizeKB: (size / 1024).toFixed(1) + ' KB',
+                    rawSize: size
+                };
+            }).sort((a, b) => b.rawSize - a.rawSize)
+              .filter(x => x.rawSize > 1024);
+            
+            const totalBytes = new TextEncoder().encode(JSON.stringify(result)).length;
+            console.log(`📦 [LIGHTEN_STORY_DATA] Total payload size: ${(totalBytes / 1024).toFixed(1)} KB`);
+            console.table(report);
+        } catch (e) {}
+
+        return result;
     };
 
     const renderScreen = () => {
@@ -485,6 +533,9 @@ const MainLayout: React.FC = () => {
             case 'checkout':
                 content = <CheckoutScreen
                     onProceedToPayment={async (details, planType, totalAmount) => {
+                        if (isSubmittingOrderRef.current) return;
+                        isSubmittingOrderRef.current = true;
+
                         setShippingDetails(details);
                         // CRITICAL: Prioritize the specific Book Language (storyData.language) if set, fallback to UI language
                         const updatedStory: StoryData = { 
@@ -502,27 +553,41 @@ const MainLayout: React.FC = () => {
                             // before sending to the database, since we already saved the generated DNA!
                             const apiStory = await lightenStoryData(updatedStory);
                             
-                            console.log("Creating Draft Order with intent...");
-                            const res = await backendApi.createDraftOrder({
-                                storyData: apiStory, // Sends lightweight version
-                                customerName: details.name,
-                                customerEmail: details.email,
-                                total: totalAmount,
-                                shippingDetails: details
-                            });
-
-                            if (res.success && res.orderId) {
-                                console.log("Draft Created:", res.orderId);
-                                updateStory({ orderId: res.orderId });
+                            const existingOrderId = storyData.orderId;
+                            if (existingOrderId) {
+                                console.log("Updating existing Draft Order:", existingOrderId);
+                                await backendApi.updateDraftOrder({
+                                    orderId: existingOrderId,
+                                    storyData: apiStory,
+                                    shippingDetails: details,
+                                    status: 'New Order'
+                                });
                                 setPaymentAmount(totalAmount);
                                 setPaymentModalOpen(true);
-
                             } else {
-                                alert(`Could not create order: ${res.message || 'Unknown error'}`);
+                                console.log("Creating Draft Order with intent...");
+                                const res = await backendApi.createDraftOrder({
+                                    storyData: apiStory, // Sends lightweight version
+                                    customerName: details.name,
+                                    customerEmail: details.email,
+                                    total: totalAmount,
+                                    shippingDetails: details
+                                });
+
+                                if (res.success && res.orderId) {
+                                    console.log("Draft Created:", res.orderId);
+                                    updateStory({ orderId: res.orderId });
+                                    setPaymentAmount(totalAmount);
+                                    setPaymentModalOpen(true);
+                                } else {
+                                    alert(`Could not create order: ${res.message || 'Unknown error'}`);
+                                }
                             }
                         } catch (e: any) {
                             console.error("Draft API Error:", e);
                             alert(`Error creating order: ${e.message || 'Unknown network error'}. Please check backend logs or connection.`);
+                        } finally {
+                            isSubmittingOrderRef.current = false;
                         }
                     }}
                     onBack={() => setScreen('styleSelection')}

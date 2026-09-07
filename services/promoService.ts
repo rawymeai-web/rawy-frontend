@@ -73,7 +73,7 @@ export async function validateAndCalculatePromo(
 
   // 1. Try backend validation first
   try {
-    const res = await backendApi.validatePromoCode?.({ code, context });
+    const res = await (backendApi as any).validatePromoCode?.({ code, context });
     if (res && res.isValid) {
       return res;
     }
