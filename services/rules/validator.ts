@@ -77,7 +77,6 @@ export const Validator = {
     },
 
     // 4. Pronoun Policy Guard (Ages 1–5)
-    // 4. Pronoun Policy Guard (Ages 1–5)
     checkPronounGuard: (text: string, age: number = 5, language: string = 'en'): { pass: boolean, matchedPronouns: string[] } => {
         if (age > 5 || language === 'ar') {
             return { pass: true, matchedPronouns: [] };
