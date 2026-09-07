@@ -158,6 +158,10 @@ export const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ order, onC
                   {order.storyData.useSecondCharacter && (
                     <DetailItem label={t('الشخصية الثانوية', 'Second Character')} value={order.storyData.secondCharacter?.name} />
                   )}
+                  <DetailItem label={t('إصدار القصة', 'Story Version')} value={(order.storyData as any).story_version ? `v${(order.storyData as any).story_version} (${(order.storyData as any).story_engine || 'v2-master-writer'})` : 'v1 (Legacy)'} />
+                  {(order.storyData as any).story_generated_at && (
+                    <DetailItem label={t('تاريخ التوليد', 'Generated At')} value={new Date((order.storyData as any).story_generated_at).toLocaleString()} />
+                  )}
                 </div>
               </DetailSection>
 
