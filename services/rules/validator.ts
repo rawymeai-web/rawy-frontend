@@ -26,6 +26,8 @@ export const Validator = {
     validateVisualPlan: (plan: any, expectedLength: number = 8): boolean => {
         if (!plan || !plan.spreads) return false;
         if (!Array.isArray(plan.spreads)) return false;
+        // The plan might include a Cover (Spread 0), so it could be script.length + 1
+        // Or sometimes it matches exactly. We should just check it has *enough* spreads.
         if (plan.spreads.length < expectedLength) return false;
         return true;
     },
