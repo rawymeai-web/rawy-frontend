@@ -168,9 +168,14 @@ export const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ order, onC
               <DetailSection title={t('تفاصيل المشاهد والرسوم', 'Spread & Illustration Details')} className="col-span-full">
                 <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
                   {(order.storyData.spreads || []).filter((s: any) => s.spreadNumber > 0).map((s: any) => (
-                    <div key={s.spreadNumber} className="text-xs border-b pb-2 last:border-b-0">
-                      <p className="font-bold text-gray-700">Spread {s.spreadNumber}:</p>
-                      <p className="text-gray-600 italic">"{s.leftText} {s.rightText}"</p>
+                    <div key={s.spreadNumber} className="text-xs border-b pb-2 last:border-b-0 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-gray-700">Spread {s.spreadNumber}:</p>
+                        <span className="inline-flex items-center text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 rounded px-1.5 py-0.5">
+                          📖 {s.textEngine || (order.storyData as any).story_engine || 'v2-master-writer'} • v{s.textVersion || (order.storyData as any).story_version || 1}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 italic">"{s.leftText || s.text || s.rightText}"</p>
                       <p className="mt-1 text-[10px] text-gray-400">Prompt: {s.actualPrompt?.substring(0, 50)}...</p>
                     </div>
                   ))}

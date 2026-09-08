@@ -353,6 +353,9 @@ export interface Page {
   debugContext?: any;
   sceneBlueprint?: any;
   pageSummary?: string;
+  textVersion?: number;
+  textEngine?: string;
+  textUpdatedAt?: string;
 }
 
 /** One visual unit = one широко illustration + its two halves of story text */
@@ -364,6 +367,9 @@ export interface Spread {
   rightText: string;          // Story text displayed on the right half
   actualPrompt?: string;      // The exact image prompt used
   textSide?: 'left' | 'right'; // Which side the subject occupies (drives layout)
+  textVersion?: number;
+  textEngine?: string;
+  textUpdatedAt?: string;
   // Layout overrides (set in EditorScreen, applied in fileService PDF rendering)
   textOffsetX?: number;       // PDF mm — left edge of text box (overrides auto calculation)
   textOffsetY?: number;       // PDF mm — top edge of text box (overrides auto calculation)
