@@ -11,57 +11,50 @@ interface WelcomeScreenProps {
 
 const COVER_METADATA = [
   {
-    src: '/covers/cover1.png',
-    title: { ar: 'مغامرة الفضاء العجيب', en: 'Wonder Space Odyssey' },
-    subtitle: { ar: 'رحلة بين الكواكب والنجوم البعيدة', en: 'Journey Across Distant Stars' },
-    category: { ar: 'فضاء وعلوم', en: 'Space & Wonder' },
-    accent: '#193056'
-  },
-  {
     src: '/covers/cover2.png',
-    title: { ar: 'مهمة مسبار الأمل', en: 'The Hope Probe Mission' },
-    subtitle: { ar: 'رحلة المريخ نحو النجوم', en: 'Beyond the Stars to Mars' },
-    category: { ar: 'استكشاف علمي', en: 'Science Exploration' },
+    title: { ar: 'ساعة السفر عبر الزمن', en: 'The Time-Traveling Watch' },
+    subtitle: { ar: 'رحلة استكشاف الماضي والمستقبل العجيب', en: 'Journey Across Past & Future Wonders' },
+    category: { ar: 'خيال علمي', en: 'Sci-Fi & Time' },
     accent: '#F78F50'
   },
   {
     src: '/covers/cover3.png',
-    title: { ar: 'سحر ألف ليلة وليلة', en: '1001 Nights Magic' },
-    subtitle: { ar: 'مغامرة البساط السحري والقصر الذهبي', en: 'The Flying Carpet & Golden Palace' },
-    category: { ar: 'مغامرات وأساطير', en: 'Myths & Legends' },
+    title: { ar: 'أسرار الصحراء', en: 'Secrets of the Desert' },
+    subtitle: { ar: 'مغامرة الواحة الذهبية ورمال الشرق', en: 'Golden Oasis & Desert Sands Adventure' },
+    category: { ar: 'مغامرة وتراث', en: 'Heritage & Adventure' },
     accent: '#006B5D'
   },
   {
     src: '/covers/cover4.png',
-    title: { ar: 'وادي الديناصورات', en: 'The Dinosaur Valley' },
-    subtitle: { ar: 'أرض العمالقة اللطفاء والمغامرة الكبرى', en: 'Land of Gentle Giants & Big Adventure' },
-    category: { ar: 'عالم ما قبل التاريخ', en: 'Prehistoric World' },
+    title: { ar: 'مغامرة الفضاء', en: 'The Space Adventure' },
+    subtitle: { ar: 'انطلاق الصاروخ نحو القمر والكواكب', en: 'Rocket Blast to the Moon & Planets' },
+    category: { ar: 'فضاء وعلوم', en: 'Space & Wonder' },
     accent: '#4B6A15'
   },
   {
     src: '/covers/cover5.png',
-    title: { ar: 'الغابة السحرية', en: 'Whispering Woods' },
-    subtitle: { ar: 'أرض الحيوانات المتكلمة والشجرة العتيقة', en: 'Forest of Talking Friends & Ancient Tree' },
-    category: { ar: 'خيال وطبيعة', en: 'Magic & Nature' },
+    title: { ar: 'مفاجأة الديناصور', en: 'The Dino Surprise' },
+    subtitle: { ar: 'صديق صغير لطيف من عالم ما قبل التاريخ', en: 'A Friendly Little Prehistoric Companion' },
+    category: { ar: 'عالم الديناصورات', en: 'Dino World' },
     accent: '#8F5A1D'
   },
   {
     src: '/covers/cover6.png',
-    title: { ar: 'منطاد السماء العجيب', en: 'Skyward Balloonist' },
-    subtitle: { ar: 'التحليق فوق السحاب نحو جزر الرياح', en: 'Floating Above the Clouds to Wind Islands' },
-    category: { ar: 'مغامرة واستكشاف', en: 'Aerial Journey' },
+    title: { ar: 'اللؤلؤة المضيئة', en: 'The Glowing Pearl' },
+    subtitle: { ar: 'أسرار الأعماق وسحر المحيط الهادئ', en: 'Deep Ocean Wonders & Sea Turtle Secrets' },
+    category: { ar: 'عالم البحار', en: 'Ocean Magic' },
     accent: '#E69B00'
   },
   {
     src: '/covers/cover7.png',
-    title: { ar: 'مايا والشعب المرجانية', en: 'Maya & The Secret Reef' },
-    subtitle: { ar: 'مغامرة الأعماق وأسرار السلاحف البحرية', en: 'Deep Ocean Odyssey & Sea Turtle Secrets' },
+    title: { ar: 'أسرار الشعب المرجانية', en: 'The Secret Reef' },
+    subtitle: { ar: 'مغامرة الدلافين والأعماق الملونة', en: 'Dolphins & Colorful Coral Kingdom' },
     category: { ar: 'عالم البحار', en: 'Ocean Expedition' },
     accent: '#0F547C'
   },
   {
     src: '/covers/cover8.png',
-    title: { ar: 'نور ورحلة السوق القديم', en: 'Noor’s Ancient Souq Adventure' },
+    title: { ar: 'الرحلة إلى السوق القديم', en: 'Ancient Souq Adventure' },
     subtitle: { ar: 'اكتشاف كنوز التراث والمدينة الساحرة', en: 'Discovering Heritage Treasures in the Old Market' },
     category: { ar: 'سحر وتراث', en: 'Heritage & Magic' },
     accent: '#1C4B75'
