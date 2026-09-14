@@ -761,11 +761,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
                 {/* Structured Text & Footer Container: Perfectly Aligned */}
                 <div className="p-4 sm:p-5 bg-white flex flex-col justify-between flex-1 gap-3 border-t border-slate-100">
-                  <div className="text-start space-y-1">
-                    <h3 className="text-base sm:text-lg font-black text-[#001A40] group-hover:text-[#F78F50] transition-colors leading-snug line-clamp-1">
-                      {isAr ? cover.title.ar : cover.title.en}
-                    </h3>
-                    <p className="text-xs text-[#554339]/80 font-medium leading-relaxed line-clamp-1">
+                  <div className="text-start">
+                    <p className="text-xs sm:text-sm text-[#001A40] font-bold leading-relaxed line-clamp-2 group-hover:text-[#F78F50] transition-colors">
                       {isAr ? cover.subtitle.ar : cover.subtitle.en}
                     </p>
                   </div>
