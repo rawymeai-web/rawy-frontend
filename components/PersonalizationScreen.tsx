@@ -5,6 +5,19 @@ import type { StoryData, Character, Language } from '../types';
 import { useStory } from '../context/StoryContext';
 import { convertPrice } from '../services/currencyService';
 
+const ALL_LANGUAGES: { code: Language; label: string; native: string }[] = [
+  { code: 'ar', label: 'العربية', native: 'Arabic' },
+  { code: 'en', label: 'English', native: 'English' },
+  { code: 'fr', label: 'Français', native: 'French' },
+  { code: 'de', label: 'Deutsch', native: 'German' },
+  { code: 'es', label: 'Español', native: 'Spanish' },
+  { code: 'it', label: 'Italiano', native: 'Italian' },
+  { code: 'pt', label: 'Português', native: 'Portuguese' },
+  { code: 'ru', label: 'Русский', native: 'Russian' },
+  { code: 'ja', label: '日本語', native: 'Japanese' },
+  { code: 'tr', label: 'Türkçe', native: 'Turkish' }
+];
+
 interface PersonalizationScreenProps {
   onNext: (data: Partial<StoryData>) => void;
   onBack: () => void;
@@ -113,9 +126,9 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
         </p>
       </div>
 
-      <form onSubmit={handleNext} className="max-w-2xl mx-auto space-y-6" noValidate>
+      <form onSubmit={handleNext} className="max-w-2xl mx-auto space-y-5" noValidate>
         
-        {/* 1. Main Character (The Hero) - Full Width */}
+        {/* 1. Main Character (The Hero) - Apple-Style Card */}
         <div className="space-y-4">
           <CharacterInput
             label={t('الشخصية الرئيسية (بطل القصة)', 'Main Character (The Hero)')}
@@ -129,9 +142,9 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
             onGenderChange={(gender) => setLocalData({ ...localData, childGender: gender })}
           />
 
-          {/* Photo Consent Checkbox (ONLY shows after photo upload) */}
+          {/* Photo Consent Checkbox (ONLY shows after photo upload) - Apple Card Style */}
           {hasMainPhoto && (
-            <div className="animate-fade-in glass-panel p-5 rounded-2xl border border-white/80 bg-white/70 shadow-sm">
+            <div className="animate-fade-in bg-white rounded-[24px] border border-[#d2d2d7] shadow-sm p-5 sm:p-6">
               <label className="flex items-start gap-3.5 cursor-pointer select-none">
                 <input 
                   type="checkbox" 
@@ -162,8 +175,8 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
           )}
         </div>
 
-        {/* 2. Prompt to Add a Secondary Character */}
-        <div className="p-1 glass-panel rounded-[2rem]">
+        {/* 2. Prompt to Add a Secondary Character - Apple Card Style */}
+        <div className="bg-white rounded-[24px] border border-[#d2d2d7] hover:border-slate-400 transition-all shadow-sm p-1.5">
           <button 
             type="button" 
             onClick={() => {
@@ -174,13 +187,13 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                 secondCharacter: isChecked && !prev.secondCharacter ? { name: '', type: 'person', images: [], imageBases64: [], description: '', relationship: '' } : prev.secondCharacter
               }));
             }}
-            className={`w-full flex items-center justify-between p-5 rounded-[1.8rem] transition-all cursor-pointer ${localData.useSecondCharacter ? 'bg-brand-teal text-white shadow-lg' : 'bg-white/50 text-brand-navy hover:bg-white/80'}`}
+            className={`w-full flex items-center justify-between p-5 rounded-[20px] transition-all cursor-pointer ${localData.useSecondCharacter ? 'bg-brand-teal text-white shadow-md' : 'bg-slate-50/60 text-brand-navy hover:bg-slate-100/80'}`}
           >
             <div className="flex items-center gap-4">
               <span className="material-symbols-outlined text-2xl">{localData.useSecondCharacter ? 'group_add' : 'person_add'}</span>
               <div className="text-start">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-bold text-sm">{t('إضافة شخصية ثانية؟', 'Add a second character?')}</p>
+                  <p className="font-extrabold text-sm">{t('إضافة شخصية ثانية؟', 'Add a second character?')}</p>
                   <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border transition-all ${
                     localData.useSecondCharacter 
                       ? 'bg-white text-brand-teal border-white' 
@@ -200,7 +213,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
 
         {localData.useSecondCharacter && localData.secondCharacter && (
           <div className="animate-enter-forward space-y-4">
-            <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
+            <div className="bg-white rounded-[24px] border border-[#d2d2d7] shadow-sm p-5 sm:p-6 flex items-center gap-4">
               <span className="text-sm font-bold text-brand-navy/70">{t('طبيعة الشخصية:', 'Character Type:')}</span>
               <div className="flex gap-3">
                 {['person', 'object'].map((type) => (
@@ -208,7 +221,7 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                     key={type}
                     type="button"
                     onClick={() => setLocalData(prev => ({ ...prev, secondCharacter: { ...prev.secondCharacter!, type: type as any }}))}
-                    className={`px-5 py-2 rounded-full text-xs font-bold border-2 transition-all cursor-pointer ${localData.secondCharacter?.type === type ? 'bg-brand-navy border-brand-navy text-white shadow-sm' : 'bg-white/60 border-brand-navy/10 text-brand-navy/60 hover:border-brand-orange/30'}`}
+                    className={`px-5 py-2 rounded-full text-xs font-bold border-2 transition-all cursor-pointer ${localData.secondCharacter?.type === type ? 'bg-brand-navy border-brand-navy text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-brand-navy/60 hover:border-brand-orange/30'}`}
                   >
                     {type === 'person' ? t('إنسان', 'Person') : t('شيء / حيوان', 'Object / Pet')}
                   </button>
@@ -225,78 +238,110 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
           </div>
         )}
 
-        {/* 3. Story Language (Short, streamlined, minimal) */}
-        <div className="glass-panel p-4 sm:p-5 rounded-2xl border border-white/80 bg-white/50 shadow-sm">
-          {!isChangingLanguage ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-orange/10 flex items-center justify-center text-brand-orange">
-                  <span className="material-symbols-outlined text-xl">translate</span>
-                </div>
-                <div className="text-start">
-                  <span className="text-[11px] font-bold text-brand-navy/50 block uppercase tracking-wider">
-                    {t('لغة القصة', 'Story Language')}
-                  </span>
-                  <p className="text-base font-extrabold text-brand-navy">
-                    {[
-                      { code: 'ar', label: 'العربية' },
-                      { code: 'en', label: 'English' },
-                      { code: 'de', label: 'Deutsch' },
-                      { code: 'es', label: 'Español' },
-                      { code: 'fr', label: 'Français' },
-                      { code: 'it', label: 'Italiano' },
-                      { code: 'pt', label: 'Português' },
-                      { code: 'ru', label: 'Русский' },
-                      { code: 'ja', label: '日本語' },
-                      { code: 'tr', label: 'Türkçe' }
-                    ].find(l => l.code === localData.language)?.label || 'English'}
-                  </p>
-                </div>
-              </div>
+        {/* 3. Creative Story Language Card (Apple Reference Layout with Fine Border) */}
+        <div className="bg-white rounded-[24px] border border-[#d2d2d7] shadow-sm p-5 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="text-start">
+              <span className="text-base font-extrabold text-[#001A40] block">
+                {t('لغة القصة', 'Story Language')}
+              </span>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                {t('تُكتب وتُطبع القصة بهذه اللغة:', 'Story written & printed in:')}{' '}
+                <span className="font-bold text-[#F78F50]">
+                  {ALL_LANGUAGES.find(l => l.code === localData.language)?.label || 'English'}
+                </span>
+              </p>
+            </div>
 
+            {/* Creative Apple-Style Segmented Language Switcher */}
+            <div className="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 self-start sm:self-auto">
+              {/* Arabic Button */}
               <button
                 type="button"
-                onClick={() => setIsChangingLanguage(true)}
-                className="px-4 py-1.5 bg-brand-orange/10 text-brand-orange border border-brand-orange/20 rounded-full text-xs font-black uppercase tracking-wider hover:bg-brand-orange hover:text-white transition-all duration-150 active:scale-95 cursor-pointer"
+                onClick={() => {
+                  setLocalData(prev => ({ ...prev, language: 'ar' }));
+                  setIsChangingLanguage(false);
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  localData.language === 'ar'
+                    ? 'bg-white text-[#001A40] shadow-sm font-black'
+                    : 'text-slate-600 hover:text-[#001A40]'
+                }`}
               >
-                {t('تغيير', 'Change')}
+                العربية
+              </button>
+
+              {/* English Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setLocalData(prev => ({ ...prev, language: 'en' }));
+                  setIsChangingLanguage(false);
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  localData.language === 'en'
+                    ? 'bg-white text-[#001A40] shadow-sm font-black'
+                    : 'text-slate-600 hover:text-[#001A40]'
+                }`}
+              >
+                English
+              </button>
+
+              {/* More Languages Dropdown Button */}
+              <button
+                type="button"
+                onClick={() => setIsChangingLanguage(prev => !prev)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  localData.language !== 'ar' && localData.language !== 'en'
+                    ? 'bg-[#F78F50] text-white shadow-sm font-black'
+                    : isChangingLanguage
+                    ? 'bg-white text-[#001A40] shadow-sm'
+                    : 'text-slate-500 hover:text-[#001A40]'
+                }`}
+              >
+                <span>
+                  {localData.language !== 'ar' && localData.language !== 'en'
+                    ? ALL_LANGUAGES.find(l => l.code === localData.language)?.label
+                    : t('لغات أخرى', 'More')}
+                </span>
+                <span className="material-symbols-outlined text-sm">
+                  {isChangingLanguage ? 'expand_less' : 'expand_more'}
+                </span>
               </button>
             </div>
-          ) : (
-            <div className="animate-enter-forward space-y-3">
-              <div className="flex items-center justify-between border-b border-brand-navy/5 pb-2">
-                <span className="text-xs font-bold text-brand-navy/80">{t('اختر لغة القصة', 'Select Story Language')}</span>
+          </div>
+
+          {/* Expandable Grid for Other Global Languages */}
+          {isChangingLanguage && (
+            <div className="pt-3 border-t border-slate-100 animate-enter-forward space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">
+                  {t('اختر من اللغات العالمية المتوفرة:', 'Choose from available languages:')}
+                </span>
                 <button
                   type="button"
                   onClick={() => setIsChangingLanguage(false)}
-                  className="text-xs font-bold text-brand-navy/60 hover:text-brand-orange cursor-pointer"
+                  className="text-xs font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
-                  {t('إلغاء', 'Cancel')}
+                  {t('إغلاق ✕', 'Close ✕')}
                 </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                {[
-                  { code: 'ar', label: 'العربية' },
-                  { code: 'en', label: 'English' },
-                  { code: 'de', label: 'Deutsch' },
-                  { code: 'es', label: 'Español' },
-                  { code: 'fr', label: 'Français' },
-                  { code: 'it', label: 'Italiano' },
-                  { code: 'pt', label: 'Português' },
-                  { code: 'ru', label: 'Русский' },
-                  { code: 'ja', label: '日本語' },
-                  { code: 'tr', label: 'Türkçe' }
-                ].map((langOption) => (
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                {ALL_LANGUAGES.map((langOption) => (
                   <button
                     key={langOption.code}
                     type="button"
                     onClick={() => {
-                      setLocalData({ ...localData, language: langOption.code as Language });
+                      setLocalData(prev => ({ ...prev, language: langOption.code as Language }));
                       setIsChangingLanguage(false);
                     }}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border-2 transition-all cursor-pointer ${localData.language === langOption.code ? 'bg-brand-orange border-brand-orange text-white shadow-md shadow-brand-orange/20' : 'bg-white/60 border-brand-navy/5 text-brand-navy/70 hover:border-brand-orange/30'}`}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                      localData.language === langOption.code
+                        ? 'bg-[#001A40] border-[#001A40] text-white shadow-sm'
+                        : 'bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-white hover:border-[#F78F50]'
+                    }`}
                   >
-                    <span className="text-xs font-bold">{langOption.label}</span>
+                    {langOption.label}
                   </button>
                 ))}
               </div>
@@ -305,11 +350,11 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
         </div>
 
         {/* 4. Navigation */}
-        <div className="flex items-center gap-4 pt-4">
+        <div className="flex items-center gap-4 pt-3">
           <button 
             type="button" 
             onClick={onBack} 
-            className="flex-1 glass-panel py-4 rounded-full font-bold text-brand-navy hover:bg-white/80 transition-all active:scale-95 cursor-pointer"
+            className="flex-1 bg-white border border-[#d2d2d7] py-4 rounded-full font-bold text-brand-navy hover:bg-slate-50 shadow-sm transition-all active:scale-95 cursor-pointer"
           >
             {t('رجوع', 'Back')}
           </button>

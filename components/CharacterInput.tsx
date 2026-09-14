@@ -180,27 +180,23 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
       {isCropperOpen && imageToCrop && (
         <ImageCropModal imageSrc={imageToCrop.dataUrl} onCropComplete={handleCropComplete} onClose={() => { setIsCropperOpen(false); setImageToCrop(null); }} language={language} />
       )}
-      <div className={`glass-panel p-6 rounded-[2rem] space-y-6 animate-enter-forward overflow-hidden relative ${
-        isMain 
-          ? 'bg-gradient-to-b from-brand-teal/[0.04] via-white/50 to-white/50 border-brand-teal/10 shadow-xl shadow-brand-teal/[0.01]' 
-          : 'bg-gradient-to-b from-brand-orange/[0.03] via-white/50 to-white/50 border-brand-orange/10 shadow-xl shadow-brand-orange/[0.01]'
-      }`}>
-        <div className="flex items-center justify-between border-b border-brand-navy/5 pb-4">
+      <div className="bg-white rounded-[24px] border border-[#d2d2d7] shadow-sm p-6 sm:p-7 space-y-6 animate-enter-forward overflow-hidden relative">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
-             <h3 className="text-xl font-bold text-brand-navy">{label}</h3>
+             <h3 className="text-xl font-black text-brand-navy">{label}</h3>
           </div>
         </div>
 
         <div className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
-              <label htmlFor={`characterName-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{nameLabel}</label>
+              <label htmlFor={`characterName-${label}`} className="block text-[10px] font-black text-brand-navy/50 uppercase tracking-[0.2em] mb-2">{nameLabel}</label>
               <input 
                 type="text" 
                 id={`characterName-${label}`} 
                 value={character.name} 
                 onChange={handleNameChange} 
-                className="block w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-lg" 
+                className="block w-full px-5 py-3.5 bg-slate-50/70 border border-[#d2d2d7] rounded-xl focus:ring-2 focus:ring-brand-orange/40 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-base" 
                 placeholder={t('أدخل الاسم هنا...', 'Enter name here...')} 
                 required 
               />
@@ -208,26 +204,26 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
 
             {isMain && onAgeChange ? (
               <div>
-                <label htmlFor={`childAge-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{t('العمر', 'Age')}</label>
+                <label htmlFor={`childAge-${label}`} className="block text-[10px] font-black text-brand-navy/50 uppercase tracking-[0.2em] mb-2">{t('العمر', 'Age')}</label>
                 <input 
                   type="number" 
                   id={`childAge-${label}`} 
                   value={childAge || ''} 
                   onChange={(e) => onAgeChange(e.target.value)} 
-                  className="block w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-lg text-center" 
+                  className="block w-full px-5 py-3.5 bg-slate-50/70 border border-[#d2d2d7] rounded-xl focus:ring-2 focus:ring-brand-orange/40 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-base text-center" 
                   min="1" max="12" 
                   required
                 />
               </div>
             ) : (!isMain && character.type === 'person') ? (
               <div>
-                <label htmlFor={`childAge-${label}`} className="block text-[10px] font-black text-brand-navy/40 uppercase tracking-[0.2em] mb-2">{t('العمر', 'Age')}</label>
+                <label htmlFor={`childAge-${label}`} className="block text-[10px] font-black text-brand-navy/50 uppercase tracking-[0.2em] mb-2">{t('العمر', 'Age')}</label>
                 <input 
                   type="number" 
                   id={`childAge-${label}`} 
                   value={character.age || ''} 
                   onChange={(e) => onCharacterChange({ ...character, age: e.target.value })} 
-                  className="block w-full px-5 py-4 bg-white/50 border border-brand-navy/5 rounded-2xl focus:ring-2 focus:ring-brand-orange/50 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-lg text-center" 
+                  className="block w-full px-5 py-3.5 bg-slate-50/70 border border-[#d2d2d7] rounded-xl focus:ring-2 focus:ring-brand-orange/40 focus:bg-white focus:border-brand-orange transition-all outline-none text-brand-navy font-bold text-base text-center" 
                   min="1" max="12" 
                   required
                 />
@@ -329,14 +325,14 @@ export const CharacterInput: React.FC<CharacterInputProps> = ({
 
             {character.images.length === 0 && (
               <div 
-                className="flex flex-col items-center justify-center text-center p-10 border-2 border-brand-navy/5 border-dashed rounded-[2rem] cursor-pointer bg-white/20 hover:bg-white/40 hover:border-brand-orange/30 transition-all group" 
+                className="flex flex-col items-center justify-center text-center p-8 sm:p-10 border-2 border-dashed border-[#d2d2d7] hover:border-[#F78F50] rounded-2xl cursor-pointer bg-slate-50/60 hover:bg-white transition-all group" 
                 onClick={() => fileInputRef.current?.click()}
               >
-                <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                   <span className="material-symbols-outlined text-3xl text-brand-orange">upload</span>
+                <div className="w-14 h-14 bg-white rounded-full shadow-md border border-slate-200/80 flex items-center justify-center mb-3.5 group-hover:scale-105 group-hover:border-[#F78F50]/40 transition-all">
+                   <span className="material-symbols-outlined text-2xl text-brand-orange">upload</span>
                 </div>
-                <p className="text-sm font-bold text-brand-navy/80 group-hover:text-brand-orange transition-colors">{uploadText}</p>
-                <p className="text-[11px] font-medium text-brand-navy/40 mt-2 max-w-[80%] leading-relaxed">
+                <p className="text-sm font-bold text-brand-navy/90 group-hover:text-brand-orange transition-colors">{uploadText}</p>
+                <p className="text-xs font-medium text-brand-navy/50 mt-1.5 max-w-[80%] leading-relaxed">
                   {t('يرجى التأكد من رفع صورة أمامية واضحة للوجه لضمان أفضل جودة.', 'Please ensure you upload a clear, front-facing photo for the best quality.')}
                 </p>
               </div>
