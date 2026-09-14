@@ -253,62 +253,21 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
               </p>
             </div>
 
-            {/* Creative Apple-Style Segmented Language Switcher */}
-            <div className="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 self-start sm:self-auto">
-              {/* Arabic Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setLocalData(prev => ({ ...prev, language: 'ar' }));
-                  setIsChangingLanguage(false);
-                }}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  localData.language === 'ar'
-                    ? 'bg-white text-[#001A40] shadow-sm font-black'
-                    : 'text-slate-600 hover:text-[#001A40]'
-                }`}
-              >
-                العربية
-              </button>
-
-              {/* English Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setLocalData(prev => ({ ...prev, language: 'en' }));
-                  setIsChangingLanguage(false);
-                }}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  localData.language === 'en'
-                    ? 'bg-white text-[#001A40] shadow-sm font-black'
-                    : 'text-slate-600 hover:text-[#001A40]'
-                }`}
-              >
-                English
-              </button>
-
-              {/* More Languages Dropdown Button */}
-              <button
-                type="button"
-                onClick={() => setIsChangingLanguage(prev => !prev)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                  localData.language !== 'ar' && localData.language !== 'en'
-                    ? 'bg-[#F78F50] text-white shadow-sm font-black'
-                    : isChangingLanguage
-                    ? 'bg-white text-[#001A40] shadow-sm'
-                    : 'text-slate-500 hover:text-[#001A40]'
-                }`}
-              >
-                <span>
-                  {localData.language !== 'ar' && localData.language !== 'en'
-                    ? ALL_LANGUAGES.find(l => l.code === localData.language)?.label
-                    : t('لغات أخرى', 'More')}
+            {/* Sleek Apple-Style Single Choice Pill with Arrow to Choose */}
+            <button
+              type="button"
+              onClick={() => setIsChangingLanguage(prev => !prev)}
+              className="inline-flex items-center gap-2.5 px-4 py-2 bg-slate-100/90 hover:bg-slate-200/80 border border-slate-200/80 rounded-2xl transition-all cursor-pointer group active:scale-95 self-start sm:self-auto"
+            >
+              <span className="text-sm font-black text-[#001A40]">
+                {ALL_LANGUAGES.find(l => l.code === localData.language)?.label || 'English'}
+              </span>
+              <span className="w-6 h-6 rounded-full bg-[#F78F50] text-white flex items-center justify-center transition-transform duration-200 shadow-sm">
+                <span className={`material-symbols-outlined text-sm transition-transform ${isChangingLanguage ? 'rotate-180' : ''}`}>
+                  expand_more
                 </span>
-                <span className="material-symbols-outlined text-sm">
-                  {isChangingLanguage ? 'expand_less' : 'expand_more'}
-                </span>
-              </button>
-            </div>
+              </span>
+            </button>
           </div>
 
           {/* Expandable Grid for Other Global Languages */}
