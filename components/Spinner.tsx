@@ -17,8 +17,8 @@ export const Spinner: React.FC<SpinnerProps> = ({
 }) => {
   const sizeMap = {
     sm: {
-      box: 'w-7 h-7',
-      logo: 'w-6 h-6',
+      box: 'w-8 h-8',
+      logo: 'w-7 h-7',
       text: 'text-[10px]'
     },
     md: {
@@ -45,32 +45,32 @@ export const Spinner: React.FC<SpinnerProps> = ({
   return (
     <div className={`inline-flex flex-col items-center justify-center gap-2.5 ${className}`}>
       <style>{`
-        @keyframes rawyFillLoop {
+        @keyframes rawyLiquidFillLoop {
           0% {
             clip-path: inset(100% 0 0 0);
-            opacity: 0.15;
+            opacity: 0.2;
             filter: drop-shadow(0 0 0px transparent);
           }
-          10% {
+          12% {
             opacity: 0.9;
           }
-          50% {
+          52% {
             clip-path: inset(0% 0 0 0);
             opacity: 1;
-            filter: drop-shadow(0 0 8px rgba(247, 143, 80, 0.4));
+            filter: drop-shadow(0 0 8px rgba(247, 143, 80, 0.45));
           }
-          68% {
+          70% {
             clip-path: inset(0% 0 0 0);
             opacity: 1;
-            filter: drop-shadow(0 0 16px rgba(247, 143, 80, 0.75));
-            transform: scale(1.04);
+            filter: drop-shadow(0 0 16px rgba(247, 143, 80, 0.8));
+            transform: scale(1.03);
           }
-          82% {
+          84% {
             clip-path: inset(0% 0 0 0);
             opacity: 0.95;
             transform: scale(1);
           }
-          94% {
+          95% {
             clip-path: inset(0% 0 0 0);
             opacity: 0.1;
             filter: drop-shadow(0 0 0px transparent);
@@ -82,19 +82,19 @@ export const Spinner: React.FC<SpinnerProps> = ({
           }
         }
 
-        @keyframes rawyWaveLineLoop {
+        @keyframes rawyLiquidWave {
           0% {
             top: 100%;
             opacity: 0;
           }
-          10% {
+          12% {
             opacity: 0.9;
           }
-          50% {
+          52% {
             top: 0%;
             opacity: 1;
           }
-          68% {
+          70% {
             top: 0%;
             opacity: 0;
           }
@@ -106,21 +106,21 @@ export const Spinner: React.FC<SpinnerProps> = ({
 
         @keyframes rawySkeletonPulse {
           0%, 100% {
-            opacity: 0.22;
+            opacity: 0.35;
           }
           50% {
-            opacity: 0.35;
+            opacity: 0.55;
           }
         }
 
         @keyframes rawyGlowPulse {
           0%, 100% {
-            transform: scale(0.92);
-            opacity: 0.25;
+            transform: scale(0.95);
+            opacity: 0.2;
           }
           50% {
-            transform: scale(1.1);
-            opacity: 0.55;
+            transform: scale(1.08);
+            opacity: 0.45;
           }
         }
       `}</style>
@@ -128,31 +128,30 @@ export const Spinner: React.FC<SpinnerProps> = ({
       {/* Main Logo Container */}
       <div className={`relative flex items-center justify-center ${currentSize.box} select-none`}>
         
-        {/* Ambient Soft Glow Behind Logo */}
+        {/* Soft Ambient Radial Glow Behind Logo */}
         <div 
-          className="absolute inset-[-10%] rounded-full bg-gradient-to-tr from-[#F78F50]/30 via-[#ECC156]/20 to-[#006B5D]/30 blur-md pointer-events-none"
+          className="absolute inset-[-12%] rounded-full bg-gradient-to-tr from-[#F78F50]/25 via-[#ECC156]/20 to-[#006B5D]/25 blur-md pointer-events-none"
           style={{ animation: 'rawyGlowPulse 2.4s ease-in-out infinite' }}
         ></div>
 
         {/* ------------------------------------------------------------- */}
-        {/* 1. SKELETON LAYER: Abstract, uncolored monochrome logo base   */}
+        {/* 1. SKELETON LAYER: The exact line-art outline (empty logo)    */}
         {/* ------------------------------------------------------------- */}
         <img
-          src="/logo-icon.png"
-          alt="Rawy"
-          className={`${currentSize.logo} object-contain select-none pointer-events-none`}
+          src="/logo-skeleton.png"
+          alt="Rawy Outline Skeleton"
+          className={`${currentSize.logo} object-contain select-none pointer-events-none z-10`}
           style={{
-            filter: 'grayscale(100%) brightness(1.25) contrast(0.7)',
             animation: 'rawySkeletonPulse 2.4s ease-in-out infinite'
           }}
         />
 
         {/* ------------------------------------------------------------- */}
         {/* 2. COLOR FILL LAYER: Authentic vibrant official colors        */}
-        {/* Liquid fills up from bottom to top, revealing the logo       */}
+        {/* Fills up inside the skeleton from bottom (0%) to top (100%)   */}
         {/* ------------------------------------------------------------- */}
         <div 
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
           style={
             isDeterministic 
               ? { 
@@ -160,30 +159,30 @@ export const Spinner: React.FC<SpinnerProps> = ({
                   transition: 'clip-path 0.3s ease-out'
                 }
               : {
-                  animation: 'rawyFillLoop 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite'
+                  animation: 'rawyLiquidFillLoop 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite'
                 }
           }
         >
           <img
-            src="/logo-icon.png"
-            alt="Loading..."
+            src="/logo-color.png"
+            alt="Loading Color Logo"
             className={`${currentSize.logo} object-contain select-none pointer-events-none drop-shadow-md`}
           />
 
-          {/* Luminous Liquid Wave / Meniscus at rising edge */}
+          {/* Luminous rising liquid meniscus wave */}
           {!isDeterministic && size !== 'sm' && (
             <div 
-              className="absolute left-1 right-1 h-[3px] bg-gradient-to-r from-transparent via-[#F78F50] to-transparent blur-[1px]"
+              className="absolute left-2 right-2 h-[3px] bg-gradient-to-r from-transparent via-[#F78F50] to-transparent blur-[1px]"
               style={{
-                animation: 'rawyWaveLineLoop 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite'
+                animation: 'rawyLiquidWave 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite'
               }}
             ></div>
           )}
         </div>
 
-        {/* Subtle rotating outer orbit ring for extra feedback */}
+        {/* Subtle rotating orbit ring */}
         <div 
-          className="absolute inset-0 rounded-full border border-dashed border-[#F78F50]/20 pointer-events-none animate-[spin_8s_linear_infinite]"
+          className="absolute inset-0 rounded-full border border-dashed border-[#F78F50]/25 pointer-events-none animate-[spin_10s_linear_infinite]"
         ></div>
 
       </div>
