@@ -465,7 +465,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onStart, 
   language 
 }) => {
+  const heroSectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hasLeftViewRef = useRef<boolean>(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -484,6 +486,36 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
   const activeVideoSrc = isMobile ? '/hero-apple-1.mp4' : '/hero-apple-2.mp4';
 
+  // Only replay video when user scrolls down away from hero and scrolls back up
+  useEffect(() => {
+    const heroEl = heroSectionRef.current;
+    if (!heroEl) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.intersectionRatio < 0.2) {
+            // User scrolled away / hero is out of view
+            hasLeftViewRef.current = true;
+          } else if (entry.intersectionRatio >= 0.5 && hasLeftViewRef.current) {
+            // User scrolled back up to the hero banner
+            hasLeftViewRef.current = false;
+            if (videoRef.current) {
+              videoRef.current.currentTime = 0;
+              videoRef.current.play().catch(() => {});
+            }
+          }
+        });
+      },
+      {
+        threshold: [0.15, 0.5]
+      }
+    );
+
+    observer.observe(heroEl);
+    return () => observer.disconnect();
+  }, [activeVideoSrc]);
+
   const lang = TRANSLATIONS[language] || TRANSLATIONS.en;
   const isAr = language === 'ar';
 
@@ -498,9 +530,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     <div className="font-sans overflow-x-hidden flex flex-col relative w-full bg-[#FAF9F6] text-[#001A40]">
       
       {/* ========================================================================= */}
-      {/* 1. 100% FULL-BLEED VIDEO HERO BANNER (NO FLOATING REPLAY / OMAR PILL)     */}
+      {/* 1. 100% FULL-BLEED VIDEO HERO BANNER (NO LOOP - REPLAYS ON SCROLL BACK UP) */}
       {/* ========================================================================= */}
-      <section className="relative w-full h-[86vh] sm:h-[84vh] lg:h-[88vh] min-h-[580px] max-h-[960px] overflow-hidden bg-black select-none flex flex-col justify-between">
+      <section 
+        ref={heroSectionRef}
+        className="relative w-full h-[86vh] sm:h-[84vh] lg:h-[88vh] min-h-[580px] max-h-[960px] overflow-hidden bg-black select-none flex flex-col justify-between"
+      >
         
         {/* Full-Bleed Edge-to-Edge Video */}
         <video
@@ -509,7 +544,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
           autoPlay
           muted
-          loop
           playsInline
           poster="/hero-poster.jpg"
         >
