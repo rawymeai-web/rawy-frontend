@@ -96,16 +96,77 @@ const OrderStatusModal: React.FC<OrderStatusModalProps> = ({ isOpen, onClose, la
         ) : (
           <div className="space-y-4 text-center">
             <h3 className="text-xl font-bold text-brand-coral">{t('حالة طلبك', 'Your Order Status')}</h3>
-            <p className="text-gray-700">{t('الطلب رقم:', 'Order #:')} <span className="font-bold text-brand-navy">{foundOrder.orderNumber}</span></p>
-            <div className="p-4 bg-brand-baby-blue/50 rounded-lg text-brand-navy">
-              <p className="font-semibold text-lg">{foundOrder.status}</p>
-              <p className="text-sm mt-1">
-                {t('آخر تحديث:', 'Last updated:')} {new Date(foundOrder.orderDate).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')}
-              </p>
+            <p className="text-gray-700">{t('الطلب رقم:', 'Order #:')} <span className="font-bold text-brand-navy font-mono">#{foundOrder.orderNumber}</span></p>
+            
+            {(() => {
+              const status = foundOrder.status;
+              const isSuccess = ['softcopy_ready', 'awaiting_preview_approval', 'completed', 'sent_to_print', 'printing', 'shipped', 'delivered'].includes(status);
+              const isOnHold = status === 'on_hold';
+              const isAction = ['processing', 'Processing', 'story_generating', 'illustrations_generating', 'book_compiling', 'blueprint_generating', 'queued', 'paid_confirmed'].includes(status);
+
+              const statusLabels: Record<string, { ar: string; en: string; descAr: string; descEn: string }> = {
+                'paid_confirmed': { ar: 'تم تأكيد الدفع والطلب 🎉', en: 'Payment Confirmed 🎉', descAr: 'تم استلام طلبك وجاري بدء التجهيز والإنتاج.', descEn: 'Order confirmed and entering production queue.' },
+                'queued': { ar: 'في قائمة الإنتاج 🚀', en: 'In Production Queue 🚀', descAr: 'طلبك في قائمة الانتظار لبدء الرسم والكتابة.', descEn: 'Your story is in the queue to begin illustration and writing.' },
+                'blueprint_generating': { ar: 'بناء مخطط القصة 📝', en: 'Constructing Blueprint 📝', descAr: 'نقوم ببناء عقدة القصة وشخصية طفلكم.', descEn: 'Structuring the custom narrative arc and character identity.' },
+                'story_generating': { ar: 'كتابة أحداث القصة 📖', en: 'Drafting Narrative 📖', descAr: 'نقوم بصياغة النص الأدبي ومراجعته بدقة.', descEn: 'Drafting the story text and running editorial quality checks.' },
+                'story_ready': { ar: 'تمت كتابة القصة ✨', en: 'Story Drafted ✨', descAr: 'تم اعتماد نص القصة وجاري تحضير الرسومات.', descEn: 'Story approved, preparing custom illustrations.' },
+                'illustrations_generating': { ar: 'جاري رسم المشاهد 🎨', en: 'Painting Illustrations 🎨', descAr: 'يقوم نظامنا الآلي برسم وفحص المشاهد بمطابقة صورة طفلكم.', descEn: 'AI engine is painting and QA-inspecting character spreads.' },
+                'illustrations_ready': { ar: 'الرسومات مكتملة 🖼️', en: 'Illustrations Ready 🖼️', descAr: 'اكتملت جميع الرسومات وجاري تجميع الكتاب.', descEn: 'All spreads illustrated, assembling high-res book.' },
+                'book_compiling': { ar: 'تجميع وتنسيق الكتاب 📑', en: 'Binding & Compiling 📑', descAr: 'جاري تجميع الصفحات في ملف PDF عالي الجودة للطباعة.', descEn: 'Compiling high-resolution print-ready files.' },
+                'softcopy_ready': { ar: 'قصتك جاهزة بالكامل! 🎉', en: 'Storybook Ready! 🎉', descAr: 'يمكنك الآن تصفح القصة وتنزيل ملف الـ PDF.', descEn: 'Your custom storybook is ready to read and download.' },
+                'awaiting_preview_approval': { ar: 'القصة جاهزة للقراءة 📚', en: 'Story Ready for Reading 📚', descAr: 'القصة جاهزة للتصفح والمطالعة الفورية.', descEn: 'Story is ready for instant viewing.' },
+                'sent_to_print': { ar: 'تم الإرسال للمطبعة 🖨️', en: 'Sent to Press 🖨️', descAr: 'تم إرسال النسخة الفاخرة للطباعة والتجليد.', descEn: 'Hardcover edition sent to our premium printing partner.' },
+                'printing': { ar: 'جاري الطباعة والتجليد 📦', en: 'Printing in Progress 📦', descAr: 'يتم الآن طباعة وتجليد نسختكم الورقية الفاخرة.', descEn: 'Your physical book is being printed and bound.' },
+                'shipped': { ar: 'تم الشحن والتسليم لشركة التوصيل 🚚', en: 'Shipped! 🚚', descAr: 'طلبك في الطريق إليكم مع شركة الشحن.', descEn: 'Package dispatched with express delivery.' },
+                'delivered': { ar: 'تم التوصيل بنجاح 🏡', en: 'Delivered 🏡', descAr: 'نتمنى لكم ولطفلكم أمتع اللحظات مع القصة!', descEn: 'Package delivered! Enjoy your magical adventure.' },
+                'on_hold': { ar: 'قيد المراجعة الفنية من فريق الجودة 🛡️', en: 'Under Art & Quality Review 🛡️', descAr: 'يقوم فريق الجودة الفني بالتدقيق على تفاصيل الرسم لضمان أعلى مطابقة. سنرسل لك إشعاراً فور اعتمادها.', descEn: 'Our art directors are fine-tuning the illustrations to ensure highest visual fidelity. We will notify you once approved.' },
+                'failed': { ar: 'توقف مؤقت ⚠️', en: 'Paused for Review ⚠️', descAr: 'يرجى التواصل مع الدعم الفني للاستفسار أو المساعدة.', descEn: 'Please contact customer support for assistance with this order.' }
+              };
+
+              const currentInfo = statusLabels[status] || {
+                ar: status,
+                en: status,
+                descAr: 'طلبك قيد المتابعة.',
+                descEn: 'Your order is being processed.'
+              };
+
+              return (
+                <div className={`p-4 rounded-xl text-center space-y-2 ${
+                  isSuccess ? 'bg-emerald-50 border border-emerald-200 text-emerald-950' :
+                  isOnHold ? 'bg-amber-50 border border-amber-200 text-amber-950' :
+                  isAction ? 'bg-orange-50 border border-orange-200 text-brand-navy' :
+                  'bg-gray-50 border border-gray-200 text-gray-900'
+                }`}>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                    isSuccess ? 'bg-emerald-100 text-emerald-800' :
+                    isOnHold ? 'bg-amber-100 text-amber-800' :
+                    'bg-brand-orange/15 text-brand-orange'
+                  }`}>
+                    {t(currentInfo.ar, currentInfo.en)}
+                  </span>
+                  <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                    {t(currentInfo.descAr, currentInfo.descEn)}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-2 font-mono">
+                    {t('آخر تحديث:', 'Last updated:')} {new Date(foundOrder.orderDate).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                  </p>
+                </div>
+              );
+            })()}
+
+            <div className="flex gap-2 pt-2">
+              <Button 
+                onClick={() => {
+                  window.location.href = `/?order=${encodeURIComponent(foundOrder.orderNumber)}`;
+                }} 
+                className="flex-1 bg-brand-orange hover:bg-brand-coral text-white font-bold"
+              >
+                {t('📖 عرض ومتابعة القصة', '📖 View & Track Story')}
+              </Button>
+              <Button onClick={handleClose} variant="outline" className="flex-1">
+                {t('إغلاق', 'Close')}
+              </Button>
             </div>
-            <Button onClick={handleClose} variant="outline" className="w-full">
-              {t('إغلاق', 'Close')}
-            </Button>
           </div>
         )}
       </div>

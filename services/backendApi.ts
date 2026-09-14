@@ -324,6 +324,9 @@ export const backendApi = {
     
     getPublicStory: (storyId: string) => fetchBackend<{ success: boolean; story: any }>(`/orders/public-story/${storyId}?_t=${Date.now()}`),
 
+    lookupOrder: (orderNumber: string, phone?: string) => 
+        fetchBackend<{ success: boolean; order: any }>(`/orders/lookup?orderNumber=${encodeURIComponent(orderNumber)}${phone ? `&phone=${encodeURIComponent(phone)}` : ''}&_t=${Date.now()}`),
+
     // Admin Tools
     triggerCron: () => fetchBackend<{ executedTasks: number; failedTasks: number }>('/cron', {
         method: 'GET'

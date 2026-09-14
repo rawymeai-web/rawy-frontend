@@ -12,6 +12,7 @@ import { UnifiedGenerationScreen } from './UnifiedGenerationScreen';
 import PreviewScreen from './PreviewScreen';
 import CheckoutScreen from './CheckoutScreen';
 import ConfirmationScreen from './ConfirmationScreen';
+import { OrderTrackingScreen } from './OrderTrackingScreen';
 import Header from './Header';
 import Footer from './Footer';
 import PageDecorations from './PageDecorations';
@@ -135,29 +136,39 @@ const MainLayout: React.FC = () => {
         return () => subscription.unsubscribe();
     }, []);
 
-    // Handle direct public story sharing via URL (?story=RWY-... or ?read=...)
+    // Handle direct public story sharing (?story=RWY-...) OR live order tracking (?order=RWY-...)
     useEffect(() => {
         try {
-            const getSharedStoryParam = () => {
-                // 1. Check window.location.search (?story=...)
+            const getParam = (keys: string[]) => {
                 const searchParams = new URLSearchParams(window.location.search);
-                let val = searchParams.get('story') || searchParams.get('read') || searchParams.get('orderId');
-                if (val) return val;
-
-                // 2. Check window.location.hash (#?story=... or #story=...)
+                for (const k of keys) {
+                    const v = searchParams.get(k);
+                    if (v) return v;
+                }
                 if (window.location.hash) {
                     const hash = window.location.hash;
                     const hashQueryIndex = hash.indexOf('?');
                     if (hashQueryIndex !== -1) {
                         const hashParams = new URLSearchParams(hash.substring(hashQueryIndex));
-                        val = hashParams.get('story') || hashParams.get('read') || hashParams.get('orderId');
-                        if (val) return val;
+                        for (const k of keys) {
+                            const v = hashParams.get(k);
+                            if (v) return v;
+                        }
                     }
                 }
                 return null;
             };
 
-            const sharedStoryId = getSharedStoryParam();
+            const directOrderId = getParam(['order', 'orderNumber', 'orderId', 'track']);
+            if (directOrderId) {
+                console.log("Found direct tracked order param:", directOrderId);
+                localStorage.setItem('last_tracked_order', directOrderId);
+                updateStory({ orderId: directOrderId });
+                setScreen('order-tracking');
+                return;
+            }
+
+            const sharedStoryId = getParam(['story', 'read']);
             if (sharedStoryId) {
                 console.log("Loading public shared story:", sharedStoryId);
                 backendApi.getPublicStory(sharedStoryId)
@@ -177,7 +188,7 @@ const MainLayout: React.FC = () => {
                     });
             }
         } catch (e) {
-            console.error("Failed to parse public story params:", e);
+            console.error("Failed to parse URL query params:", e);
         }
     }, []);
 
@@ -263,26 +274,33 @@ const MainLayout: React.FC = () => {
 
     const handlePaymentSuccess = useCallback(async (isManualLink: boolean = false) => {
         try {
+            const confirmedOrderId = storyData.orderId || (typeof window !== 'undefined' ? localStorage.getItem('last_tracked_order') || '' : '');
             if (isManualLink) {
                 setIsManualPayment(true);
             }
-            if (storyData.orderId) {
+            if (confirmedOrderId) {
                 const targetStatus = isManualLink ? 'pending_payment' : 'paid_confirmed';
-                console.log(`Marking Order ${storyData.orderId} as ${targetStatus}`);
+                console.log(`Marking Order ${confirmedOrderId} as ${targetStatus}`);
+                localStorage.setItem('last_tracked_order', confirmedOrderId);
+                
+                // Update URL to include ?order=RWY-... for bookmarking and page refresh
+                if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('order', confirmedOrderId);
+                    window.history.replaceState({}, '', url.toString());
+                }
+
                 await backendApi.updateDraftOrder({
-                    orderId: storyData.orderId,
+                    orderId: confirmedOrderId,
                     status: targetStatus,
                     shippingDetails
                 });
             } else {
-                console.warn("No Order ID found in context! Falling back to legacy flow (or displaying error).");
-                // TODO: Handle no-order scenario gracefully
+                console.warn("No Order ID found in context!");
             }
 
-            localStorage.removeItem('storyData');
-            localStorage.removeItem('currentScreen');
             setPaymentModalOpen(false);
-            setScreen('confirmation'); // NEW: Skip generation entirely
+            setScreen('order-tracking');
 
         } catch (error) {
             console.error("Payment Confirmation Error:", error);
@@ -430,15 +448,22 @@ const MainLayout: React.FC = () => {
         switch (screen) {
             case 'welcome':
             case 'language': // Fallback mapping language to welcome
-                content = <WelcomeScreen onStart={() => { 
-                    try {
-                        localStorage.setItem('has_completed_welcome', 'true');
-                        localStorage.setItem('rawy_user_preferences_set', 'true');
-                        localStorage.setItem('rawy_region_confirmed', 'true');
-                    } catch (e) {}
-                    resetStory(); 
-                    setScreen('personalization'); 
-                }} onBack={() => { }} language={language} setLanguage={setLanguage} />;
+                content = (
+                    <WelcomeScreen 
+                        onStart={() => { 
+                            try {
+                                localStorage.setItem('has_completed_welcome', 'true');
+                                localStorage.setItem('rawy_user_preferences_set', 'true');
+                                localStorage.setItem('rawy_region_confirmed', 'true');
+                            } catch (e) {}
+                            resetStory(); 
+                            setScreen('personalization'); 
+                        }} 
+                        onBack={() => { }} 
+                        language={language} 
+                        setLanguage={setLanguage} 
+                    />
+                );
                 break;
             case 'personalization':
                 content = <PersonalizationScreen onNext={(data) => { 
@@ -596,8 +621,25 @@ const MainLayout: React.FC = () => {
                     currency={currency}
                 />;
                 break;
+            case 'order-tracking':
             case 'confirmation':
-                content = <ConfirmationScreen orderNumber={storyData.orderId || 'RWY-UNKNOWN'} onRestart={() => { resetStory(); setIsManualPayment(false); }} language={language} shippingDetails={shippingDetails} storyData={storyData} currency={currency} totalPrice={paymentAmount} isManualPayment={isManualPayment} />;
+                {
+                    const resolvedOrderNum = storyData.orderId || 
+                        (typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('order') || new URLSearchParams(window.location.search).get('orderNumber') || localStorage.getItem('last_tracked_order') || '') : '');
+                    content = (
+                        <OrderTrackingScreen 
+                            orderNumber={resolvedOrderNum} 
+                            language={language} 
+                            onRestart={() => { resetStory(); setIsManualPayment(false); setScreen('welcome'); }} 
+                            onViewBook={(bookStoryData) => {
+                                updateStory(bookStoryData);
+                                setPreviewReturnScreen('order-tracking');
+                                setScreen('preview');
+                            }}
+                            currency={currency}
+                        />
+                    );
+                }
                 break;
             case 'customerDashboard':
                 if (!user) {
@@ -693,7 +735,7 @@ const MainLayout: React.FC = () => {
             />
             <main className="flex-grow relative">
                 <PageDecorations />
-                <div className={`relative w-full h-full p-4 sm:p-8 flex flex-col justify-center ${(screen === 'unified-generation' || screen === 'editor') ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
+                <div className={`relative w-full h-full ${screen === 'welcome' ? 'p-0' : 'p-4 sm:p-8'} flex flex-col justify-center ${(screen === 'unified-generation' || screen === 'editor') ? 'z-50' : 'z-10'}`}>{renderScreen()}</div>
             </main>
             <Footer 
                 language={language} 

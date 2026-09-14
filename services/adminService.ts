@@ -261,3 +261,23 @@ export async function getQualityLogs(orderId: string, spreadNumber: number) {
   if (error) return [];
   return data;
 }
+
+export async function rerunQA(orderId: string, payload: {
+  spreadIndex: number | 'cover';
+  illustrationUrl?: string;
+  targetPrompt?: string;
+  spreadText?: string;
+  currentTextSide?: string;
+}): Promise<{ success: boolean; qcResult: any; logEntry: any }> {
+  const res = await fetch(`/api/admin/orders/${orderId}/rerun-qa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'QA re-evaluation failed');
+  }
+  return res.json();
+}
+

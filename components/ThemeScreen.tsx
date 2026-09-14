@@ -91,6 +91,13 @@ const THEME_STYLING: Record<string, { bg: string; border: string; emojiBg: strin
     text: 'text-violet-950',
     subtext: 'text-violet-900/60'
   },
+  'val-school': {
+    bg: 'bg-gradient-to-br from-amber-50/80 via-yellow-50/50 to-orange-50/40 hover:from-amber-100/70 hover:to-orange-100/50',
+    border: 'border-amber-200/70 hover:border-amber-300',
+    emojiBg: 'bg-amber-100/90 text-amber-700',
+    text: 'text-amber-950',
+    subtext: 'text-amber-900/70'
+  },
 
   // Adventures themes (adventurous & colorful)
   'adv-lost-found': {

@@ -214,6 +214,8 @@ export interface StoryData {
   secondCharacter?: Character;
   useSecondCharacter: boolean;
   coverImageUrl: string;
+  coverOriginalUrl?: string;
+  coverQcStatus?: 'passed' | 'flagged' | 'pending' | string;
   actualCoverPrompt?: string;
   coverTextSide?: 'left' | 'right';
   spreadCount?: number;   // Resolved from settings.defaultSpreadCount; defaults to 8
@@ -376,6 +378,12 @@ export interface Spread {
   imageOffsetX?: number;      // % shift of illustration horizontally (-50 to +50, default 0)
   imageOffsetY?: number;      // % shift of illustration vertically (-50 to +50, default 0)
   imageScale?: number;        // scale of illustration (100 = default, 150 = 1.5x zoom)
+  qcStatus?: 'passed' | 'flagged' | 'pending' | string;
+  qcOriginalUrl?: string;
+  promptDetails?: {
+    mainContentSide?: 'left' | 'right';
+    textSide?: 'left' | 'right';
+  };
 }
 
 

@@ -1,13 +1,18 @@
 import { supabase } from '../utils/supabaseClient';
 
-const redirectTo = `${window.location.origin}/`;
+const getRedirectUrl = () => {
+    if (typeof window !== 'undefined') {
+        return window.location.origin;
+    }
+    return 'https://rawytime.com';
+};
 
 export const authService = {
     /** Google OAuth — redirects back to app after login */
     async signInWithGoogle(): Promise<void> {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo },
+            options: { redirectTo: getRedirectUrl() },
         });
         if (error) throw error;
     },
@@ -16,7 +21,7 @@ export const authService = {
     async signInWithApple(): Promise<void> {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'apple',
-            options: { redirectTo },
+            options: { redirectTo: getRedirectUrl() },
         });
         if (error) throw error;
     },
@@ -25,7 +30,7 @@ export const authService = {
     async signInWithFacebook(): Promise<void> {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'facebook',
-            options: { redirectTo },
+            options: { redirectTo: getRedirectUrl() },
         });
         if (error) throw error;
     },
@@ -34,7 +39,7 @@ export const authService = {
     async signInWithOtp(email: string): Promise<void> {
         const { error } = await supabase.auth.signInWithOtp({
             email,
-            options: { emailRedirectTo: redirectTo },
+            options: { emailRedirectTo: getRedirectUrl() },
         });
         if (error) throw error;
     },

@@ -12,7 +12,7 @@ interface PaymentModalProps {
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentSuccess, totalAmount, orderId, language }) => {
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'manual'>('manual');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'manual' | 'test_paid'>('test_paid');
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!isOpen) return null;
@@ -49,6 +49,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
         ));
         setIsProcessing(false);
       }
+    } else if (paymentMethod === 'test_paid') {
+      // Instant Test Mode: Mark order paid_confirmed and trigger autonomous pipeline
+      setTimeout(() => {
+        setIsProcessing(false);
+        onPaymentSuccess(false); // isManualLink = false -> marks as paid_confirmed
+      }, 600);
     } else {
       // Manual Link selected: Complete order setup with pending state immediately
       setTimeout(() => {
@@ -95,6 +101,39 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
 
           {/* Payment Method Selection */}
           <div className="space-y-3">
+            {/* Instant Test Mode (Developer & Testing) */}
+            <label className={`relative flex items-start p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+              paymentMethod === 'test_paid' 
+                ? 'border-brand-orange bg-brand-orange/5 shadow-lg ring-2 ring-brand-orange/20' 
+                : 'border-gray-200 hover:border-gray-300 bg-white'
+            }`}>
+              <input 
+                type="radio" 
+                name="payment_method" 
+                value="test_paid"
+                checked={paymentMethod === 'test_paid'}
+                onChange={() => setPaymentMethod('test_paid')}
+                className="mt-1 accent-brand-orange"
+                disabled={isProcessing}
+              />
+              <div className={`${language === 'ar' ? 'mr-3' : 'ml-3'} flex-1`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-black text-brand-navy text-base flex items-center gap-1.5">
+                    <span>🧪 {t('اختبار فوري (تأكيد الدفع وبدء الإنتاج التلقائي)', 'Instant Test Mode (Simulate Paid & Auto-Generate)')}</span>
+                  </span>
+                  <span className="bg-amber-500 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    {t('اختبار محلي ⚡', 'TEST MODE ⚡')}
+                  </span>
+                </div>
+                <p className="text-xs text-brand-navy/70 mt-1.5 leading-relaxed font-medium">
+                  {t(
+                    'يحاكي نجاح الدفع فوراً ويبدأ نظام الذكاء الاصطناعي في كتابة القصة ورسم المشاهد وتتبع التقدم مباشرة.',
+                    'Simulates instant payment confirmation and triggers the autonomous pipeline to illustrate and build your storybook with live progress.'
+                  )}
+                </p>
+              </div>
+            </label>
+
             {/* Primary Recommended: Official Link (KNET / Apple Pay) */}
             <label className={`relative flex items-start p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
               paymentMethod === 'manual' 

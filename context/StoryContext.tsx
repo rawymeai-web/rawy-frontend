@@ -69,15 +69,24 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             const savedLang = localStorage.getItem('preferred_language');
             if (savedLang) return savedLang as Language;
 
-            // Auto-detect Arabic if user browser / system locale is Arabic
-            if (typeof navigator !== 'undefined' && navigator.language) {
-                const navLang = navigator.language.toLowerCase();
-                if (navLang.startsWith('ar')) return 'ar';
+            // Auto-detect from user browser / system locale
+            if (typeof navigator !== 'undefined') {
+                const navLangs = navigator.languages && navigator.languages.length > 0
+                    ? navigator.languages
+                    : [navigator.language];
+                
+                for (const raw of navLangs) {
+                    if (!raw) continue;
+                    const code = raw.toLowerCase().split('-')[0];
+                    if (code === 'ar') return 'ar';
+                    if (['en', 'de', 'tr', 'zh', 'ja', 'fr', 'es', 'it', 'pt', 'ru'].includes(code)) {
+                        return code as Language;
+                    }
+                }
             }
-            // Default to Arabic as primary regional brand language, or 'ar'
-            return 'ar';
+            return 'en';
         } catch (e) {
-            return 'ar';
+            return 'en';
         }
     });
 
@@ -116,7 +125,10 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         try {
             const search = window.location.search || '';
             const hash = window.location.hash || '';
-            return search.includes('story=') || search.includes('read=') || search.includes('preview=') || search.includes('orderId=') ||
+            const isAppleTest = search.includes('banner=apple') || search.includes('hero=apple') || search.includes('apple=true') || search.includes('preview=apple');
+            if (isAppleTest) return false;
+
+            return search.includes('story=') || search.includes('read=') || (search.includes('preview=') && !search.includes('preview=apple')) || search.includes('orderId=') ||
                    hash.includes('story=') || hash.includes('read=') || hash.includes('preview=') || hash.includes('orderId=');
         } catch (e) {
             return false;
@@ -124,11 +136,19 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     // Default screen determination:
-    // 1. Direct shared story links jump straight to 'preview'
-    // 2. Returning users who completed onboarding jump straight to 'personalization' (or saved screen)
-    // 3. Brand new first-time users see 'welcome'
+    // 1. Direct apple banner preview jumps straight to 'welcome'
+    // 2. Direct shared story links jump straight to 'preview'
+    // 3. Returning users who completed onboarding jump straight to 'personalization' (or saved screen)
+    // 4. Brand new first-time users see 'welcome'
     const [screen, setScreen] = useState<Screen>(() => {
         try {
+            if (typeof window !== 'undefined') {
+                const search = window.location.search || '';
+                if (search.includes('banner=apple') || search.includes('hero=apple') || search.includes('apple=true') || search.includes('preview=apple')) {
+                    return 'welcome';
+                }
+            }
+
             if (hasSharedStoryInUrl()) return 'preview';
 
             const hasCompletedWelcome = localStorage.getItem('has_completed_welcome') === 'true' ||
@@ -148,20 +168,8 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const [isOrderStatusModalOpen, setOrderStatusModalOpen] = useState(false);
 
     // Regional discovery modal (Language / Country / Currency setup)
-    // NEVER show on shared story links, and only show ONCE for first-time visitors
-    const [isRegionModalOpen, setRegionModalOpen] = useState<boolean>(() => {
-        try {
-            if (hasSharedStoryInUrl()) return false;
-
-            const hasConfirmed = localStorage.getItem('rawy_region_confirmed') === 'true' || 
-                                 localStorage.getItem('rawy_user_preferences_set') === 'true' ||
-                                 localStorage.getItem('has_completed_welcome') === 'true' ||
-                                 sessionStorage.getItem('rawy_region_confirmed') === 'true';
-            return !hasConfirmed;
-        } catch (e) {
-            return false;
-        }
-    });
+    // Silently runs in background without popup friction; accessible anytime from header button
+    const [isRegionModalOpen, setRegionModalOpen] = useState<boolean>(false);
 
     // Persistence Effect
     React.useEffect(() => {

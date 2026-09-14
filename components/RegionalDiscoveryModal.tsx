@@ -20,10 +20,12 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
     onLanguageChange,
     onCurrencyChange
 }) => {
-    const [internalIsOpen, setInternalIsOpen] = useState(true);
+    const [internalIsOpen, setInternalIsOpen] = useState(false);
     const isModalOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
 
     const [detectedRegion, setDetectedRegion] = useState<any>(null);
+    const [detectedLangCode, setDetectedLangCode] = useState<Language | null>(null);
+    const [detectedCountryCode, setDetectedCountryCode] = useState<string | null>(null);
 
     const [selectedCountry, setSelectedCountry] = useState('KW');
     const [selectedLang, setSelectedLang] = useState<Language>(currentLanguage);
@@ -67,43 +69,45 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
         { code: 'IT', name: 'Italy', ar: 'إيطاليا', flag: '🇮🇹', currency: 'EUR' },
     ];
 
-    const languages: { code: Language, label: string, flag: string }[] = [
-        { code: 'ar', label: 'العربية', flag: '🇸🇦' },
-        { code: 'en', label: 'English', flag: '🇺🇸' },
-        { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-        { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
-        { code: 'zh', label: '中文 (Chinese)', flag: '🇨🇳' },
-        { code: 'ja', label: '日本語', flag: '🇯🇵' },
-        { code: 'fr', label: 'Français', flag: '🇫🇷' },
-        { code: 'es', label: 'Español', flag: '🇪🇸' },
-        { code: 'it', label: 'Italiano', flag: '🇮🇹' },
-        { code: 'pt', label: 'Português', flag: '🇵🇹' },
-        { code: 'ru', label: 'Русский', flag: '🇷🇺' },
+    const languages: { code: Language, label: string, nativeLabel: string, flag: string }[] = [
+        { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', flag: '🇸🇦' },
+        { code: 'en', label: 'English', nativeLabel: 'English', flag: '🇺🇸' },
+        { code: 'de', label: 'German', nativeLabel: 'Deutsch', flag: '🇩🇪' },
+        { code: 'tr', label: 'Turkish', nativeLabel: 'Türkçe', flag: '🇹🇷' },
+        { code: 'zh', label: 'Chinese', nativeLabel: '中文', flag: '🇨🇳' },
+        { code: 'ja', label: 'Japanese', nativeLabel: '日本語', flag: '🇯🇵' },
+        { code: 'fr', label: 'French', nativeLabel: 'Français', flag: '🇫🇷' },
+        { code: 'es', label: 'Spanish', nativeLabel: 'Español', flag: '🇪🇸' },
+        { code: 'it', label: 'Italian', nativeLabel: 'Italiano', flag: '🇮🇹' },
+        { code: 'pt', label: 'Portuguese', nativeLabel: 'Português', flag: '🇵🇹' },
+        { code: 'ru', label: 'Russian', nativeLabel: 'Русский', flag: '🇷🇺' },
     ];
 
     const getPhoneLanguage = (): Language => {
-        if (typeof navigator === 'undefined') return 'ar';
+        if (typeof navigator === 'undefined') return 'en';
         const navLangs = navigator.languages && navigator.languages.length > 0 ? navigator.languages : [navigator.language];
         for (const raw of navLangs) {
             if (!raw) continue;
             const code = raw.toLowerCase().split('-')[0];
-            if (['ar', 'en', 'de', 'tr', 'zh', 'ja', 'fr', 'es', 'it', 'pt', 'ru'].includes(code)) {
+            if (code === 'ar') return 'ar';
+            if (['en', 'de', 'tr', 'zh', 'ja', 'fr', 'es', 'it', 'pt', 'ru'].includes(code)) {
                 return code as Language;
             }
         }
-        return 'ar';
+        return 'en';
     };
 
     useEffect(() => {
         const checkRegion = async () => {
             // 1. Phone / Device Language Detection
             const phoneLang = getPhoneLanguage();
+            setDetectedLangCode(phoneLang);
             setSelectedLang(phoneLang);
 
             // 2. IP Detection with reliable fallback
-            let countryCode = 'KW';
-            let countryName = 'Kuwait';
-            let detectedCurr = 'KWD';
+            let countryCode = 'US';
+            let countryName = 'United States';
+            let detectedCurr = 'USD';
 
             try {
                 const res = await fetch('https://ipapi.co/json/');
@@ -111,7 +115,7 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                     const data = await res.json();
                     if (data && data.country_code) {
                         countryCode = data.country_code;
-                        countryName = data.country_name || 'Kuwait';
+                        countryName = data.country_name || 'United States';
                         detectedCurr = data.currency || 'USD';
                         setDetectedRegion(data);
                     }
@@ -125,7 +129,7 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                         const data2 = await res2.json();
                         if (data2 && data2.country_code) {
                             countryCode = data2.country_code;
-                            countryName = data2.country || 'Kuwait';
+                            countryName = data2.country || 'United States';
                             detectedCurr = data2.currency?.code || 'USD';
                             setDetectedRegion(data2);
                         }
@@ -135,6 +139,8 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                 }
             }
 
+            setDetectedCountryCode(countryCode);
+
             const country = allCountries.find(c => c.code === countryCode) || 
                             { code: countryCode, name: countryName, ar: countryName, flag: '🌍', currency: detectedCurr };
             
@@ -143,6 +149,19 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                                      currencies.find(c => c.code === detectedCurr) || 
                                      currencies[0];
             setSelectedCurrency(supportedCurrency.code);
+
+            // Silently apply auto-detected language if not manually chosen before
+            try {
+                const savedLanguage = localStorage.getItem('preferred_language');
+                if (!savedLanguage && phoneLang) {
+                    onLanguageChange(phoneLang);
+                }
+                const savedCurrency = localStorage.getItem('preferred_currency');
+                if (!savedCurrency && supportedCurrency) {
+                    onCurrencyChange(supportedCurrency.code);
+                }
+                localStorage.setItem('rawy_region_confirmed', 'true');
+            } catch (e) {}
         };
 
         checkRegion();
@@ -157,7 +176,7 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
         if (country) {
             setSelectedCountry(code);
             setSelectedCurrency(country.currency);
-            // Auto-detect language but don't force if they already chose something exotic
+            // Auto-detect language if switching regions
             if (['ar', 'en'].includes(selectedLang)) {
                 setSelectedLang(['KW', 'SA', 'AE', 'QA', 'BH', 'OM', 'EG', 'JO', 'LB'].includes(code) ? 'ar' : 'en');
             }
@@ -197,97 +216,148 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
 
     const filteredLangs = languages.filter(l => 
         l.label.toLowerCase().includes(langSearch.toLowerCase()) || 
+        l.nativeLabel.toLowerCase().includes(langSearch.toLowerCase()) ||
         l.code.includes(langSearch.toLowerCase())
     );
 
+    const currentCountryObj = allCountries.find(c => c.code === selectedCountry) || 
+                              (detectedRegion ? { code: selectedCountry, name: detectedRegion.country_name || 'International', ar: detectedRegion.country_name || 'دولي', flag: '🌍' } : { code: 'KW', name: 'Kuwait', ar: 'الكويت', flag: '🇰🇼' });
+
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-brand-navy/60 backdrop-blur-md">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-brand-navy/65 backdrop-blur-md">
                 <motion.div 
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    initial={{ opacity: 0, scale: 0.92, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="bg-white/90 backdrop-blur-2xl rounded-[3.5rem] shadow-2xl border border-white/50 max-w-xl w-full overflow-hidden relative"
+                    exit={{ opacity: 0, scale: 0.92, y: 20 }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                    className="bg-white/95 backdrop-blur-2xl rounded-[2.5rem] sm:rounded-[3.2rem] shadow-2xl border border-white/60 max-w-lg w-full overflow-hidden relative"
                 >
-                    <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-brand-orange/15 to-transparent" />
+                    {/* Glowing Brand Header Background */}
+                    <div className="absolute top-0 left-0 w-full h-36 bg-gradient-to-br from-brand-orange/20 via-brand-yellow/15 to-transparent pointer-events-none" />
                     
                     {onClose && (
                         <button
                             onClick={handleClose}
-                            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-brand-navy flex items-center justify-center shadow-md z-20 transition-all active:scale-95"
+                            className="absolute top-5 right-5 sm:top-6 sm:right-6 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-brand-navy flex items-center justify-center shadow-md border border-gray-100 z-20 transition-all active:scale-95"
                             aria-label="Close"
                         >
                             <span className="material-symbols-outlined text-lg">close</span>
                         </button>
                     )}
 
-                    <div className="p-10 relative z-10 space-y-8">
-                        <div className="flex flex-col items-center text-center space-y-3">
-                            <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center border border-gray-50 mb-1 overflow-hidden p-2">
-                                <Logo showText={false} className="h-10 w-10" />
+                    <div className="p-6 sm:p-8 relative z-10 space-y-6">
+                        {/* Header Branding */}
+                        <div className="flex flex-col items-center text-center space-y-2.5">
+                            <div className="w-14 h-14 bg-gradient-to-br from-brand-orange to-brand-yellow rounded-2xl shadow-lg shadow-brand-orange/25 flex items-center justify-center border-2 border-white mb-0.5 overflow-hidden p-2 text-white">
+                                <span className="material-symbols-outlined text-2xl font-bold">auto_stories</span>
                             </div>
                             <div>
-                                <h2 className="text-3xl font-black text-brand-navy tracking-tighter uppercase">
+                                <h2 className="text-2xl sm:text-3xl font-black text-brand-navy tracking-tight">
                                     {t('مرحباً بك في راوي', 'Welcome to Rawy')}
                                 </h2>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1">
-                                    {t('لنخصص تجربتك السحرية', 'Let\'s personalize your magical experience')}
+                                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">
+                                    {t('خصص لغة وعملة تجربتك', 'Personalize your language & currency')}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="space-y-6">
-                            {/* Country Selector */}
-                            <div className="space-y-3">
-                                <label className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest ml-4">
-                                    {t('الدولة أو المنطقة', 'Your Country or Region')}
-                                </label>
-                                <div className="relative">
+                        <div className="space-y-5">
+                            {/* Primary Story Language Quick Selector */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between px-1">
+                                    <label className="text-[11px] font-black text-brand-navy/60 uppercase tracking-wider">
+                                        {t('لغة القصة', 'Story Language')}
+                                    </label>
+                                    {detectedLangCode && (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/90 border border-amber-300/60 px-2 py-0.5 rounded-full shadow-xs">
+                                            <span>✨</span> {t(`تم التعرف: ${detectedLangCode === 'ar' ? 'العربية' : 'English'}`, `Detected: ${detectedLangCode === 'ar' ? 'Arabic' : 'English'}`)}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Quick Primary Pills */}
+                                <div className="grid grid-cols-2 gap-2.5">
                                     <button
-                                        onClick={() => { setIsShowingAllCountries(!isShowingAllCountries); setIsShowingAllLangs(false); }}
-                                        className="w-full flex items-center justify-between px-6 py-4 bg-gray-100/50 rounded-[1.8rem] border-2 border-transparent hover:border-brand-teal/20 transition-all group"
+                                        type="button"
+                                        onClick={() => setSelectedLang('ar')}
+                                        className={`flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl font-black text-sm transition-all border-2 ${
+                                            selectedLang === 'ar'
+                                                ? 'bg-gradient-to-r from-brand-orange to-brand-yellow text-white border-brand-orange shadow-lg shadow-brand-orange/25 scale-[1.02]'
+                                                : 'bg-[#FFF9F0] text-brand-navy border-amber-200/60 hover:border-brand-orange/40 hover:bg-amber-50/70'
+                                        }`}
                                     >
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-2xl">
-                                                {allCountries.find(c => c.code === selectedCountry)?.flag || '🌍'}
-                                            </span>
-                                            <div className="text-left">
-                                                <div className="text-xs font-black text-brand-navy uppercase tracking-tight">
-                                                    {allCountries.find(c => c.code === selectedCountry)?.name || detectedRegion?.country_name || 'International'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <span className="material-symbols-outlined text-brand-navy/30 group-hover:text-brand-teal transition-colors">expand_more</span>
+                                        <span className="text-lg">🇸🇦</span>
+                                        <span>العربية</span>
+                                        {detectedLangCode === 'ar' && selectedLang !== 'ar' && (
+                                            <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
+                                        )}
                                     </button>
 
-                                    {isShowingAllCountries && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedLang('en')}
+                                        className={`flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl font-black text-sm transition-all border-2 ${
+                                            selectedLang === 'en'
+                                                ? 'bg-gradient-to-r from-brand-teal to-teal-600 text-white border-brand-teal shadow-lg shadow-brand-teal/25 scale-[1.02]'
+                                                : 'bg-[#FFF9F0] text-brand-navy border-amber-200/60 hover:border-brand-teal/40 hover:bg-teal-50/40'
+                                        }`}
+                                    >
+                                        <span className="text-lg">🇺🇸</span>
+                                        <span>English</span>
+                                        {detectedLangCode === 'en' && selectedLang !== 'en' && (
+                                            <span className="w-2 h-2 rounded-full bg-brand-teal animate-ping" />
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* More Languages Dropdown Toggle */}
+                                <div className="relative pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setIsShowingAllLangs(!isShowingAllLangs); setIsShowingAllCountries(false); }}
+                                        className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50/80 hover:bg-amber-50/50 rounded-xl border border-gray-200/70 text-xs font-bold text-gray-700 transition-all"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm text-brand-navy/50">translate</span>
+                                            <span>
+                                                {selectedLang !== 'ar' && selectedLang !== 'en'
+                                                    ? `${languages.find(l => l.code === selectedLang)?.nativeLabel} (${languages.find(l => l.code === selectedLang)?.label})`
+                                                    : t('لغات أخرى...', 'More languages...')}
+                                            </span>
+                                        </div>
+                                        <span className="material-symbols-outlined text-xs text-gray-400">expand_more</span>
+                                    </button>
+
+                                    {isShowingAllLangs && (
                                         <motion.div 
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            initial={{ opacity: 0, y: 8, scale: 0.96 }}
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            className="absolute top-full left-0 right-0 mt-3 bg-white rounded-[2rem] shadow-2xl border border-gray-100 z-50 overflow-hidden"
+                                            className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden"
                                         >
-                                            <div className="p-4 border-b border-gray-50 bg-gray-50/30">
+                                            <div className="p-3 border-b border-gray-100 bg-gray-50/60">
                                                 <input 
                                                     type="text"
-                                                    placeholder={t('ابحث عن دولتك...', 'Search for your country...')}
-                                                    value={countrySearch}
-                                                    onChange={(e) => setCountrySearch(e.target.value)}
+                                                    placeholder={t('ابحث عن لغة...', 'Search language...')}
+                                                    value={langSearch}
+                                                    onChange={(e) => setLangSearch(e.target.value)}
                                                     autoFocus
-                                                    className="w-full px-4 py-3 bg-white border border-gray-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-teal/20"
+                                                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-teal/30"
                                                 />
                                             </div>
-                                            <div className="max-h-48 overflow-y-auto no-scrollbar p-2">
-                                                {filteredCountries.map(c => (
+                                            <div className="max-h-44 overflow-y-auto no-scrollbar p-1.5 space-y-0.5">
+                                                {filteredLangs.map(l => (
                                                     <button 
-                                                        key={c.code}
-                                                        onClick={() => handleCountryChange(c.code)}
-                                                        className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${selectedCountry === c.code ? 'bg-brand-teal/10' : 'hover:bg-gray-50'}`}
+                                                        key={l.code}
+                                                        type="button"
+                                                        onClick={() => { setSelectedLang(l.code); setIsShowingAllLangs(false); }}
+                                                        className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${selectedLang === l.code ? 'bg-brand-teal/10 text-brand-teal font-black' : 'hover:bg-amber-50/60 text-gray-700'}`}
                                                     >
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-xl">{c.flag}</span>
-                                                            <span className="text-[11px] font-bold text-brand-navy">{selectedLang === 'ar' ? c.ar : c.name}</span>
+                                                        <div className="flex items-center gap-2.5">
+                                                            <span className="text-base">{l.flag}</span>
+                                                            <span className="text-xs">{l.nativeLabel} <span className="text-gray-400 text-[10px]">({l.label})</span></span>
                                                         </div>
-                                                        {selectedCountry === c.code && <span className="material-symbols-outlined text-brand-teal text-sm">check_circle</span>}
+                                                        {selectedLang === l.code && <span className="material-symbols-outlined text-brand-teal text-sm">check_circle</span>}
                                                     </button>
                                                 ))}
                                             </div>
@@ -296,56 +366,66 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Enhanced Language Selector */}
-                                <div className="space-y-3">
-                                    <label className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest ml-4">
-                                        {t('لغة القصة المفضلة', 'Preferred Story Language')}
-                                    </label>
+                            {/* Country & Currency Row */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                {/* Country Selector */}
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between px-1">
+                                        <label className="text-[11px] font-black text-brand-navy/60 uppercase tracking-wider">
+                                            {t('البلد / الوجهة', 'Country / Region')}
+                                        </label>
+                                        {detectedCountryCode && selectedCountry === detectedCountryCode && (
+                                            <span className="text-[9px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md">
+                                                {t('موقعك', 'Your IP')}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="relative">
                                         <button
-                                            onClick={() => { setIsShowingAllLangs(!isShowingAllLangs); setIsShowingAllCountries(false); }}
-                                            className="w-full flex items-center justify-between px-6 py-4 bg-gray-100/50 rounded-[1.8rem] border-2 border-transparent hover:border-brand-teal/20 transition-all group"
+                                            type="button"
+                                            onClick={() => { setIsShowingAllCountries(!isShowingAllCountries); setIsShowingAllLangs(false); }}
+                                            className="w-full flex items-center justify-between px-3.5 py-3 bg-[#FFF9F0] hover:bg-amber-50/70 rounded-2xl border-2 border-amber-200/70 hover:border-brand-orange/40 transition-all group text-left"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-lg">
-                                                    {languages.find(l => l.code === selectedLang)?.flag || '🌐'}
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <span className="text-xl shrink-0">
+                                                    {currentCountryObj.flag}
                                                 </span>
-                                                <span className="text-xs font-black text-brand-navy uppercase">
-                                                    {languages.find(l => l.code === selectedLang)?.label || 'Select'}
+                                                <span className="text-xs font-black text-brand-navy truncate">
+                                                    {selectedLang === 'ar' ? currentCountryObj.ar : currentCountryObj.name}
                                                 </span>
                                             </div>
-                                            <span className="material-symbols-outlined text-brand-navy/30 group-hover:text-brand-teal text-sm">expand_more</span>
+                                            <span className="material-symbols-outlined text-brand-navy/40 group-hover:text-brand-orange transition-colors text-sm">expand_more</span>
                                         </button>
 
-                                        {isShowingAllLangs && (
+                                        {isShowingAllCountries && (
                                             <motion.div 
-                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                initial={{ opacity: 0, y: 8, scale: 0.96 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                className="absolute top-full left-0 right-0 mt-3 bg-white rounded-[2rem] shadow-2xl border border-gray-100 z-50 overflow-hidden"
+                                                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden"
                                             >
-                                                <div className="p-3 border-b border-gray-50 bg-gray-50/30">
+                                                <div className="p-3 border-b border-gray-100 bg-gray-50/60">
                                                     <input 
                                                         type="text"
-                                                        placeholder={t('ابحث عن لغة...', 'Search language...')}
-                                                        value={langSearch}
-                                                        onChange={(e) => setLangSearch(e.target.value)}
+                                                        placeholder={t('ابحث عن دولتك...', 'Search country...')}
+                                                        value={countrySearch}
+                                                        onChange={(e) => setCountrySearch(e.target.value)}
                                                         autoFocus
-                                                        className="w-full px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-bold outline-none focus:ring-2 focus:ring-brand-teal/20"
+                                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-orange/30"
                                                     />
                                                 </div>
-                                                <div className="max-h-48 overflow-y-auto no-scrollbar p-2">
-                                                    {filteredLangs.map(l => (
+                                                <div className="max-h-44 overflow-y-auto no-scrollbar p-1.5 space-y-0.5">
+                                                    {filteredCountries.map(c => (
                                                         <button 
-                                                            key={l.code}
-                                                            onClick={() => { setSelectedLang(l.code); setIsShowingAllLangs(false); }}
-                                                            className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${selectedLang === l.code ? 'bg-brand-teal/10' : 'hover:bg-gray-50'}`}
+                                                            key={c.code}
+                                                            type="button"
+                                                            onClick={() => handleCountryChange(c.code)}
+                                                            className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${selectedCountry === c.code ? 'bg-brand-orange/10 text-brand-orange font-black' : 'hover:bg-amber-50/60 text-gray-700'}`}
                                                         >
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="text-lg">{l.flag}</span>
-                                                                <span className="text-[11px] font-bold text-brand-navy">{l.label}</span>
+                                                            <div className="flex items-center gap-2.5">
+                                                                <span className="text-lg">{c.flag}</span>
+                                                                <span className="text-xs font-bold">{selectedLang === 'ar' ? c.ar : c.name}</span>
                                                             </div>
-                                                            {selectedLang === l.code && <span className="material-symbols-outlined text-brand-teal text-sm">check_circle</span>}
+                                                            {selectedCountry === c.code && <span className="material-symbols-outlined text-brand-orange text-sm">check_circle</span>}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -355,21 +435,23 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                                 </div>
 
                                 {/* Currency Selection */}
-                                <div className="space-y-3">
-                                    <label className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest ml-4">
-                                        {t('عملة التسوق', 'Shopping Currency')}
-                                    </label>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between px-1">
+                                        <label className="text-[11px] font-black text-brand-navy/60 uppercase tracking-wider">
+                                            {t('العملة', 'Currency')}
+                                        </label>
+                                    </div>
                                     <div className="relative">
                                         <select 
                                             value={selectedCurrency}
                                             onChange={(e) => setSelectedCurrency(e.target.value)}
-                                            className="w-full px-6 py-4 bg-gray-100/50 border-none rounded-[1.8rem] outline-none text-xs font-black text-brand-navy appearance-none cursor-pointer focus:ring-4 focus:ring-brand-orange/10 transition-all"
+                                            className="w-full px-3.5 py-3 bg-[#FFF9F0] hover:bg-amber-50/70 border-2 border-amber-200/70 hover:border-brand-orange/40 rounded-2xl outline-none text-xs font-black text-brand-navy appearance-none cursor-pointer focus:ring-2 focus:ring-brand-orange/30 transition-all pr-8"
                                         >
                                             {currencies.map(c => (
-                                                <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
+                                                <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
                                             ))}
                                         </select>
-                                        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-brand-navy/40">
+                                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-brand-navy/40">
                                             <span className="material-symbols-outlined text-sm">unfold_more</span>
                                         </div>
                                     </div>
@@ -377,12 +459,15 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
                             </div>
                         </div>
 
+                        {/* Confirm Button */}
                         <div className="pt-2">
                             <button 
+                                type="button"
                                 onClick={handleConfirm}
-                                className="w-full bg-brand-navy text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.25em] hover:bg-brand-orange hover:shadow-2xl hover:shadow-brand-orange/30 transition-all flex items-center justify-center gap-4 group"
+                                className="w-full bg-gradient-to-r from-brand-navy via-[#193056] to-brand-navy text-white py-4 sm:py-4.5 rounded-2xl font-black uppercase tracking-wider hover:from-brand-orange hover:to-amber-500 hover:shadow-xl hover:shadow-brand-orange/30 transition-all flex items-center justify-center gap-2 group active:scale-[0.98]"
                             >
-                                {t('ابدأ رحلتك الآن', 'Start Your Journey')}
+                                <span>{t('ابدأ رحلتك السحرية', 'Continue to Rawy')}</span>
+                                <span className="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
                             </button>
                         </div>
                     </div>
@@ -391,4 +476,5 @@ export const RegionalDiscoveryModal: React.FC<RegionalDiscoveryModalProps> = ({
         </AnimatePresence>
     );
 };
+
 

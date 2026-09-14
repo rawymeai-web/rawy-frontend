@@ -1,7 +1,28 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 
 <head>
+  <script>
+    (function() {
+      try {
+        var saved = localStorage.getItem('preferred_language');
+        var navLangs = navigator.languages || [navigator.language || ''];
+        var primaryLang = '';
+        for (var i = 0; i < navLangs.length; i++) {
+          if (navLangs[i]) {
+            var code = navLangs[i].toLowerCase().split('-')[0];
+            if (code === 'ar') { primaryLang = 'ar'; break; }
+            if (['en', 'de', 'tr', 'zh', 'ja', 'fr', 'es', 'it', 'pt', 'ru'].indexOf(code) !== -1 && !primaryLang) {
+              primaryLang = code;
+            }
+          }
+        }
+        var activeLang = saved || primaryLang || 'en';
+        document.documentElement.lang = activeLang;
+        document.documentElement.dir = (activeLang === 'ar') ? 'rtl' : 'ltr';
+      } catch(e) {}
+    })();
+  </script>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/logo-icon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -239,7 +260,26 @@
     }
   </style>
 
-
+  <!-- Structured Data / Google Search & Console Transparency Metadata -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Rawy - Personalized AI Storybooks",
+    "alternateName": "راوي - قصص أطفال مخصصة بالذكاء الاصطناعي",
+    "url": "https://rawytime.com/",
+    "applicationCategory": "DesignApplication",
+    "operatingSystem": "All",
+    "description": "Custom personalized storybooks starring your child's name and likeness generated with AI.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Rawy",
+      "url": "https://rawytime.com",
+      "privacyPolicy": "https://rawytime.com/policy.html",
+      "termsOfService": "https://rawytime.com/tos.html"
+    }
+  }
+  </script>
 </head>
 
 <body>
@@ -247,23 +287,34 @@
   <noscript>
     <img height="1" width="1" style="display:none" 
          src="https://www.facebook.com/tr?id=%VITE_FB_PIXEL_ID%&ev=PageView&noscript=1"/>
+    <div style="padding: 20px; font-family: sans-serif; max-width: 600px; margin: 0 auto; text-align: center;">
+      <h1>Rawy | راوي</h1>
+      <p>Personalized AI Children's Storybooks / قصص أطفال مخصصة بالذكاء الاصطناعي</p>
+      <p><a href="/policy.html">Privacy Policy</a> &middot; <a href="/tos.html">Terms of Service</a></p>
+    </div>
   </noscript>
+
   <div id="root">
-    <!-- Google OAuth Verification Pre-render (Crawler Friendly) -->
-    <div style="padding: 40px; font-family: sans-serif; max-width: 800px; margin: 0 auto;">
-      <h1>Rawy: Personalized AI Storybooks / راوي: قصص أطفال مخصصة بالذكاء الاصطناعي</h1>
-      <p>راوي (Rawy) هي منصة مخصصة لإنشاء كتب وقصص الأطفال المصورة بالذكاء الاصطناعي. ارفع صورة طفلك واكتب اسمه لتصنع له كتاباً مصوراً فريداً عالي الجودة. يقوم نظامنا المبتكر بتحويل ملامح طفلك إلى رسومات كرتونية ساحرة داخل مغامرات شيقة تطابق ملامحه.</p>
-      <p>Rawy is a personalized storybook platform that uses AI to customize illustrations and stories featuring your child as the main character. Simply enter their name and upload a photo to generate a print-ready custom hardcover adventure.</p>
-      <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;" />
-      <p><strong>Privacy Data Transparency Notice / خصوصية البيانات:</strong></p>
-      <p>نطلب اسم طفلك وعمره وصورته الشخصية فقط لإنشاء وتخصيص رسومات وقصص كتابك المطبوع بشكل آمن بالكامل دون مشاركتها مع أي جهات خارجية.</p>
-      <p>We collect your child's name, age, and photo reference solely to personalize the illustrations and custom story texts for your book. All uploads are processed securely and never sold or shared.</p>
-      <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;" />
-      <p>
-        <a href="/policy.html">Privacy Policy (سياسة الخصوصية)</a>
-        &middot; 
-        <a href="/tos.html">Terms of Service (شروط الخدمة)</a>
-      </p>
+    <!-- Clean Branded Animated Loader (Pre-Hydration) -->
+    <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #FFF9F0; font-family: 'Plus Jakarta Sans', 'Tajawal', -apple-system, BlinkMacSystemFont, sans-serif;">
+      <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+        <div style="width: 76px; height: 76px; border-radius: 26px; background: linear-gradient(135deg, #F78F50 0%, #ECC156 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 14px 32px rgba(247, 143, 80, 0.28); animation: rawyPulse 2s ease-in-out infinite;">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+        </div>
+      </div>
+      <div style="margin-top: 22px; display: flex; align-items: center; gap: 6px;">
+        <span style="font-weight: 900; font-size: 20px; color: #001A40; letter-spacing: -0.02em;">راوي</span>
+        <span style="font-weight: 700; font-size: 15px; color: #F78F50; opacity: 0.9;">Rawy</span>
+      </div>
+      <style>
+        @keyframes rawyPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.06); opacity: 0.88; }
+        }
+      </style>
     </div>
   </div>
   <div class="bg-noise"></div>
