@@ -164,7 +164,7 @@ async function renderTextBlobToImage(
     if (childName) {
         const childFirstName = childName.trim().split(/\s+/)[0];
         const escapedName = childFirstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const nameRegex = new RegExp(`\\b(${escapedName})\\b`, 'gi');
+        const nameRegex = new RegExp(`(?<=^|[^\\p{L}\\p{N}_])(${escapedName})(?=[^\\p{L}\\p{N}_]|$)`, 'gu');
         finalHtml = finalHtml.replace(nameRegex, `<span style="font-weight: 900; color: #F78F50; font-size: 1.05em;">$1</span>`);
     }
 
