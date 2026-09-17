@@ -309,12 +309,17 @@ export const generatePreviewPdf = async (storyData: StoryData, language: Languag
         // AR: Front is LEFT half (0% to 50%)
         const isAr = language === 'ar';
         // Smart subtitle: double hero vs single hero (coverSubtitle = manual override)
-        const subtitle = storyData.coverSubtitle || (
-            storyData.useSecondCharacter && storyData.secondCharacter?.name
-                ? `${storyData.childName} ${isAr ? 'و' : '&'} ${storyData.secondCharacter.name}`
+        const childHeroName = storyData.childName || storyData.mainCharacter?.name || '';
+        const secondHeroName = storyData.secondCharacter?.name || '';
+        const effectiveStoredSub = (isAr && storyData.coverSubtitle && storyData.coverSubtitle.startsWith('A Story for '))
+            ? `قصة ${storyData.coverSubtitle.replace(/^A Story for\s*/i, '')}`
+            : storyData.coverSubtitle;
+        const subtitle = effectiveStoredSub || (
+            storyData.useSecondCharacter && secondHeroName
+                ? `${childHeroName} ${isAr ? 'و' : '&'} ${secondHeroName}`
                 : isAr
-                    ? `قصة ${storyData.childName}`
-                    : `A Story for ${storyData.childName}`
+                    ? `قصة ${childHeroName}`
+                    : `A Story for ${childHeroName}`
         );
         const coverTitle = storyData.title || storyData.blueprint?.foundation?.title || storyData.childName || 'My Story';
         const titleB64 = await createTextImage({ title: coverTitle, subtitle }, language);
