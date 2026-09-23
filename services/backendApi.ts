@@ -321,6 +321,12 @@ export const backendApi = {
 
     // Customer Tools
     getCustomerDashboard: (userId: string) => fetchBackend<{ orders: any[], subscription: any }>(`/orders/customer/${userId}`),
+
+    cancelSubscription: (customerId: string, email?: string, reason?: string) =>
+        fetchBackend<{ success: boolean; message: string }>('/subscriptions/cancel', {
+            method: 'POST',
+            body: JSON.stringify({ customerId, email, reason })
+        }),
     
     getPublicStory: (storyId: string) => fetchBackend<{ success: boolean; story: any }>(`/orders/public-story/${storyId}?_t=${Date.now()}`),
 

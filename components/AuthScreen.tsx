@@ -17,6 +17,48 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess, langu
     const [email, setEmail] = useState('');
     const [emailSent, setEmailSent] = useState(false);
 
+    // COPPA Age Gate State
+    const [birthDate, setBirthDate] = useState('');
+    const [ageGateStatus, setAgeGateStatus] = useState<'pending' | 'verified' | 'underage_blocked'>(() => {
+        try {
+            return sessionStorage.getItem('rawy_age_verified') === 'true' ? 'verified' : 'pending';
+        } catch (e) {
+            return 'pending';
+        }
+    });
+    const [ageGateError, setAgeGateError] = useState('');
+
+    const handleAgeVerification = (e: React.FormEvent) => {
+        e.preventDefault();
+        setAgeGateError('');
+        if (!birthDate) {
+            setAgeGateError(t('يرجى تحديد تاريخ ميلادك للمتابعة', 'Please select your date of birth to continue'));
+            return;
+        }
+
+        const selectedDate = new Date(birthDate);
+        const today = new Date();
+        let age = today.getFullYear() - selectedDate.getFullYear();
+        const monthDiff = today.getMonth() - selectedDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < selectedDate.getDate())) {
+            age--;
+        }
+
+        if (isNaN(age) || age < 0) {
+            setAgeGateError(t('تاريخ ميلاد غير صالح', 'Invalid date of birth'));
+            return;
+        }
+
+        if (age < 13) {
+            setAgeGateStatus('underage_blocked');
+        } else {
+            try {
+                sessionStorage.setItem('rawy_age_verified', 'true');
+            } catch (e) {}
+            setAgeGateStatus('verified');
+        }
+    };
+
     const handleGoogleLogin = async () => {
         setIsLoading(true);
         try {
@@ -86,7 +128,78 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess, langu
                     </div>
                 </div>
 
-                {emailSent ? (
+                {ageGateStatus === 'underage_blocked' ? (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="py-6 space-y-6"
+                    >
+                        <div className="w-20 h-20 bg-amber-500/10 text-amber-600 rounded-full flex items-center justify-center mx-auto text-3xl">
+                            🛡️
+                        </div>
+                        <div className="space-y-3">
+                            <h3 className="text-xl font-black text-brand-navy">
+                                {t('عذراً، قيود العمر (حماية الأطفال)', 'Age Requirement Not Met')}
+                            </h3>
+                            <p className="text-xs text-brand-navy/70 leading-relaxed font-medium max-w-sm mx-auto">
+                                {t(
+                                    'امتثالاً لقوانين حماية خصوصية الأطفال عبر الإنترنت (COPPA)، حسابات راوي مخصصة للآباء وأولياء الأمور البالغين (18+). يرجى أن يقوم أحد الوالدين بإنشاء الحساب وإتمام طلب الكتاب.',
+                                    "In accordance with the Children's Online Privacy Protection Act (COPPA), accounts on Rawy are reserved for parents and adult legal guardians. Please ask an adult parent to register and order the book."
+                                )}
+                            </p>
+                        </div>
+                        <Button 
+                            onClick={() => {
+                                setAgeGateStatus('pending');
+                                setBirthDate('');
+                            }} 
+                            variant="outline" 
+                            className="w-full"
+                        >
+                            {t('إعادة المحاولة كولي أمر', 'Try Again as Parent / Guardian')}
+                        </Button>
+                    </motion.div>
+                ) : ageGateStatus === 'pending' ? (
+                    <motion.form 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onSubmit={handleAgeVerification}
+                        className="space-y-6 relative z-10 text-start"
+                    >
+                        <div className="bg-brand-orange/5 border border-brand-orange/15 rounded-2xl p-4 text-center">
+                            <span className="text-xs font-bold text-brand-navy">
+                                {t(
+                                    '🛡️ حماية خصوصية الأطفال: راوي مخصص لأولياء الأمور والبالغين.',
+                                    "🛡️ Child Privacy Protection: Rawy accounts are reserved for adult parents & guardians."
+                                )}
+                            </span>
+                        </div>
+
+                        <div>
+                            <label className="block text-[11px] font-black uppercase tracking-wider text-brand-navy mb-2">
+                                {t('تاريخ ميلادك (ولي الأمر / صاحب الحساب)', 'Your Date of Birth (Parent / Account Holder)')}
+                            </label>
+                            <input 
+                                type="date" 
+                                value={birthDate}
+                                onChange={(e) => setBirthDate(e.target.value)}
+                                max={new Date().toISOString().split('T')[0]}
+                                required
+                                className="w-full px-5 py-4 bg-gray-50/70 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-brand-orange/10 focus:border-brand-orange transition-all font-bold text-brand-navy text-sm"
+                            />
+                            {ageGateError && (
+                                <p className="text-xs text-red-500 font-bold mt-1.5">{ageGateError}</p>
+                            )}
+                        </div>
+
+                        <button 
+                            type="submit"
+                            className="w-full bg-brand-navy text-white py-4 rounded-2xl font-black uppercase tracking-wider hover:bg-brand-orange transition-all shadow-lg hover:shadow-brand-orange/20"
+                        >
+                            {t('متابعة التسجيل', 'Continue to Sign In')}
+                        </button>
+                    </motion.form>
+                ) : emailSent ? (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}

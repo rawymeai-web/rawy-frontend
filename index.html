@@ -55,31 +55,39 @@
   <meta name="twitter:title" content="راوي | Rawy - اجعل طفلك بطل قصته الخاصة 📖✨" />
   <meta name="twitter:description" content="كتاب مصور فاخر مطبوع باسم وملامح طفلك الحقيقية. تخصيص كامل في دقيقة واحدة وشحن سريع لجميع الدول." />
   <meta name="twitter:image" content="https://rawytime.com/og-image.png" />
-  <!-- Meta Pixel Code -->
+  <!-- Meta Pixel Code (Consent-Guarded for GDPR Compliance) -->
   <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
+    window.initMetaPixel = function() {
+      if (window._fbq_initialized) return;
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      
+      const pixelId = "%VITE_FB_PIXEL_ID%";
+      if (pixelId && pixelId !== "undefined" && !pixelId.startsWith("%")) {
+        fbq('init', pixelId);
+        fbq('track', 'PageView');
+        window._fbq_initialized = true;
+      }
+    };
     
-    // Check if Pixel ID is injected and valid
-    const pixelId = "%VITE_FB_PIXEL_ID%";
-    if (pixelId && pixelId !== "undefined" && !pixelId.startsWith("%")) {
-      fbq('init', pixelId);
-      fbq('track', 'PageView');
-    }
+    // Only auto-initialize if user previously accepted tracking cookies
+    try {
+      if (localStorage.getItem('rawy_cookie_consent') === 'accepted') {
+        window.initMetaPixel();
+      }
+    } catch(e) {}
   </script>
   <!-- End Meta Pixel Code -->
   <link rel="preconnect" href="https://gcmhnvjflgqnjkikphwt.supabase.co" crossorigin>
   <link rel="dns-prefetch" href="https://gcmhnvjflgqnjkikphwt.supabase.co">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+  <!-- Self-Hosted Web Fonts (GDPR Compliant - No requests to Google servers) -->
+  <link rel="stylesheet" href="/fonts/fonts.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
@@ -283,14 +291,12 @@
 </head>
 
 <body>
-  <!-- Meta Pixel Code (Noscript fallback) -->
+  <!-- Non-tracking Noscript fallback -->
   <noscript>
-    <img height="1" width="1" style="display:none" 
-         src="https://www.facebook.com/tr?id=%VITE_FB_PIXEL_ID%&ev=PageView&noscript=1"/>
     <div style="padding: 20px; font-family: sans-serif; max-width: 600px; margin: 0 auto; text-align: center;">
       <h1>Rawy | راوي</h1>
       <p>Personalized AI Children's Storybooks / قصص أطفال مخصصة بالذكاء الاصطناعي</p>
-      <p><a href="/policy.html">Privacy Policy</a> &middot; <a href="/tos.html">Terms of Service</a></p>
+      <p><a href="/policy.html">Privacy Policy</a> &middot; <a href="/tos.html">Terms of Service</a> &middot; <a href="/dmca.html">DMCA Policy</a></p>
     </div>
   </noscript>
 

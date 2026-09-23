@@ -31,6 +31,7 @@ import { FAQModal } from './FAQModal';
 import { AboutUsModal } from './AboutUsModal';
 import { CartDrawer } from './CartDrawer';
 import { useCart } from '../context/CartContext';
+import { CookieConsentBanner } from './CookieConsentBanner';
 
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from './PageTransition';
@@ -670,6 +671,16 @@ const MainLayout: React.FC = () => {
                             setShippingDetails(order.shippingDetails || {} as any);
                             setScreen('checkout');
                         }}
+                        onTrackOrder={(orderNumber) => {
+                            updateStory({ orderId: orderNumber });
+                            try {
+                                localStorage.setItem('last_tracked_order', orderNumber);
+                                const url = new URL(window.location.href);
+                                url.searchParams.set('order', orderNumber);
+                                window.history.replaceState({}, '', url.toString());
+                            } catch (e) {}
+                            setScreen('order-tracking');
+                        }}
                     />;
                 }
                 break;
@@ -760,6 +771,7 @@ const MainLayout: React.FC = () => {
                 onCurrencyChange={(c) => setCurrency(currencies.find(x => x.code === c) || currencies[0])} 
             />
             <CartDrawer />
+            <CookieConsentBanner language={language} />
         </div>
     );
 };

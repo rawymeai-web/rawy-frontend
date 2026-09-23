@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wqklukruzxicjaeblser.supabase.co';
+let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials missing from .env');
+// Fallback to active publishable key if legacy key (starts with eyJ) or missing
+if (!supabaseAnonKey || supabaseAnonKey.startsWith('eyJ')) {
+  supabaseAnonKey = 'sb_publishable_lSFRnJu5fvLwzGC4ltpw0w_TN0XnmCu';
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

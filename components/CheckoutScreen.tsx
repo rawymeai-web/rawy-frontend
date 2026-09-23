@@ -42,6 +42,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
   const [promoError, setPromoError] = useState<string | null>(null);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRenewalAgreed, setIsRenewalAgreed] = useState(true);
 
   const [details, setDetails] = useState<ShippingDetails>({ 
     name: storyData.parentName || '', 
@@ -1145,11 +1146,48 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ onProceedToPayment, onB
               </div>
             </div>
 
+            {/* Automatic Renewal Law (ARL) Conspicuous Terms Disclosure */}
+            {(planType === 'monthly' || planType === 'yearly') && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-start space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-black text-brand-navy">
+                  <span className="text-sm">🔄</span>
+                  <span>{t('شروط التجديد التلقائي للاشتراك', 'Automatic Renewal & Recurring Billing Terms')}</span>
+                </div>
+                <p className="text-[11px] text-brand-navy/80 leading-relaxed font-medium">
+                  {planType === 'monthly' 
+                    ? t(
+                        `سيتم تجديد عضويتك تلقائياً كل شهر بسعر ${convertPrice(pricing.total, currency)} حتى تقوم بالإلغاء. يمكنك إلغاء الاشتراك في أي وقت بنقرة واحدة من لوحة التحكم الخاصة بك دون أي رسوم أو شروط معقدة.`,
+                        `Your subscription will automatically renew each month at ${convertPrice(pricing.total, currency)} until cancelled. You can easily cancel anytime with 1 click from your Customer Dashboard or by contacting support@rawytime.com.`
+                      )
+                    : t(
+                        `سيتم تجديد عضويتك السنوية تلقائياً كل عام بسعر ${convertPrice(pricing.total, currency)} حتى تقوم بالإلغاء. سنرسل لك إشعاراً تذكيرياً قبل موعد التجديد. يمكنك الإلغاء في أي وقت من لوحة التحكم بنقرة واحدة.`,
+                        `Your annual subscription will automatically renew each year at ${convertPrice(pricing.total, currency)} until cancelled. A reminder will be sent before renewal. You can cancel anytime from your dashboard with 1 click.`
+                      )
+                  }
+                </p>
+                <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    checked={isRenewalAgreed} 
+                    onChange={(e) => setIsRenewalAgreed(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded text-brand-orange focus:ring-brand-orange border-gray-300 cursor-pointer shrink-0"
+                    required
+                  />
+                  <span className="text-[10px] font-bold text-brand-navy leading-snug">
+                    {t(
+                      'أوافق على شروط التجديد التلقائي والخصم الدوري حتى أقوم بالإلغاء.',
+                      'I understand and agree to recurring billing until I cancel.'
+                    )}
+                  </span>
+                </label>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Button 
                 type="submit" 
                 form="checkout-form"
-                disabled={isSubmitting}
+                disabled={isSubmitting || ((planType === 'monthly' || planType === 'yearly') && !isRenewalAgreed)}
                 className="w-full py-4 text-base font-black rounded-2xl shadow-xl shadow-brand-coral/20 bg-brand-coral hover:bg-[#e07b40] text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (

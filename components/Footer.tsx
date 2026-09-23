@@ -19,6 +19,7 @@ const Footer: React.FC<FooterProps> = ({ language, onCheckOrderStatus, onContact
         { href: '#', ar: 'الأسئلة الشائعة', en: 'FAQ', onClick: onFAQ },
         { href: '/policy.html', ar: 'سياسة الخصوصية', en: 'Privacy Policy', isExternal: true },
         { href: '/tos.html', ar: 'شروط الخدمة', en: 'Terms of Service', isExternal: true },
+        { href: '/dmca.html', ar: 'حقوق النشر (DMCA)', en: 'DMCA Policy', isExternal: true },
     ];
 
     return (

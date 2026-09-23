@@ -156,14 +156,14 @@ const PersonalizationScreen: React.FC<PersonalizationScreenProps> = ({ onNext, o
                 <span className="text-xs font-bold text-brand-navy/70 leading-relaxed text-start">
                   {language === 'ar' ? (
                     <>
-                      أؤكد أنني أملك حقوق هذه الصور أو لدي الإذن باستخدامها، وأوافق على استخدامها لإنشاء القصة الشخصية لطفلي وفقاً لـ{' '}
+                      أؤكد أنني بالغ (18 عاماً فأكثر) وبصفتي الوالد أو الوصي القانوني، أوافق على معالجة صورة واسم الطفل لإنشاء القصة المخصصة وفقاً لـ{' '}
                       <a href="/tos.html" target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:underline">شروط الخدمة</a>{' '}
                       و{' '}
                       <a href="/policy.html" target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:underline">سياسة الخصوصية</a>.
                     </>
                   ) : (
                     <>
-                      I confirm that I own or have permission to use these photos, and consent to their use for creating my custom storybook in accordance with the{' '}
+                      I confirm that I am an adult (18+) and the parent or legal guardian of this child, and consent to processing their likeness and name to create their personalized storybook under the{' '}
                       <a href="/tos.html" target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:underline">Terms of Service</a>{' '}
                       and{' '}
                       <a href="/policy.html" target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:underline">Privacy Policy</a>.
